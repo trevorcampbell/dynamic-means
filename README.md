@@ -46,7 +46,7 @@ cluster large datasets by considering small chunks of data at a time.
 
 5. Cluster some data
 	<pre>
-	vector<Eigen::Vector2d> someData;
+	vector&lt;Eigen::Vector2d> someData;
 	...
 	int nRestarts = 10;
 	dynm.cluster(someData, nRestarts);
