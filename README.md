@@ -14,8 +14,9 @@ cluster large datasets by considering small chunks of it at a time.
 
 ####Usage
 1. Clone this repository:
-
+	<pre>
     git clone http://github.com/tc4mp/dynamic-means
+    </pre>
 
 2. Install the liblpsolve dependency:
 
