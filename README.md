@@ -25,8 +25,41 @@ cluster large datasets by considering small chunks of data at a time.
 	<pre>
 	sudo ./install
 	</pre>
+3. In your code, include the header:
+	<pre>
+	#include &lt;dynmeans/dynmeans.hpp>
+	</pre>
+4. Create a DynMeans object:
+	<pre>
+	double lambda = .05;
+	double T_Q = 6.8;
+	double K_tau = 1.01;
+	double Q = lambda/T_Q;
+	double tau = (T_Q*(K_tau - 1.0)+1.0)/(T_Q-1.0);
+	DynMeans&lt;Eigen::Vector2d> dynm(lambda, Q, tau);
+	</pre>
+	where Eigen::Vector2d is the vector data type that Dynamic Means is going to cluster.
+	Note that other types can be used in place of Eigen::Vector2d, but they must
+	implement vector addition, and scalar multiplcation/division.
+	See [the Dynamic Means paper](http://arxiv.org/abs/1305.6659) for a description
+	of the values `lambda, T_Q, K_tau, Q, tau`.
 
-3. (optional) To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
+5. Cluster some data
+	<pre>
+	vector<Eigen::Vector2d> someData;
+	...
+	int nRestarts = 10;
+	dynm.cluster(someData, nRestarts);
+	</pre>
+
+6. Get the results
+	<pre>
+	vector&lt;int> labels;
+	vector&lt;Eigen::Vector2d> parameters;
+	dynm.getClustering(labels, parameters);
+	</pre>
+
+7. (optional) To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
 	<pre>
 	sudo apt-get install liblpsolve55-dev
 	</pre>
