@@ -19,30 +19,34 @@ cluster large datasets by considering small chunks of it at a time.
     </pre>
 
 2. Install the liblpsolve dependency:
-
+	<pre>
 	sudo apt-get install liblpsolve55-dev
+	</pre>
 
 3. Navigate to the directory and run the install script:
-
+	<pre>
 	sudo ./install
+	</pre>
 
 4. Make sure /usr/local/include is on your default include path
 
 5. To test out the code, check out the `examples` folder:
-
+	<pre>
 	make config=release
 	./DynMeansExample
+	</pre>
 
 	Also included is a premake4.lua script, in case you have premake and want to generate the makefiles for yourself
 
 ####Citation
 
-If you use Dynamic Means for a paper or project, please use the following bibtex entry for citation:
-
+If you use Dynamic Means for a paper or project, please use the following BibTeX entry for citation:
+	<pre>
     @inproceedings{Campbell13_NIPS,
     	Author = {Trevor Campbell and Miao Liu and Brian Kulis and Jonathan P.~How and Lawrence Carin},
     	Title = {Dynamic Clustering via Asymptotics of the Dependent Dirichlet Process Mixture},
     	Year = {2013},
     	Booktitle = {Neural Information Processing Systems (NIPS)}}
+   	</pre>
 
 
