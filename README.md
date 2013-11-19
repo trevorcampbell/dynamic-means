@@ -30,7 +30,7 @@ cluster large datasets by considering small chunks of data at a time.
 	<pre>
 	sudo apt-get install liblpsolve55-dev
 	</pre>
-	and navigate to the `examples` folder to compile the example:
+	and navigate to the `examples` folder to compile and run the example:
 	<pre>
 	make config=release
 	./DynMeansExample
