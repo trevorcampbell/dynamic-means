@@ -26,7 +26,7 @@ cluster large datasets by considering small chunks of data at a time.
 	sudo ./install
 	</pre>
 
-3. To test out the code, first make sure liblpsolve is installed (required for label accuracy computations):
+3. (optional) To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
 	<pre>
 	sudo apt-get install liblpsolve55-dev
 	</pre>
