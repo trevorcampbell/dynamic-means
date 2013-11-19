@@ -35,7 +35,6 @@ cluster large datasets by considering small chunks of data at a time.
 	make config=release
 	./DynMeansExample
 	</pre>
-	Also included is a premake4.lua script, in case you have premake and want to generate the makefiles for yourself
 
 ####Citation
 
