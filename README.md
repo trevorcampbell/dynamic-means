@@ -12,6 +12,28 @@ cluster large datasets by considering small chunks of it at a time.
 
 ![](https://github.com/tc4mp/dynamic-means/blob/master/imgs/clustermotion.png?raw=true)
 
+####Usage
+1. Clone this repository:
+
+    git clone http://github.com/tc4mp/dynamic-means
+
+2. Install the liblpsolve dependency:
+
+	sudo apt-get install liblpsolve55-dev
+
+3. Navigate to the directory and run the install script:
+
+	sudo ./install
+
+4. Make sure /usr/local/include is on your default include path
+
+5. To test out the code, check out the `examples` folder:
+
+	make config=release
+	./DynMeansExample
+
+	Also included is a premake4.lua script, in case you have premake and want to generate the makefiles for yourself
+
 ####Citation
 
 If you use Dynamic Means for a paper or project, please use the following bibtex entry for citation:
