@@ -69,7 +69,7 @@ cluster large datasets by considering small chunks of data at a time.
 	dynm.getClustering(labels2, parameters2);
 	</pre>
 
-8. Repeat step 7 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and run `DynMeans::cluster` on each)
+8. Repeat step 7 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and call `DynMeans::cluster`/`DynMeans::getClustering` on each)
 
 7. (optional) To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
 	<pre>
