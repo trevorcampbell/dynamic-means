@@ -44,20 +44,32 @@ cluster large datasets by considering small chunks of data at a time.
 	See [the Dynamic Means paper](http://arxiv.org/abs/1305.6659) for a description
 	of the values `lambda, T_Q, K_tau, Q, tau`.
 
-5. Cluster some data
+5. To cluster the first window of data, just call the `DynMeans::cluster` function
 	<pre>
-	vector&lt;Eigen::Vector2d> someData;
+	vector&lt;Eigen::Vector2d> dataWindow1;
 	...
 	int nRestarts = 10;
-	dynm.cluster(someData, nRestarts);
+	dynm.cluster(dataWindow1, nRestarts);
 	</pre>
 
-6. Get the results
+6. To get results from the latest clustering step, call `DynMeans::getClustering`
 	<pre>
-	vector&lt;int> labels;
-	vector&lt;Eigen::Vector2d> parameters;
-	dynm.getClustering(labels, parameters);
+	vector&lt;int> labels1;
+	vector&lt;Eigen::Vector2d> parameters1;
+	dynm.getClustering(labels1, parameters1);
 	</pre>
+
+7. To cluster another window of data, just call `DynMeans::cluster` and `DynMeans::getClustering` again
+	<pre>
+	vector&lt;Eigen::Vector2d> dataWindow2;
+	...
+	dynm.cluster(dataWindow2, nRestarts);
+	vector&lt;int> labels2;
+	vector&lt;Eigen::Vector2d> parameters2;
+	dynm.getClustering(labels2, parameters2);
+	</pre>
+
+8. Repeat step 7 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and run `DynMeans::cluster` on each)
 
 7. (optional) To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
 	<pre>
