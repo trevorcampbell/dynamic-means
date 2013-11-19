@@ -10,7 +10,10 @@ It operates batch-sequentially, i.e. it processes "windows" of data rather than 
 at once. This allows it to capture clusters that change over time (via (a) motion, (b) creation, and (c) deletion), or to
 cluster large datasets by considering small chunks of it at a time.
 
-![](https://github.com/tc4mp/dynamic-means/blob/master/imgs/clustermotion.png?raw=true)
+<p align="center">
+<img src="https://github.com/tc4mp/dynamic-means/blob/master/imgs/clustermotion.png?raw=true"/>
+</p>
+
 
 ####Usage
 1. Clone this repository:
