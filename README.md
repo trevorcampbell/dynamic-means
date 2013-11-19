@@ -21,22 +21,20 @@ cluster large datasets by considering small chunks of data at a time.
     git clone http://github.com/tc4mp/dynamic-means
     </pre>
 
-2. Install the liblpsolve dependency:
-	<pre>
-	sudo apt-get install liblpsolve55-dev
-	</pre>
-
-3. Navigate to the directory and run the install script:
+2. Navigate to the directory and run the install script:
 	<pre>
 	sudo ./install
 	</pre>
 
-4. To test out the code, check out the `examples` folder:
+3. To test out the code, first make sure liblpsolve is installed (required for label accuracy computations):
+	<pre>
+	sudo apt-get install liblpsolve55-dev
+	</pre>
+	and navigate to the `examples` folder to compile the example:
 	<pre>
 	make config=release
 	./DynMeansExample
 	</pre>
-
 	Also included is a premake4.lua script, in case you have premake and want to generate the makefiles for yourself
 
 ####Citation

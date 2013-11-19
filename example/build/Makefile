@@ -24,7 +24,7 @@ ifeq ($(config),debug)
   TARGETDIR  = ..
   TARGET     = $(TARGETDIR)/DynMeansExample
   DEFINES   += 
-  INCLUDES  += -I/usr/local/include/eigen3 -I/usr/local/include/dynmeans -I/usr/local/include/maxmatching
+  INCLUDES  += -I/usr/local/include/eigen3 -I/usr/local/include/dynmeans
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -Wall -std=c++0x
   CXXFLAGS  += $(CFLAGS) 
@@ -46,7 +46,7 @@ ifeq ($(config),release)
   TARGETDIR  = ..
   TARGET     = $(TARGETDIR)/DynMeansExample
   DEFINES   += 
-  INCLUDES  += -I/usr/local/include/eigen3 -I/usr/local/include/dynmeans -I/usr/local/include/maxmatching
+  INCLUDES  += -I/usr/local/include/eigen3 -I/usr/local/include/dynmeans
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++0x
   CXXFLAGS  += $(CFLAGS) 
