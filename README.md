@@ -5,7 +5,7 @@ dynamic-means
 
 ####Introduction
 
-The Dynamic Means algorithm is a k-means-like algorithm for clustering large or temporally evolving datasets.
+The [Dynamic Means algorithm](http://arxiv.org/abs/1305.6659) is a k-means-like algorithm for clustering large or temporally evolving datasets.
 It operates batch-sequentially, i.e. it processes "windows" of data rather than processing an entire dataset
 at once. This allows it to capture clusters that change over time (via (a) motion, (b) creation, and (c) deletion), or to
 cluster large datasets by considering small chunks of data at a time.
