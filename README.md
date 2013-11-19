@@ -71,15 +71,15 @@ cluster large datasets by considering small chunks of data at a time.
 
 8. Repeat step 7 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and call `DynMeans::cluster`/`DynMeans::getClustering` on each)
 
-7. (optional) To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
-	<pre>
-	sudo apt-get install liblpsolve55-dev
-	</pre>
-	and navigate to the `examples` folder to compile and run the example:
-	<pre>
-	make config=release
-	./DynMeansExample
-	</pre>
+####Example Code
+To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
+    
+    sudo apt-get install liblpsolve55-dev
+    
+and navigate to the `examples` folder to compile and run the example:
+    
+    make config=release
+    ./DynMeansExample
 
 ####Citation
 
