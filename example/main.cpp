@@ -11,7 +11,7 @@
 #include <cmath>
 #include <random>
 
-#include <dynmeans.hpp>
+#include <dynmeans/dynmeans.hpp>
 #include "maxmatching.hpp"
 
 using namespace std;
