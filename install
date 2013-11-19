@@ -1,4 +1,7 @@
 mkdir -p /usr/local/include/dynmeans
-cp dynmeans.hpp dynmeans_impl.hpp /usr/local/include/dynmeans/
+cp src/dynmeans.hpp src/dynmeans_impl.hpp /usr/local/include/dynmeans/
+mkdir -p /usr/local/include/maxmatching
+cp src/maxmatching.hpp src/maxmatching_impl.hpp /usr/local/include/maxmatching/
+
 
 

@@ -31,9 +31,7 @@ cluster large datasets by considering small chunks of data at a time.
 	sudo ./install
 	</pre>
 
-4. Make sure /usr/local/include is on your default include path
-
-5. To test out the code, check out the `examples` folder:
+4. To test out the code, check out the `examples` folder:
 	<pre>
 	make config=release
 	./DynMeansExample
