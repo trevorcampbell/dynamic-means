@@ -1,0 +1,4 @@
+mkdir -p /usr/local/include/dynmeans
+cp dynmeans.hpp dynmeans_impl.hpp /usr/local/include/dynmeans/
+
+
