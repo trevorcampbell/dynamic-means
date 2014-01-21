@@ -79,6 +79,9 @@ and navigate to the `examples` folder to compile and run the example:
     make config=release
     ./DynMeansExample
 
+If you want to change how the example compiles, a [premake](http://industriousone.com/premake) 
+Makefile generation script is included.
+
 ####Citation
 
 If you use Dynamic Means for a paper or project, please use the following BibTeX entry for citation:
