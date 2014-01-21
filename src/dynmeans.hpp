@@ -15,9 +15,7 @@ class DynMeans{
 		~DynMeans();
 		
 		//initialize a new step and cluster
-		double cluster(std::vector<Vec>& newobservations, int nRestarts);
-		//output results
-		void getClustering(std::vector<Vec>& params, std::vector<int>& labels);
+		void cluster(std::vector<Vec>& newobservations, int nRestarts, std::vector<int>& finalLabels, std::vector<Vec>& finalParams, double& finalObj, double& tTaken);
 		//reset DDP chain
 		void reset();
 	private:

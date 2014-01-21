@@ -64,7 +64,12 @@ void DynMeans<Vec>::updateState(std::vector<int> lbls, std::vector<int> cnts, st
 }
 
 template<class Vec>
-double DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts){
+void DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts, 
+		std::vector<int>& finalLabels, std::vector<Vec>& finalParams, double& finalObj, double& tTaken){
+	timeval tStart;
+	gettimeofday(&tStart, NULL);
+
+
 	//set the new obs
 	this->observations = newobservations;
 
@@ -90,13 +95,9 @@ double DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts){
 		randOrderings.push_back(tmpindices);
 	}
 
-	
-
 	//stuff for storing best clustering (all other countries make inferior potassium) 
-	double minobj =  std::numeric_limits<double>::max();
-	std::vector<int> minlbls;
-	std::vector<int> mincnts;
-	std::vector<Vec> minprms;
+	finalObj =  std::numeric_limits<double>::max();
+	std::vector<int> finalCnts;
 
 	if (verbose){
 		std::cout << "libdynmeans: Clustering " << newobservations.size() << " datapoints with " << nRestarts << " restarts." << std::endl;
@@ -145,28 +146,32 @@ double DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts){
 			}
 		} while(prevobj > obj);
 
-		if (obj < minobj){
-			minobj = obj;
-			minprms = prms;
-			minlbls = lbls;
-			mincnts = cnts;
+		if (obj < finalObj){
+			finalObj = obj;
+			finalParams = prms;
+			finalLabels = lbls;
+			finalCnts = cnts;
 		}
 	}
 	if (verbose){
 		int numinst = 0;
-		for (int ii = 0; ii < mincnts.size(); ii++){
-			if (mincnts[ii] > 0){
+		for (int ii = 0; ii < finalCnts.size(); ii++){
+			if (finalCnts[ii] > 0){
 				numinst++;
 			}
 		}
-		int numnew = minprms.size() - this->ages.size();
+		int numnew = finalParams.size() - this->ages.size();
 		int numoldinst = numinst - numnew;
-		int numolduninst = mincnts.size() - numinst;
-		std::cout << "libdynmeans: Done clustering. Min Objective: " << minobj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  std::endl;
+		int numolduninst = finalCnts.size() - numinst;
+		std::cout << "libdynmeans: Done clustering. Min Objective: " << finalObj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  std::endl;
 	}
 	//update the stored results to the one with minimum cost
-	this->updateState(minlbls, mincnts, minprms);
-	return minobj;
+	this->updateState(finalLabels, finalCnts, finalParams);
+	timeval tCur;
+	gettimeofday(&tCur, NULL);
+	tTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
+
+	return;
 }
 
 

@@ -94,10 +94,11 @@ int main(int argc, char** argv){
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
-		cout << "Step " << i << ": Clustering..." << endl;
-		dynm.cluster(clusterData, nRestarts);
 		vector<V2d> learnedParams;
 		vector<int> learnedLabels;
+		double tTaken, obj;
+		cout << "Step " << i << ": Clustering..." << endl;
+		dynm.cluster(clusterData, nRestarts, learnedLabels, learnedParams, obj, tTaken);
 		dynm.getClustering(learnedParams, learnedLabels);
 
 		//***************************************************
