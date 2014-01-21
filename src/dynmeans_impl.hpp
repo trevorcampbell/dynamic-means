@@ -75,11 +75,11 @@ void DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts,
 
 	if (newobservations.size() == 0){
 		std::cout << "libdynmeans: ERROR: newobservations is empty" << std::endl;
-		return -1;
+		return;
 	}
 	if (nRestarts <= 0){
 		std::cout << "libdynmeans: ERROR: Cannot have nRestarts <= 0" << std::endl;
-		return -1;
+		return;
 	}
 
 	//generate the orderings
