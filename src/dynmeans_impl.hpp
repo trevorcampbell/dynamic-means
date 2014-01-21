@@ -276,11 +276,5 @@ double DynMeans<Vec>::setParameters(std::vector<int>& lbls, std::vector<int>& cn
 }
 
 
-template<class Vec>
-void DynMeans<Vec>::getClustering(std::vector<Vec>& params, std::vector<int>& labels){
-	labels = this->labels;
-	params = this->oldprms;
-	return;
-}
 #define __DYNMEANS_IMPL_HPP
 #endif /* __DYNMEANS_IMPL_HPP */
