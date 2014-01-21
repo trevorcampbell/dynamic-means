@@ -49,27 +49,25 @@ cluster large datasets by considering small chunks of data at a time.
 	vector&lt;Eigen::Vector2d> dataWindow1;
 	...
 	int nRestarts = 10;
-	dynm.cluster(dataWindow1, nRestarts);
+	vector&lt;Eigen::Vector2d> learnedParams1;
+	vector&lt;int> learnedLabels1;
+	double obj1, tTaken1;
+	dynm.cluster(dataWindow1, nRestarts, learnedLabels1, learnedParams1, obj1, tTaken1);
 	</pre>
+	where `obj1` is the clustering cost output, `tTaken1` is the clustering time output, 
+	`learnedLabels1` is the data labels output, and `learnedParams1` is the cluster parameters output.
 
-6. To get results from the latest clustering step, call `DynMeans::getClustering`
-	<pre>
-	vector&lt;int> labels1;
-	vector&lt;Eigen::Vector2d> parameters1;
-	dynm.getClustering(labels1, parameters1);
-	</pre>
-
-7. To cluster another window of data, just call `DynMeans::cluster` and `DynMeans::getClustering` again
+6. To cluster another window of data, just call `DynMeans::cluster` again
 	<pre>
 	vector&lt;Eigen::Vector2d> dataWindow2;
 	...
-	dynm.cluster(dataWindow2, nRestarts);
-	vector&lt;int> labels2;
-	vector&lt;Eigen::Vector2d> parameters2;
-	dynm.getClustering(labels2, parameters2);
+	vector&lt;Eigen::Vector2d> learnedParams2;
+	vector&lt;int> learnedLabels2;
+	double obj2, tTaken2;
+	dynm.cluster(dataWindow2, nRestarts, learnedLabels2, learnedParams2, obj2, tTaken2);
 	</pre>
 
-8. Repeat step 7 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and call `DynMeans::cluster`/`DynMeans::getClustering` on each)
+7. Repeat step 6 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and call `DynMeans::cluster` on each)
 
 ####Example Code
 To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
