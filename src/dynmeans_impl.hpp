@@ -139,7 +139,7 @@ void DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts,
 						numinst++;
 					}
 				}
-				int numnew = prms.size() - this->ages.size();
+				int numnew = prms.size() - this->oldprms.size();
 				int numoldinst = numinst - numnew;
 				int numolduninst = cnts.size() - numinst;
 			std::cout << "libdynmeans: Trial: " << i+1 << "/" << nRestarts << " Objective: " << obj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  "                   \r" << std::flush; 
@@ -160,7 +160,7 @@ void DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts,
 				numinst++;
 			}
 		}
-		int numnew = finalParams.size() - this->ages.size();
+		int numnew = finalParams.size() - this->oldprms.size();
 		int numoldinst = numinst - numnew;
 		int numolduninst = finalCnts.size() - numinst;
 		std::cout << "libdynmeans: Done clustering. Min Objective: " << finalObj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  std::endl;
@@ -181,25 +181,8 @@ void DynMeans<Vec>::assignObservations(std::vector<int> assgnOrdering, std::vect
 		//get the observation idx from the random ordering
 		int idx = assgnOrdering[i];
 
-		//as long as this obs was previously assigned, deassign it
-		int oldidx = lbls[idx];
-		if (oldidx != -1){
-			cnts[oldidx]--;
-			//if this cluster now has no observations, but was a new one (no age recording for it yet)
-			//remove it and shift labels downwards
-			if (cnts[oldidx] == 0 && oldidx >= this->oldprms.size()){
-				prms.erase(prms.begin() + oldidx);
-				cnts.erase(cnts.begin() + oldidx);
-				for (int j = 0; j < lbls.size(); j++){
-					if (lbls[j] > oldidx){
-						lbls[j]--;
-					}
-				}
-			} else if (cnts[oldidx] == 0){//it was an old parameter, reset it to the oldprm
-				prms[oldidx] = this->oldprms[oldidx];
-			}
-		}
-
+		//store the old lbl for possibly deleting clusters later
+		int oldlbl = lbls[idx];
 
 		//calculate the distances to all the parameters
 		int minind = 0;
@@ -208,9 +191,7 @@ void DynMeans<Vec>::assignObservations(std::vector<int> assgnOrdering, std::vect
 			double tmpdistsq = (prms[j] - this->observations[idx]).squaredNorm();
 			if (cnts[j] == 0){//the only way cnts can get to 0 is if it's an old parameter
 				double gamma = 1.0/(1.0/this->weights[j] + this->ages[j]*this->tau);
-				tmpdistsq = gamma/(1.0+gamma)*(tmpdistsq*tmpdistsq) + this->ages[j]*this->Q;
-			} else {
-				tmpdistsq = tmpdistsq*tmpdistsq;
+				tmpdistsq = gamma/(1.0+gamma)*tmpdistsq + this->ages[j]*this->Q;
 			}
 			if(tmpdistsq < mindistsq){
 				minind = j;
@@ -234,6 +215,25 @@ void DynMeans<Vec>::assignObservations(std::vector<int> assgnOrdering, std::vect
 			cnts[minind]++;
 		}
 
+
+		//if obs was previously assigned to something, decrease the count the clus it was assigned to
+		//we do cluster deletion *after* assignment to prevent corner cases with monotonicity
+		if (oldlbl != -1){
+			cnts[oldlbl]--;
+			//if this cluster now has no observations, but was a new one (no age recording for it yet)
+			//remove it and shift labels downwards
+			if (cnts[oldlbl] == 0 && oldlbl >= this->oldprms.size()){
+				prms.erase(prms.begin() + oldlbl);
+				cnts.erase(cnts.begin() + oldlbl);
+				for (int j = 0; j < lbls.size(); j++){
+					if (lbls[j] > oldlbl){
+						lbls[j]--;
+					}
+				}
+			} else if (cnts[oldlbl] == 0){//it was an old parameter, reset it to the oldprm
+				prms[oldlbl] = this->oldprms[oldlbl];
+			}
+		}
 	}
 	return;	
 }
@@ -245,7 +245,7 @@ double DynMeans<Vec>::setParameters(std::vector<int>& lbls, std::vector<int>& cn
 		if (cnts[i] > 0){
 			//add cost for new clusters - lambda
 			// or add cost for old clusters - Q
-			if (i < ages.size()){
+			if (i < this->oldprms.size()){
 				objective += this->Q*this->ages[i];
 			} else {
 				objective += this->lambda;
