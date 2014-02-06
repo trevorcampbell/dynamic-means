@@ -74,13 +74,14 @@ cluster large datasets by considering small chunks of data at a time.
 	vector&lt;Eigen::Vector2d> learnedParams1;
 	vector&lt;int> learnedLabels1;
 	double obj1, tTaken1;
-	dynm.cluster(dataWindow1, nRestarts, nClusMax, SpecDynMeans<DatType,PrmType>::EigenSolverType::REDSVD, learnedLabels1, obj1, tTaken1);
+	sdynm.cluster(dataWindow1, nRestarts, nClusMax, SpecDynMeans<DatType,PrmType>::EigenSolverType::REDSVD, learnedLabels1, obj1, tTaken1);
 	</pre>
 	where `obj1` is the clustering cost output, `tTaken1` is the clustering time output, 
 	`learnedLabels1` is the data labels output, and `learnedParams1` is the cluster parameters output.
 	`nRestarts` is the number of random orthogonal matrix initializations Spectral Dynamic Means will try,
 	and `nClusMax` is (intuitively) the maximum number of new clusters expected in each timestep (mathematically,
-	it is the rank approximation to use when doing eigendecompositions).
+	it is the rank approximation to use when doing eigendecompositions). `EigenSolverType::REDSVD` tells
+	the algorithm to use the redsvd approximate eigendecomposition (adapted from https://code.google.com/p/redsvd/).
 
 6. To cluster another window of data, just call `DynMeans::cluster` and/or `SpecDynMeans::cluster` again
 	<pre>
