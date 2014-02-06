@@ -99,7 +99,6 @@ int main(int argc, char** argv){
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
 		dynm.cluster(clusterData, nRestarts, learnedLabels, learnedParams, obj, tTaken);
-		dynm.getClustering(learnedParams, learnedLabels);
 
 		//***************************************************
 		//calculate the accuracy via linear programming

@@ -30,7 +30,7 @@ class SD{
 		V2d v;
 		//similarity function from data->data is just exp(-|| ||^2 / w^2)
 		double sim(const SD& rhs) const{
-			return exp(-(this->v-rhs.v).squaredNorm()/(0.1*0.1));
+			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 };
 
@@ -48,7 +48,7 @@ class SP{
 		}
 		//similarity function from parameter->data is just exp(-|| ||^2 / w^2)
 		double sim(const SD& rhs) const{
-			return exp(-(this->v-rhs.v).squaredNorm()/(0.1*0.1));
+			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 		//This is the typical prior-weighted least squares Dynamic Means paramter update
 		void update(const vector<SD>& rhs, const double gamma){
@@ -102,12 +102,12 @@ int main(int argc, char** argv){
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
-	double lambda = 0.05;
-	double T_Q = 6.8;
-	double K_tau = 1.01;
+	double lambda = 10;
+	double T_Q = 5;
+	double K_tau = 1.05;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-	int nRestarts = 10;
+	int nRestarts = 30;
 	int nClusMax = 20; // maximum 20 new clusters per timestep
 					  //this forms the rank approximation for the eigendecomp
 					  //rank approx = nClusMax + (# old clusters)
@@ -131,14 +131,23 @@ int main(int argc, char** argv){
 		vector<int> trueLabels;
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, clusterData, trueLabels);
 
+		//**************************************************************************************
+		//Take the vectors that we just created, and package them in the SD class defined above
+		//**************************************************************************************
+		vector<SD> clusterDataSD;
+		for (int i = 0; i < clusterData.size(); i++){
+			SD s;
+			s.v = clusterData[i];
+			clusterDataSD.push_back(s);
+		}
+
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
-		vector<V2d> learnedParams;
 		vector<int> learnedLabels;
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
-		sdm.cluster(clusterData, nRestarts, nClusMax, SpecDynMeans<SD,SP>::EigenSolverType::REDSVD, learnedLabels, obj, tTaken);
+		sdm.cluster(clusterDataSD, nRestarts, nClusMax, SpecDynMeans<SD,SP>::EigenSolverType::REDSVD, learnedLabels, obj, tTaken);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
