@@ -36,7 +36,10 @@ Efficient C++ implementations of both algorithms are provided in this repository
 	<pre>
 	#include &lt;specdynmeans/specdynmeans.hpp>
 	</pre>
-   for Spectral Dynamic Means. If the use of Spectral Dynamic Means is desired, make sure [Gurobi](www.gurobi.com) is installed (free for academic use).
+   for Spectral Dynamic Means. Make sure [Gurobi](www.gurobi.com) is installed (free for academic use) if 
+   you want to use Spectral Dynamic Means. If you can't get access to Gurobi, feel free to modify
+   the `SpecDynMeans::getOldNewMatching` function in `src/specdynmeans_impl.hpp` to use a different
+   LP solver.
 4. Create a DynMeans and/or SpecDynMeans object:
 	<pre>
 	double lambda = .05;
