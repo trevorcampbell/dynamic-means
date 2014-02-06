@@ -98,18 +98,26 @@ cluster large datasets by considering small chunks of data at a time.
 To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
     
     sudo apt-get install liblpsolve55-dev
+   
+If the use of Spectral Dynamic Means is desired, make sure Gurobi is installed (free for academic use at www.gurobi.com).
+
+Navigate to the `examples` folder to compile and run the example for Dynamic Means:
     
-and navigate to the `examples` folder to compile and run the example:
-    
-    make config=release
+    make config=release DynMeansExample
     ./DynMeansExample
+
+Or for Spectral Dynamic Means, run
+
+    make config=release SpecDynMeansExample
+    ./SpecDynMeansExample
+ 
 
 If you want to change how the example compiles, a [premake](http://industriousone.com/premake) 
 Makefile generation script is included.
 
 ####Citation
 
-If you use Dynamic Means for a paper or project, please use the following BibTeX entry for citation:
+If you use Dynamic Means or Spectral Dynamic Means for a paper or project, please use the following BibTeX entry for citation:
 	<pre>
     @inproceedings{Campbell13_NIPS,
     	Author = {Trevor Campbell and Miao Liu and Brian Kulis and Jonathan P.~How and Lawrence Carin},
