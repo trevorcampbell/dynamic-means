@@ -52,7 +52,7 @@ cluster large datasets by considering small chunks of data at a time.
 	See [the Dynamic Means paper](http://arxiv.org/abs/1305.6659) for a description
 	of the values `lambda, T_Q, K_tau, Q, tau`.
 
-5a. [Dynamic Means] To cluster the first window of data, just call the `DynMeans::cluster` function
+5. To cluster the first window of data with Dynamic Means, just call the `DynMeans::cluster` function
 	<pre>
 	vector&lt;Eigen::Vector2d> dataWindow1;
 	...
@@ -66,7 +66,7 @@ cluster large datasets by considering small chunks of data at a time.
 	`learnedLabels1` is the data labels output, and `learnedParams1` is the cluster parameters output.
 	`nRestarts` is the number of random label assignment orders Dynamic Means will try.
 	
-5b. [Spectral Dynamic Means] To cluster the first window of data, just call the `SpecDynMeans::cluster` function
+	To cluster the first window of data with Spectral Dynamic Means, just call the `SpecDynMeans::cluster` function
 	<pre>
 	vector&lt;Eigen::Vector2d> dataWindow1;
 	...
@@ -80,9 +80,9 @@ cluster large datasets by considering small chunks of data at a time.
 	`learnedLabels1` is the data labels output, and `learnedParams1` is the cluster parameters output.
 	`nRestarts` is the number of random orthogonal matrix initializations Spectral Dynamic Means will try,
 	and `nClusMax` is (intuitively) the maximum number of new clusters expected in each timestep (mathematically,
-	it is essentially the rank approximation to use when doing eigendecompositions).
+	it is the rank approximation to use when doing eigendecompositions).
 
-6. To cluster another window of data, just call `DynMeans/SpecDynMeans::cluster` again
+6. To cluster another window of data, just call `DynMeans::cluster` and/or `SpecDynMeans::cluster` again
 	<pre>
 	vector&lt;Eigen::Vector2d> dataWindow2;
 	...
@@ -92,7 +92,7 @@ cluster large datasets by considering small chunks of data at a time.
 	dynm.cluster(dataWindow2, nRestarts, learnedLabels2, learnedParams2, obj2, tTaken2);
 	</pre>
 
-7. Repeat step 6 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and call `DynMeans::cluster` on each)
+7. Repeat step 6 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and call `DynMeans::cluster` and/or `SpecDynMeans::cluster` on each)
 
 ####Example Code
 To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
