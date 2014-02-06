@@ -8,7 +8,9 @@ dynamic-means
 The [Dynamic Means algorithm](http://arxiv.org/abs/1305.6659) is a k-means-like algorithm for clustering large or temporally evolving datasets.
 It operates batch-sequentially, i.e. it processes "windows" of data rather than processing an entire dataset
 at once. This allows it to capture clusters that change over time (via (a) motion, (b) creation, and (c) deletion), or to
-cluster large datasets by considering small chunks of data at a time.
+cluster large datasets by considering small chunks of data at a time. Spectral Dynamic Means is an extension 
+to Dynamic Means that captures cluster motion, creation and deletion in general similarity graphs -- this allows
+it to capture more general data types and cluster shapes, at the expense of increased computational cost.
 
 <p align="center">
 <img src="https://github.com/tc4mp/dynamic-means/blob/master/imgs/clustermotion.png?raw=true"/>
