@@ -84,7 +84,7 @@ Efficient C++ implementations of both algorithms are provided in this repository
 	`nRestarts` is the number of random orthogonal matrix initializations Spectral Dynamic Means will try,
 	and `nClusMax` is (intuitively) the maximum number of new clusters expected in each timestep (mathematically,
 	it is the rank approximation to use when doing eigendecompositions). `EigenSolverType::REDSVD` tells
-	the algorithm to use an approximate eigendecomposition (adapted from [RedSVD](https://code.google.com/p/redsvd/)).
+	the algorithm to use an approximate eigendecomposition (adapted from [redsvd](https://code.google.com/p/redsvd/)).
 
 6. To cluster another window of data, just call `DynMeans::cluster` and/or `SpecDynMeans::cluster` again
 	<pre>
