@@ -11,6 +11,7 @@ at once. This allows it to capture clusters that change over time (via (a) motio
 cluster large datasets by considering small chunks of data at a time. Spectral Dynamic Means is an extension 
 to Dynamic Means that captures cluster motion, creation and deletion in general similarity graphs -- this allows
 it to capture more general data types and cluster shapes, at the expense of increased computational cost.
+Efficient c++ implementations of both algorithms are provided in this repository.
 
 <p align="center">
 <img src="https://github.com/tc4mp/dynamic-means/blob/master/imgs/clustermotion.png?raw=true"/>
