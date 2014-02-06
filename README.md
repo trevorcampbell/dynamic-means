@@ -36,7 +36,7 @@ Efficient C++ implementations of both algorithms are provided in this repository
 	<pre>
 	#include &lt;specdynmeans/specdynmeans.hpp>
 	</pre>
-   for Spectral Dynamic Means.
+   for Spectral Dynamic Means. If the use of Spectral Dynamic Means is desired, make sure [Gurobi](www.gurobi.com) is installed (free for academic use).
 4. Create a DynMeans and/or SpecDynMeans object:
 	<pre>
 	double lambda = .05;
@@ -103,7 +103,7 @@ To run the example, first make sure liblpsolve is installed (required for label 
     
     sudo apt-get install liblpsolve55-dev
    
-If the use of Spectral Dynamic Means is desired, make sure [Gurobi](www.gurobi.com) is installed (free for academic use).
+
 
 Navigate to the `examples` folder to compile and run the example for Dynamic Means:
     
