@@ -84,7 +84,7 @@ Efficient C++ implementations of both algorithms are provided in this repository
 	`nRestarts` is the number of random orthogonal matrix initializations Spectral Dynamic Means will try,
 	and `nClusMax` is (intuitively) the maximum number of new clusters expected in each timestep (mathematically,
 	it is the rank approximation to use when doing eigendecompositions). `EigenSolverType::REDSVD` tells
-	the algorithm to use an approximate eigendecomposition (adapted from https://code.google.com/p/redsvd/).
+	the algorithm to use an approximate eigendecomposition (adapted from [RedSVD](https://code.google.com/p/redsvd/)).
 
 6. To cluster another window of data, just call `DynMeans::cluster` and/or `SpecDynMeans::cluster` again
 	<pre>
@@ -103,7 +103,7 @@ To run the example, first make sure liblpsolve is installed (required for label 
     
     sudo apt-get install liblpsolve55-dev
    
-If the use of Spectral Dynamic Means is desired, make sure Gurobi is installed (free for academic use at www.gurobi.com).
+If the use of Spectral Dynamic Means is desired, make sure [Gurobi](www.gurobi.com) is installed (free for academic use).
 
 Navigate to the `examples` folder to compile and run the example for Dynamic Means:
     
