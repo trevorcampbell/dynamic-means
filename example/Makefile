@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := DynMeansExample
+PROJECTS := DynMeansExample SpecDynMeansExample
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -14,10 +14,15 @@ all: $(PROJECTS)
 
 DynMeansExample: 
 	@echo "==== Building DynMeansExample ($(config)) ===="
-	@${MAKE} --no-print-directory -C build -f Makefile
+	@${MAKE} --no-print-directory -C build -f DynMeansExample.make
+
+SpecDynMeansExample: 
+	@echo "==== Building SpecDynMeansExample ($(config)) ===="
+	@${MAKE} --no-print-directory -C build -f SpecDynMeansExample.make
 
 clean:
-	@${MAKE} --no-print-directory -C build -f Makefile clean
+	@${MAKE} --no-print-directory -C build -f DynMeansExample.make clean
+	@${MAKE} --no-print-directory -C build -f SpecDynMeansExample.make clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -30,5 +35,6 @@ help:
 	@echo "   all (default)"
 	@echo "   clean"
 	@echo "   DynMeansExample"
+	@echo "   SpecDynMeansExample"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"
