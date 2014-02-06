@@ -29,7 +29,12 @@ cluster large datasets by considering small chunks of data at a time.
 	<pre>
 	#include &lt;dynmeans/dynmeans.hpp>
 	</pre>
-4. Create a DynMeans object:
+   for Dynamic Means, and:
+	<pre>
+	#include &lt;specdynmeans/specdynmeans.hpp>
+	</pre>
+   for Spectral Dynamic Means.
+4. Create a DynMeans and/or SpecDynMeans object:
 	<pre>
 	double lambda = .05;
 	double T_Q = 6.8;
@@ -37,14 +42,17 @@ cluster large datasets by considering small chunks of data at a time.
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau - 1.0)+1.0)/(T_Q-1.0);
 	DynMeans&lt;Eigen::Vector2d> dynm(lambda, Q, tau);
+	SpecDynMeans&lt;DatType, PrmType> sdynm(lambda, Q, tau);
 	</pre>
 	where Eigen::Vector2d is the vector data type that Dynamic Means is going to cluster.
 	Note that other types can be used in place of Eigen::Vector2d, but they must
-	implement vector addition, and scalar multiplcation/division.
+	implement vector addition, and scalar multiplcation/division. For Spectral Dynamic Means,
+	DatType and PrmType are the data and parameter types, respectively. To see which functions
+	DatType and PrmType must implement, see the example in examples/mainsdm.cpp.
 	See [the Dynamic Means paper](http://arxiv.org/abs/1305.6659) for a description
 	of the values `lambda, T_Q, K_tau, Q, tau`.
 
-5. To cluster the first window of data, just call the `DynMeans::cluster` function
+5a. [Dynamic Means] To cluster the first window of data, just call the `DynMeans::cluster` function
 	<pre>
 	vector&lt;Eigen::Vector2d> dataWindow1;
 	...
@@ -56,8 +64,25 @@ cluster large datasets by considering small chunks of data at a time.
 	</pre>
 	where `obj1` is the clustering cost output, `tTaken1` is the clustering time output, 
 	`learnedLabels1` is the data labels output, and `learnedParams1` is the cluster parameters output.
+	`nRestarts` is the number of random label assignment orders Dynamic Means will try.
+	
+5b. [Spectral Dynamic Means] To cluster the first window of data, just call the `SpecDynMeans::cluster` function
+	<pre>
+	vector&lt;Eigen::Vector2d> dataWindow1;
+	...
+	int nRestarts = 10;
+	vector&lt;Eigen::Vector2d> learnedParams1;
+	vector&lt;int> learnedLabels1;
+	double obj1, tTaken1;
+	dynm.cluster(dataWindow1, nRestarts, nClusMax, SpecDynMeans<DatType,PrmType>::EigenSolverType::REDSVD, learnedLabels1, obj1, tTaken1);
+	</pre>
+	where `obj1` is the clustering cost output, `tTaken1` is the clustering time output, 
+	`learnedLabels1` is the data labels output, and `learnedParams1` is the cluster parameters output.
+	`nRestarts` is the number of random orthogonal matrix initializations Spectral Dynamic Means will try,
+	and `nClusMax` is (intuitively) the maximum number of new clusters expected in each timestep (mathematically,
+	it is essentially the rank approximation to use when doing eigendecompositions).
 
-6. To cluster another window of data, just call `DynMeans::cluster` again
+6. To cluster another window of data, just call `DynMeans/SpecDynMeans::cluster` again
 	<pre>
 	vector&lt;Eigen::Vector2d> dataWindow2;
 	...
