@@ -130,7 +130,7 @@ If you use Dynamic Means or Spectral Dynamic Means for a paper or project, pleas
     	Author = {Trevor Campbell and Miao Liu and Brian Kulis and Jonathan P.~How and Lawrence Carin},
     	Title = {Dynamic Clustering via Asymptotics of the Dependent Dirichlet Process Mixture},
     	Year = {2013},
-    	Booktitle = {Neural Information Processing Systems (NIPS)}}
+    	Booktitle = {Advances in Neural Information Processing Systems 26}}
    	</pre>
 
 
