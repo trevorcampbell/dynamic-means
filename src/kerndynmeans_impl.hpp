@@ -1,6 +1,6 @@
-#ifndef __DYNMEANS_IMPL_HPP
+#ifndef __KERNDYNMEANS_IMPL_HPP
 template<class Vec>
-DynMeans<Vec>::DynMeans(double lambda, double Q, double tau, bool verbose){
+KernDynMeans<Vec>::KernDynMeans(double lambda, double Q, double tau, bool verbose){
 	this->verbose = verbose;
 	this->lambda = lambda;
 	this->Q = Q;
@@ -13,11 +13,11 @@ DynMeans<Vec>::DynMeans(double lambda, double Q, double tau, bool verbose){
 }
 
 template<class Vec>
-DynMeans<Vec>::~DynMeans(){
+KernDynMeans<Vec>::~KernDynMeans(){
 }
 
 template<class Vec>
-void DynMeans<Vec>::reset(){
+void KernDynMeans<Vec>::reset(){
 	this->ages.clear();
 	this->oldprms.clear();
 	this->labels.clear();
@@ -29,7 +29,7 @@ void DynMeans<Vec>::reset(){
 //along with the index of that cluster.
 //If this is the last parameter to be sampled, the function returns true; otherwise, false.
 template<class Vec>
-std::vector<Vec> DynMeans<Vec>::getObsInCluster(int idx, std::vector<int> lbls){
+std::vector<Vec> KernDynMeans<Vec>::getObsInCluster(int idx, std::vector<int> lbls){
 	//std::cout << "Getting obs set in next cluster" << std::endl;
 	std::vector<Vec> obsInCluster;
 	obsInCluster.reserve(lbls.size());
@@ -43,7 +43,7 @@ std::vector<Vec> DynMeans<Vec>::getObsInCluster(int idx, std::vector<int> lbls){
 }
 
 template<class Vec>
-void DynMeans<Vec>::updateState(std::vector<int> lbls, std::vector<int> cnts, std::vector<Vec> prms){
+void KernDynMeans<Vec>::updateState(std::vector<int> lbls, std::vector<int> cnts, std::vector<Vec> prms){
 	this->oldprms = prms;
 	this->labels = lbls;
 	//update the weights/ages
@@ -64,7 +64,7 @@ void DynMeans<Vec>::updateState(std::vector<int> lbls, std::vector<int> cnts, st
 }
 
 template<class Vec>
-void DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts, 
+void KernDynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts, 
 		std::vector<int>& finalLabels, std::vector<Vec>& finalParams, double& finalObj, double& tTaken){
 	timeval tStart;
 	gettimeofday(&tStart, NULL);
@@ -176,7 +176,7 @@ void DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts,
 
 
 template<class Vec>
-void DynMeans<Vec>::assignObservations(std::vector<int> assgnOrdering, std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms){
+void KernDynMeans<Vec>::assignObservations(std::vector<int> assgnOrdering, std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms){
 	for (int i = 0; i < assgnOrdering.size(); i++){
 		//get the observation idx from the random ordering
 		int idx = assgnOrdering[i];
@@ -239,7 +239,7 @@ void DynMeans<Vec>::assignObservations(std::vector<int> assgnOrdering, std::vect
 }
 
 template<class Vec>
-double DynMeans<Vec>::setParameters(std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms){
+double KernDynMeans<Vec>::setParameters(std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms){
 	double objective = 0;
 	for (int i = 0; i < prms.size(); i++){
 		if (cnts[i] > 0){
@@ -276,5 +276,5 @@ double DynMeans<Vec>::setParameters(std::vector<int>& lbls, std::vector<int>& cn
 }
 
 
-#define __DYNMEANS_IMPL_HPP
-#endif /* __DYNMEANS_IMPL_HPP */
+#define __KERNDYNMEANS_IMPL_HPP
+#endif /* __KERNDYNMEANS_IMPL_HPP */
