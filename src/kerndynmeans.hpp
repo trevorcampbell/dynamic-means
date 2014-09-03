@@ -1,13 +1,21 @@
 #ifndef __KERNDYNMEANS_HPP
 #include<vector>
+#include<stack>
 #include<iostream>
 #include<algorithm>
+#include<limits>
 #include<boost/static_assert.hpp>
 #include<boost/function.hpp>
 #include<boost/bind.hpp>
 #include<sys/time.h>
 #include <ctime>
 
+using namespace std;
+
+typedef Eigen::MatrixXd MXd;
+typedef Eigen::VectorXd VXd;
+typedef Eigen::SparseMatrix<double> SMXd;
+typedef Eigen::Triplet<double> TD;
 
 template <class D, class P>
 class KernDynMeans{
@@ -15,16 +23,26 @@ class KernDynMeans{
 		KernDynMeans(double lambda, double Q, double tau, bool verbose = false);
 		~KernDynMeans();
 		//initialize a new step and cluster
-		void cluster(std::vector<D>& data, const int nRestarts, std::vector<int>& finalLabels, double& finalObj, double& tTaken);
+		void cluster(std::vector<D>& data, const int nRestarts, const int nCoarsest, std::vector<int>& finalLabels, double& finalObj, double& tTaken);
 		//reset DDP chain
 		void reset();
 	private:
+		//clusters a refinement level with kernelized dyn means batch updates
+		//tempalte so it works with C/D
+		template <typename T> std::vector<int> cluster_refinement(std::vector<T>& data, std::vector<int> initlbls);
+		//clusters the base level
+		std::vector<int> cluster_base(std::vector<C>& data);
+		//expands the labels to the new refinement level
+		std::vector<int> refine(std::vector< std::pair<int, int> > merges, std::vector<int> lbls);
+		//template function for coarsify so it works with both C and D types
+		template<typename T> std::pair< std::vector<C>, std::vector<std::pair<int, int> > > 
+			coarsify(std::vector<T>& data);
+		//compute the dynamic means objective given the current labels
+		double objective(std::vector<D>& data, std::vector<int> lbls);
+
+
 		double lambda, Q, tau;
 		bool verbose;
-
-		//working variables for the current step
-		std::vector<Vec> observations;
-		std::vector<int> labels;
 
 		//during each step, constants which are information about the past steps
 		//once each step is complete, these get updated
@@ -33,12 +51,8 @@ class KernDynMeans{
 		int nextlbl;                //because clusters that die are removed entirely to save computation
 		std::vector<double> weights;
 		std::vector<int> ages;
-
-		//tools to help with kmeans
-		std::vector<Vec> getObsInCluster(int idx, std::vector<int> lbls); 
-		void assignObservations(std::vector<int> assgnOrdering, std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms);
-		double setParameters(std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms);
-		void updateState(std::vector<int> lbls, std::vector<int> cnts, std::vector<Vec> prms);
+		std::vector<double> agecosts;
+		std::vector<double> gammas;
 };
 
 //FROM SDM

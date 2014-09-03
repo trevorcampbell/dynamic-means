@@ -1,280 +1,276 @@
 #ifndef __KERNDYNMEANS_IMPL_HPP
-template<class Vec>
-KernDynMeans<Vec>::KernDynMeans(double lambda, double Q, double tau, bool verbose){
+template<typename D, typename C, typename P>
+KernDynMeans<D,C,P>::KernDynMeans(double lambda, double Q, double tau, bool verbose){
 	this->verbose = verbose;
+	this->nextlbl = 0;
+	this->ages.clear();
+	this->oldprms.clear();
+	this->oldprmlbls.clear();
+	this->weights.clear();
+	this->gammas.clear();
+	this->agecosts.clear();
 	this->lambda = lambda;
 	this->Q = Q;
 	this->tau = tau;
+}
+
+template<typename D, typename C, typename P>
+KernDynMeans<D,C,P>::~KernDynMeans(){
+}
+
+template<typename D, typename C, typename P>
+void KernDynMeans<D,C,P>::reset(){
+	this->nextlbl = 0;
 	this->ages.clear();
 	this->oldprms.clear();
-	this->labels.clear();
-	this->observations.clear();
+	this->oldprmlbls.clear();
 	this->weights.clear();
+	this->gammas.clear();
+	this->agecosts.clear();
 }
 
-template<class Vec>
-KernDynMeans<Vec>::~KernDynMeans(){
-}
-
-template<class Vec>
-void KernDynMeans<Vec>::reset(){
-	this->ages.clear();
-	this->oldprms.clear();
-	this->labels.clear();
-	this->observations.clear();
-	this->weights.clear();
-}
-
-//This function is used when sampling parameters - it returns a vector of the observations in the next cluster,
-//along with the index of that cluster.
-//If this is the last parameter to be sampled, the function returns true; otherwise, false.
-template<class Vec>
-std::vector<Vec> KernDynMeans<Vec>::getObsInCluster(int idx, std::vector<int> lbls){
-	//std::cout << "Getting obs set in next cluster" << std::endl;
-	std::vector<Vec> obsInCluster;
-	obsInCluster.reserve(lbls.size());
-	//std::cout << "Getting obs for param with idx " << idx << std::endl;
-	for (int i = 0; i < lbls.size(); i++){
-		if (lbls[i] == idx){
-			obsInCluster.push_back(this->observations[i]);
-		}
-	}
-	return obsInCluster;
-}
-
-template<class Vec>
-void KernDynMeans<Vec>::updateState(std::vector<int> lbls, std::vector<int> cnts, std::vector<Vec> prms){
-	this->oldprms = prms;
-	this->labels = lbls;
-	//update the weights/ages
-	for (int i = 0; i < prms.size(); i++){
-		if (i < this->weights.size() && cnts[i] > 0){
-			//this is an instantiated cluster from a previous time; set age to 0 and update weights
-			this->weights[i] = 1.0/(1.0/this->weights[i] + this->ages[i]*this->tau) + cnts[i];
-			this->ages[i] = 0;
-		} else if (i >= this->weights.size() ) {
-			//new cluster
-			//push back a 0 for the age, and set the weight to the number of observations
-			this->ages.push_back(0);
-			this->weights.push_back(cnts[i]);
-		}
-		//increment the age for all clusters (including old clusters with i < weights.size() && cnts = 0)
+//This function updates the weights/ages of all the clusters after each clustering step is complete
+template <typename D, typename P>
+void KernDynMeans<D,C,P>::updateState(const vector<D>& data, const vector<int>& lbls){
+	//first increment the age of everything
+	//this will be undone below for any current clusters
+	for (int i = 0; i < this->ages.size(); i++){
 		this->ages[i]++;
 	}
+	//get a map from label -> vector of data
+	map<int, vector<D> > m;
+	for (int i = 0; i < data.size(); i++){
+		m[lbls[i]].push_back(data[i]);
+	}
+	//for every current cluster
+	for (auto it = m.begin(); it != m.end(); ++it){
+		//check if it's an old label
+		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), it->first);
+		if (it2 == this->oldprmlbls.end()){
+			//it's a new cluster, so create stuff for it
+			this->ages.push_back(1);
+			this->weights.push_back(it->second.size());
+			this->oldprmlbls.push_back(it->first);
+			this->oldprms.push_back(P(it->second));
+		} else {
+			//it's an old cluster, so update old stuff
+			int oldidx = distance(this->oldprmlbls.begin(), it2);
+			this->ages[oldidx] = 1;
+			this->weights[oldidx] = this->gammas[oldidx] + it->second.size();
+			this->oldprms[oldidx].update(it->second, this->gammas[oldidx]);
+		}
+	}
+	//update the Gammas
+	this->gammas.clear();
+	this->gammas.reserve(this->ages.size());
+	for (int i = 0; i < this->ages.size(); i++){
+			this->gammas.push_back(1.0/(1.0/this->weights[i] + this->ages[i]*this->tau)); 
+	}
+	//update the Age Costs
+	this->agecosts.clear();
+	this->agecosts.reserve(this->ages.size());
+	for (int i = 0; i < this->ages.size(); i++){
+			this->agecosts.push_back(this->Q*this->ages[i]); 
+	}
+
+	//delete any old cluster whose age cost exceeds lambda
+	for (int i = 0; i < this->ages.size(); i++){
+		if (this->agecosts[i] > this->lamb){
+			this->weights.erase(this->weights.begin()+i);
+			this->ages.erase(this->ages.begin()+i);
+			this->gammas.erase(this->gammas.begin()+i);
+			this->agecosts.erase(this->agecosts.begin()+i);
+			this->oldprms.erase(this->oldprms.begin()+i);
+			this->oldprmlbls.erase(this->oldprmlbls.begin()+i);
+			i--;
+		}
+	}
+
+	//update this->nextlbl if new clusters were created
+	int maxlbl = *max_element(lbls.begin(), lbls.end());
+	if (maxlbl >= this->nextlbl){
+		this->nextlbl = maxlbl+1;
+	}
+
+	//done
+	return;
 }
 
-template<class Vec>
-void KernDynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts, 
-		std::vector<int>& finalLabels, std::vector<Vec>& finalParams, double& finalObj, double& tTaken){
+template<typename D, typename C, typename P>
+void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, const int nCoarsest, std::vector<int>& finalLabels, double& finalObj, double& tTaken){
 	timeval tStart;
 	gettimeofday(&tStart, NULL);
 
+	const int nB = this->oldprms.size();
+	const int nA = data.size();
 
-	//set the new obs
-	this->observations = newobservations;
-
-	if (newobservations.size() == 0){
-		std::cout << "libdynmeans: ERROR: newobservations is empty" << std::endl;
+	if (data.size() <= 0){
+		cout << "libkerndynmeans: WARNING: data size <=0 (= " << nA << "); Returning empty labels."<<  endl;
+		finalLabels = vector<int>();
+		timeTaken = 0;
+		finalObj = 0;
 		return;
 	}
 	if (nRestarts <= 0){
-		std::cout << "libdynmeans: ERROR: Cannot have nRestarts <= 0" << std::endl;
+		cout << "libkerndynmeans: ERROR: nRestarts <=0 (= " << nRestarts << ")"<<  endl;
 		return;
 	}
-
-	//generate the orderings
-	std::vector< std::vector<int> > randOrderings;
-	std::vector<int> tmpindices;
-	for (int i = 0; i < newobservations.size(); i++){
-		tmpindices.push_back(i);
-	}
-	std::srand( unsigned( std::time(0) ) );
-	for (int i = 0; i < nRestarts; i++){
-		//cout << "Generating random order " << i+1 << "/" << nOrderings << "               \r" << flush;
-		random_shuffle(tmpindices.begin(), tmpindices.end());
-		randOrderings.push_back(tmpindices);
-	}
-
-	//stuff for storing best clustering (all other countries make inferior potassium) 
-	finalObj =  std::numeric_limits<double>::max();
-	std::vector<int> finalCnts;
-
 	if (verbose){
-		std::cout << "libdynmeans: Clustering " << newobservations.size() << " datapoints with " << nRestarts << " restarts." << std::endl;
+		cout << "libkerndynmeans: Clustering " << nA << " datapoints with " << nRestarts << " restarts." << endl;
+		cout << "libkerndynmeans: " << nB << " old clusters from previous timesteps." << endl;
 	}
-	for (int i = 0; i < nRestarts; i++){
-
-		//create working variables
-		std::vector<Vec> prms;
-		std::vector<int> cnts;
-		std::vector<int> lbls;
-
-		for (int j = 0; j < this->oldprms.size(); j++){
-			prms.push_back(this->oldprms[j]); //just placeholders for updated parameters if the old ones get instantiated
-			cnts.push_back(0); //start with count 0
+	std::vector<int> minLbls;
+	double minObj = std::numeric_limits<double>::max();
+	for(int rest = 0; rest < nRestarts; rest++){
+		if (verbose){
+			cout << "libkerndynmeans: Attempt " << rest+1 << "/" << nRestarts << ", Obj = " << minObj << endl;
+			cout << "libkerndynmeans: Coarsifying " << nA << " nodes..." << endl;
 		}
 
-		//Initialization: no label on anything
-		for (int j = 0; j < this->observations.size(); j++){
-			lbls.push_back(-1); // start with no labels on anything
-		}
-
-		double obj, prevobj;
-		obj = prevobj = std::numeric_limits<double>::max();
-
-		do {
-			//do the kmeans iteration
-			prevobj = obj;
-			this->assignObservations(randOrderings[i], lbls, cnts, prms);
-			obj = this->setParameters(lbls, cnts, prms);
-			if (obj > prevobj){
-				std::cout << "Error: obj > prevobj - monotonicity violated! Check your distance/set parameter functions..." << std::endl;
-				std::cout << "obj: " << obj << " prevobj: " << prevobj << std::endl;
-			}
-			//std::cout << "KMeans -- Restart: " << i+1 << "/" << nRestarts << " Iteration: " << iter << " Objective: " << obj << std::endl;//"\r" << std::flush;
+		//first, form the coarsification levels in the graph
+		std::stack<std::vector<C> > coarsestack; //stores coarsified nodes
+		std::stack<std::vector<std::pair<int, int> > > mergestack; //mergestack.top() stores the pairs that were merged to form coarsestack.top()
+		auto crs = this->coarsify(data);
+		coarsestack.push(crs.first);
+		mergestack.push(crs.second);
+		while(coarsestack.top().size() > nCoarsest){
 			if (verbose){
-				int numinst = 0;
-				for (int ii = 0; ii < cnts.size(); ii++){
-					if (cnts[ii] > 0){
-						numinst++;
-					}
-				}
-				int numnew = prms.size() - this->oldprms.size();
-				int numoldinst = numinst - numnew;
-				int numolduninst = cnts.size() - numinst;
-			std::cout << "libdynmeans: Trial: " << i+1 << "/" << nRestarts << " Objective: " << obj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  "                   \r" << std::flush; 
+				cout << "libkerndynmeans: Coarsifying " << coarsestack.top().size() << " nodes..." << endl;
 			}
-		} while(prevobj > obj);
+			crs = this->coarsify(coarsestack.top());
+			coarsestack.push(crs.first);
+			mergestack.push(crs.second);
+		}
+		if (verbose){
+			cout << "libkerndynmeans: Done coarsifying, top level has " << coarsestack.top().size() << " nodes." << endl;
+			cout << "libkerndynmeans: Running base cluster..." << endl;
+		}
+		//next, perform the base clustering on the top level
+		std::vector<int> lbls = this->cluster_base(coarsestack.top());
 
-		if (obj < finalObj){
-			finalObj = obj;
-			finalParams = prms;
-			finalLabels = lbls;
-			finalCnts = cnts;
+		//next, step down through the refinements and cluster, initializing from the coarser level
+		while(!coarsestack.empty()){
+			//optimize the labels for the current top of coarsestack
+			lbls = this->cluster_refinement(coarsestack.top(), lbls);
+			coarsestack.pop();
+			//distribute the labels to the next level down
+			lbls = this->refine(mergestack.top(), lbls);
+			mergestack.pop();
+		}
+		//final clustering at the data level
+		lbls = this->cluster_refinement(data, lbls);
+
+		//finally, compute the kernelized dynamic means objective
+		double obj = this->objective(data, lbls);
+		if (obj < minObj){
+			minLbls = lbls;
+			minObj = obj;
 		}
 	}
+
 	if (verbose){
-		int numinst = 0;
-		for (int ii = 0; ii < finalCnts.size(); ii++){
-			if (finalCnts[ii] > 0){
-				numinst++;
+		vector<int> unqlbls = minLbls;
+		sort(unqlbls.begin(), unqlbls.end());
+		unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+		int numnew = 0;
+		for (int i = 0; i < unqlbls.size(); i++){
+			if (find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]) == this->oldprmlbls.end()){
+				numnew++;
 			}
 		}
-		int numnew = finalParams.size() - this->oldprms.size();
-		int numoldinst = numinst - numnew;
-		int numolduninst = finalCnts.size() - numinst;
-		std::cout << "libdynmeans: Done clustering. Min Objective: " << finalObj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  std::endl;
+		int numoldinst = unqlbls.size() - numnew;
+		int numolduninst = this->ages.size() - numoldinst;
+		cout << endl << "libkerndynmeans: Done clustering. Min Objective: " << minObj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  endl;
 	}
-	//update the stored results to the one with minimum cost
-	this->updateState(finalLabels, finalCnts, finalParams);
+
+	//update the state of the ddp chain
+	this->updateState(data, minLbls);
+
+	//output results
+	finalObj =  minObj;
+	finalLabels = minLbls;
+	//get final time taken
 	timeval tCur;
 	gettimeofday(&tCur, NULL);
-	tTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
-
+	timeTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
 	return;
 }
 
 
-template<class Vec>
-void KernDynMeans<Vec>::assignObservations(std::vector<int> assgnOrdering, std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms){
-	for (int i = 0; i < assgnOrdering.size(); i++){
-		//get the observation idx from the random ordering
-		int idx = assgnOrdering[i];
+template<typename D, typename C, typename P>
+template <typename T> std::vector<int> KernDynMeans<D,C,P>::cluster_refinement(std::vector<T>& data, std::vector<int> initlbls){
 
-		//store the old lbl for possibly deleting clusters later
-		int oldlbl = lbls[idx];
+}
 
-		//calculate the distances to all the parameters
-		int minind = 0;
-		double mindistsq = std::numeric_limits<double>::max();
-		for (int j = 0; j < prms.size(); j++){
-			double tmpdistsq = (prms[j] - this->observations[idx]).squaredNorm();
-			if (cnts[j] == 0){//the only way cnts can get to 0 is if it's an old parameter
-				double gamma = 1.0/(1.0/this->weights[j] + this->ages[j]*this->tau);
-				tmpdistsq = gamma/(1.0+gamma)*tmpdistsq + this->ages[j]*this->Q;
-			}
-			if(tmpdistsq < mindistsq){
-				minind = j;
-				mindistsq = tmpdistsq;
-			}
+template<typename D, typename C, typename P>
+std::vector<int> KernDynMeans<D,C,P>::cluster_base(std::vector<C>& data){
+
+}
+
+template<typename D, typename C, typename P>
+std::vector<int> KernDynMeans<D,C,P>::refine(std::vector< std::pair<int, int> > merges, std::vector<int> lbls){
+	//find the max index in merges to see how big the new labels should be
+	int lblmax = -1;
+	for (auto it = merges.begin(); it != merges.end(); ++it){
+		if (it->first > lblmax){
+			lblmax = it->first;
 		}
-
-		//if the minimum distance is stil greater than lambda + startup cost, start a new cluster
-		if (mindistsq > this->lambda){
-			prms.push_back(this->observations[idx]);
-			lbls[idx] = prms.size()-1;
-			cnts.push_back(1);
-		} else {
-			if (cnts[minind] == 0){ //if we just instantiated an old cluster
-						//update its parameter to the current timestep
-						//so that upcoming assignments are valid
-				double gamma = 1.0/(1.0/this->weights[minind] + this->ages[minind]*this->tau);
-				prms[minind] = (this->oldprms[minind]*gamma + this->observations[idx])/(gamma + 1);
-			}
-			lbls[idx] = minind;
-			cnts[minind]++;
+		if (it->second > lblmax){
+			lblmax = it->second;
 		}
+	}
+	//fill in the extended labels by assigning all subnodes the label of the supernode
+	std::vector<int> newlbls(lblmax+1, 0);
+	for (int i = 0; i < merges.size(); i++){
+		newlbls[merges[i].first] = lbls[i];
+		newlbls[merges[i].second] = lbls[i];
+	}
+	return newlbls;
+}
 
-
-		//if obs was previously assigned to something, decrease the count the clus it was assigned to
-		//we do cluster deletion *after* assignment to prevent corner cases with monotonicity
-		if (oldlbl != -1){
-			cnts[oldlbl]--;
-			//if this cluster now has no observations, but was a new one (no age recording for it yet)
-			//remove it and shift labels downwards
-			if (cnts[oldlbl] == 0 && oldlbl >= this->oldprms.size()){
-				prms.erase(prms.begin() + oldlbl);
-				cnts.erase(cnts.begin() + oldlbl);
-				for (int j = 0; j < lbls.size(); j++){
-					if (lbls[j] > oldlbl){
-						lbls[j]--;
+template<typename D, typename C, typename P>
+template<typename T> std::pair< std::vector<C>, std::vector<std::pair<int, int> > >  KernDynMeans<D,C,P>::coarsify(std::vector<T>& data){
+	//Pick a random order to traverse the data
+	std::vector<int> idcs(data.size());
+	std::iota(idcs.begin(), idcs.end(), 0);
+	std::random_shuffle(idcs.begin(), idcs.end());
+	//set up the vector to save which vertices have been marked
+	std::vector<bool> marks(data.size(), false);
+	std::vector< std::pair<int, int> > merges;
+	for (int i = 0; i < idcs.size(); i++){
+		if (!marks[i]){//if the vertex hasn't already been merged to another
+			double maxSim = 0;
+			int maxId = -1;
+			for (int j = i+1; j < idcs.size(); j++){//search all vertices after i (since all beforehave been merged)
+				if (!marks[j]){
+					double sim = data[i].sim(data[j]);
+					if (sim > maxSim && sim > 1e-16){//1e-16 for keeping sparsity, only choose those whose mark is false
+						maxSim = sim;
+						maxId = j;
 					}
 				}
-			} else if (cnts[oldlbl] == 0){//it was an old parameter, reset it to the oldprm
-				prms[oldlbl] = this->oldprms[oldlbl];
+			}
+			//if maxId is still -1, then pair(i, -1) states correctly that i is a singleton
+			merges.push_back( std::pair<int, int>(i, maxId));
+			marks[i] = true;
+			if (maxId >= 0){
+				marks[maxId] = true;
 			}
 		}
 	}
-	return;	
-}
-
-template<class Vec>
-double KernDynMeans<Vec>::setParameters(std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms){
-	double objective = 0;
-	for (int i = 0; i < prms.size(); i++){
-		if (cnts[i] > 0){
-			//add cost for new clusters - lambda
-			// or add cost for old clusters - Q
-			if (i < this->oldprms.size()){
-				objective += this->Q*this->ages[i];
-			} else {
-				objective += this->lambda;
-			}
-			std::vector<Vec> obsInClus = this->getObsInCluster(i, lbls);
-			Vec tmpvec = obsInClus[0];
-			for (int j = 1; j < obsInClus.size(); j++){
-				tmpvec = tmpvec + obsInClus[j];
-			}
-			tmpvec = tmpvec / obsInClus.size();
-			if (i < this->oldprms.size()){ //updating an old param
-				double gamma = 1.0/(1.0/this->weights[i] + this->ages[i]*this->tau);
-				prms[i] = (this->oldprms[i]*gamma + tmpvec*cnts[i])/(gamma + cnts[i]);
-				//add parameter lag cost
-				double tmpsqdist = (prms[i] - this->oldprms[i]).squaredNorm();
-				objective += gamma*tmpsqdist;
-			} else { //just setting a new param
-				prms[i] = tmpvec;
-				//no lag cost for new params
-			}
-			//get cost for prms[i]
-			for (int j = 0; j < obsInClus.size(); j++){
-				objective += (prms[i] - obsInClus[j]).squaredNorm();
-			}
-		}
+	//now all merges have been created
+	//create the coarsified nodes
+	std::vector<C> coarse;
+	for (int i = 0; i < merges.size(); i++){
+		coarse.push_back( C(data[merges[i].first], data[merges[i].second]));
 	}
-	return objective;
+	return std::pair< std::vector<C>, std::vector<std::pair<int, int> > >(coarse, merges);
 }
 
+template<typename D, typename C, typename P>
+double KernDynMeans<D,C,P>::objective(std::vector<D>& data, std::vector<int> lbls){
+
+}
 
 #define __KERNDYNMEANS_IMPL_HPP
 #endif /* __KERNDYNMEANS_IMPL_HPP */
