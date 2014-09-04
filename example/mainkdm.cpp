@@ -88,7 +88,7 @@ int main(int argc, char** argv){
 	double deathProbability = 0.05;
 	double motionStdDev = 0.05;
 	double clusterStdDev = 0.05;
-	int nDataPerClusterPerStep = 15; // datapoints generated for each cluster per timestep
+	int nDataPerClusterPerStep = 100; // datapoints generated for each cluster per timestep
 	int nSteps = 100;//run the experiment for nSteps steps
 	int initialClusters = 4; //the number of clusters to start with
 
