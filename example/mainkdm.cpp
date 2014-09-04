@@ -115,7 +115,8 @@ int main(int argc, char** argv){
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
-	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau);
+	int nCoarsest = 20;
+	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau, verbose=true);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
@@ -151,8 +152,7 @@ int main(int argc, char** argv){
 		vector<int> learnedLabels;
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
-		kdm.cluster(clusterDataKD, nRestarts, nClusMax, KernDynMeans<KD,KC,KP>::EigenSolverType::REDSVD, learnedLabels, obj, tTaken);
-
+		kdm.cluster(clusterDataKD, nRestarts, nCoarsest, learnedLabels, obj, tTaken);
 		//***************************************************
 		//calculate the accuracy via linear programming
 		//including proper cluster label tracking (see above)
