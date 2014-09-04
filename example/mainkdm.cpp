@@ -11,7 +11,7 @@
 #include <cmath>
 #include <random>
 
-#include <dynmeans/specdynmeans.hpp>
+#include <dynmeans/kerndynmeans.hpp>
 #include "maxmatching.hpp"
 
 using namespace std;
@@ -24,22 +24,29 @@ void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveC
 void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<V2d>& clusterData, vector<int>& trueLabels);
 
 
-//spectral data class 
-class SD{
+//kernel data class 
+class KD{
 	public:
 		V2d v;
 		//similarity function from data->data is just exp(-|| ||^2 / w^2)
-		double sim(const SD& rhs) const{
+		double sim(const KD& rhs) const{
 			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 };
 
-//spectral parameter class 
-class SP{
+//kernel coarse node class
+
+class KC{
+	public:
+
+};
+
+//kernel parameter class 
+class KP{
 	public:
 		V2d v;
 		//constructs a new parameter at the mean of a set of vectors
-		SP(const vector<SD>& rhs){
+		KP(const vector<KD>& rhs){
 			this->v = V2d::Zero();
 			for (int i = 0; i < rhs.size(); i++){
 				this->v += rhs[i].v;
@@ -47,11 +54,11 @@ class SP{
 			this->v /= rhs.size();
 		}
 		//similarity function from parameter->data is just exp(-|| ||^2 / w^2)
-		double sim(const SD& rhs) const{
+		double sim(const KD& rhs) const{
 			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 		//This is the typical prior-weighted least squares Dynamic Means paramter update
-		void update(const vector<SD>& rhs, const double gamma){
+		void update(const vector<KD>& rhs, const double gamma){
 			this->v *= gamma;
 			for (int i = 0; i < rhs.size(); i++){
 				this->v += rhs[i].v;
@@ -102,16 +109,13 @@ int main(int argc, char** argv){
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
-	double lambda = 10;
-	double T_Q = 5;
-	double K_tau = 1.05;
+	double lambda = 0.05;
+	double T_Q = 6.8;
+	double K_tau = 1.01;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-	int nRestarts = 30;
-	int nClusMax = 20; // maximum 20 new clusters per timestep
-					  //this forms the rank approximation for the eigendecomp
-					  //rank approx = nClusMax + (# old clusters)
-	SpecDynMeans<SD, SP> sdm(lambda, Q, tau);
+	int nRestarts = 10;
+	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
@@ -132,13 +136,13 @@ int main(int argc, char** argv){
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, clusterData, trueLabels);
 
 		//**************************************************************************************
-		//Take the vectors that we just created, and package them in the SD class defined above
+		//Take the vectors that we just created, and package them in the KD class defined above
 		//**************************************************************************************
-		vector<SD> clusterDataSD;
+		vector<KD> clusterDataKD;
 		for (int i = 0; i < clusterData.size(); i++){
-			SD s;
-			s.v = clusterData[i];
-			clusterDataSD.push_back(s);
+			KD dd;
+			dd.v = clusterData[i];
+			clusterDataKD.push_back(dd);
 		}
 
 		//***************************
@@ -147,7 +151,7 @@ int main(int argc, char** argv){
 		vector<int> learnedLabels;
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
-		sdm.cluster(clusterDataSD, nRestarts, nClusMax, SpecDynMeans<SD,SP>::EigenSolverType::REDSVD, learnedLabels, obj, tTaken);
+		kdm.cluster(clusterDataKD, nRestarts, nClusMax, KernDynMeans<KD,KC,KP>::EigenSolverType::REDSVD, learnedLabels, obj, tTaken);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
