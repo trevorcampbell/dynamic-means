@@ -305,27 +305,145 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterSplit(std::ve
 		return lbls;
 	}
 
+	double preobj = this->objective(data, lbls);
+
 	std::uniform_int_distribution<> randnode(0, clusidcs.size()-1);
-	int isp1 = clusidcs[randnode(gen)];
+	int isp1 =randnode(gen);
 	int isp2 = isp1;
 	while(isp2 == isp1){
-		isp2 = clusidcs[randnode(gen)];
+		isp2 = randnode(gen);
 	}
 
-	//greedy growth of the two clusters by greedy search
+	//grow the two clusters by weighted greedy search
+	auto paircomp = []( std::pair<int, double> a, std::pair<int, double> b){return a.second > b.second;};
+	std::vector<int> c1, c2;
+	std::vector<double> maxSimTo(clusidcs.size(), -std::numeric_limits<double>::max());
+	std::vector<bool> maxSimToVia1(clusidcs.size(), true);
+	maxSimTo[isp1] = std::numeric_limits<double>::max();
+	maxSimtoVia1[isp1] = true;
+	maxSimto[isp2] = std::numeric_limits<double>::max();
+	maxSimtoVia1[isp2] = false;
+	while(c1.size()+c2.size() < clusidcs.size()){
+		//get the next best node to add to a cluster
+		int idx = std::distance(maxSimTo.begin(), std::max_element(maxSimTo.begin(), maxSimTo.end()));
+		//if it was linked from 1, add it to 1
+		if (maxSimToVia1[idx] == true){
+			c1.push_back(idx);
+			//update all the maxsims
+			for (int i = 0; i < maxSimTo.size(); i++){
+				double sim = data[clusidcs[idx]].sim(data[clusidcs[i]]);
+				if(sim > maxSimTo[i]){
+					maxSimTo[i] = sim;
+					maxSimToVia1[i] = true;
+				}
+			}
+			//set all the max sims to anything already in c1 to -inf, therefore they'll never be repicked
+			for (int i = 0; i < c1.size(); i++){
+				maxSimTo[c1[i]] = -std::numeric_limits<double>::max();
+			}
+		} else {
+			c2.push_back(idx);
+			//update all the maxsims
+			for (int i = 0; i < maxSimTo.size(); i++){
+				double sim = data[clusidcs[idx]].sim(data[clusidcs[i]]);
+				if(sim > maxSimTo[i]){
+					maxSimTo[i] = sim;
+					maxSimToVia1[i] = false;
+				}
+			}
+			//set all the max sims to anything already in c1 to -inf, therefore they'll never be repicked
+			for (int i = 0; i < c2.size(); i++){
+				maxSimTo[c2[i]] = -std::numeric_limits<double>::max();
+			}
+		}
+	}
 
-	//just randomly pick one of the splits to give a new label to (new/old assocaitions will be updated after properly)
-
-	//check objective function for decrease
+	//if the cluster was new, just create a new label for isp2's cluster 
+	if (std::find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbls[clusidcs[isp2]]) == this->oldprmlbls.end()){
+		std::vector<int> newlbls = lbls;
+		int oldlbl = lbls[clusidcs[isp2]];
+		int newlbl = this->nextlbl; 
+		for (int i = 0; i < c2.size(); i++){
+			newlbls[clusidcs[c2[i]]] = newlbl;
+		}
+		double postobj = this->objective(data, newlbls);
+		if (postobj < preobj){
+			this->nextlbl++;
+			return newlbls;
+		} else{
+			return lbls;
+		}
+	} else {
+		//if the cluster was linked to an old one, pick the least costly linkage
+		std::vector<int> newlbls1 = lbls;
+		std::vector<int> newlbls2 = lbls;
+		int oldlbl = lbls[clusidcs[isp2]];
+		int newlbl = this->nextlbl; 
+		for (int i = 0; i < c1.size(); i++){
+			newlbls2[clusidcs[c1[i]]] = newlbl;
+		}
+		for (int i = 0; i < c2.size(); i++){
+			newlbls2[clusidcs[c2[i]]] = newlbl;
+		}
+		double postobj1 = this->objective(data, newlbls1);
+		double postobj2 = this->objective(data, newlbls2);
+		if (postobj1 < postobj2 && postobj1 < preobj){
+			this->nextlbl++;
+			return newlbls1;
+		} else if (postobj2 < postobj1 && postobj2 < preobj){
+			this->nextlbl++;
+			return newlbls2;
+		} else {
+			return lbls;
+		}
+	}
 }
 
 template <typename D, typename C, typename P>
 template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterMerge(std::vector<T>& data, std::vector<int> lbls){
+
 	//pick two random clusters
+	vector<int> unqlbls = lbls;
+	sort(unqlbls.begin(), unqlbls.end());
+	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+	if (unqlbls.size() == 1){
+		//no merge, only one cluster
+		return lbls;
+	}
 
-	//if they're both old, choose which old cluster to associate
+	double preobj = this->objective(data, lbls);
 
-	//check objective function for decrease
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> randclus(0, unqlbls.size()-1);
+	int km1 = unqlbls[randclus(gen)];
+	int km2 = km1;
+	while(km2 == km1){
+		km2 = unqlbls[randclus(gen)];
+	}
+	//try merging both ways (due to asymmetry when one/both clusters are related to old clusters)
+	std::vector<int> newlbls1 = lbls;
+	std::vector<int> newlbls2 = lbls;
+	for (int i = 0; i < newlbls1.size(); i++){
+		if (newlbls1[i] == km2){
+			newlbls1[i] = km1;
+		}
+	}
+	double postobj1 = this->objective(data, newlbls1);
+	for (int i = 0; i < newlbls2.size(); i++){
+		if (newlbls2[i] == km1){
+			newlbls2[i] = km2;
+		}
+	}
+	double postobj2 = this->objective(data, newlbls2);
+	if (postobj1 < postobj2 && postobj1 < preobj){
+		return newlbls1;
+	} else if (postobj2 < postobj1 && postobj2 < preobj){
+		return newlbls2;
+	} else{
+		return lbls;
+	}
 }
 
 template <typename D, typename C, typename P>

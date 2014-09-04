@@ -1,6 +1,7 @@
 #ifndef __KERNDYNMEANS_HPP
 #include<vector>
 #include<stack>
+#include<queue>
 #include<iostream>
 #include<algorithm>
 #include<limits>
