@@ -135,33 +135,42 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 		mergestack.push(crs.second);
 		while(coarsestack.top().size() > nCoarsest){
 			if (verbose){
-				cout << "libkerndynmeans: Coarsifying " << coarsestack.top().size() << " nodes..." << endl;
+				cout << "libkerndynmeans: Coarsifying " << coarsestack.top().size() << " nodes at level " << coarsestack.size() << "." << endl;
 			}
 			crs = this->coarsify(coarsestack.top());
 			coarsestack.push(crs.first);
 			mergestack.push(crs.second);
 		}
 		if (verbose){
-			cout << "libkerndynmeans: Done coarsifying, top level has " << coarsestack.top().size() << " nodes." << endl;
-			cout << "libkerndynmeans: Running base cluster..." << endl;
+			cout << "libkerndynmeans: Done coarsifying, top level " << coarsestack.size() << " has " << coarsestack.top().size() << " nodes." << endl;
 		}
-		//next, perform the base clustering on the top level
-		std::vector<int> lbls = this->cluster_base(coarsestack.top());
-
 		//next, step down through the refinements and cluster, initializing from the coarser level
+		std::vector<int> lbls;
 		while(!coarsestack.empty()){
+			if (verbose){
+				cout << "libkerndynmeans: Running clustering at level " << coarsestack.size() << endl;
+			}
 			//optimize the labels for the current top of coarsestack
-			lbls = this->cluster_refinement(coarsestack.top(), lbls);
+			lbls = this->cluster_refinement(coarsestack.top(), lbls); //lbls starts out empty, cluster_refinement knows to use a base clustering
 			coarsestack.pop();
 			//distribute the labels to the next level down
 			lbls = this->refine(mergestack.top(), lbls);
 			mergestack.pop();
 		}
+		if (verbose){
+			cout << "libkerndynmeans: Running final clustering at data level." << endl;
+		}
 		//final clustering at the data level
 		lbls = this->cluster_refinement(data, lbls);
 
 		//finally, compute the kernelized dynamic means objective
+		if (verbose){
+			cout << "libkerndynmeans: Computing objective..." << endl;
+		}
 		double obj = this->objective(data, lbls);
+		if (verbose){
+			cout << "libkerndynmeans: Objective = " << obj << endl;
+		}
 		if (obj < minObj){
 			minLbls = lbls;
 			minObj = obj;

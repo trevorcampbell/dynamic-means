@@ -30,8 +30,6 @@ class KernDynMeans{
 		//clusters a refinement level with kernelized dyn means batch updates
 		//tempalte so it works with C/D
 		template <typename T> std::vector<int> cluster_refinement(std::vector<T>& data, std::vector<int> initlbls);
-		//clusters the base level
-		std::vector<int> cluster_base(std::vector<C>& data);
 		//expands the labels to the new refinement level
 		std::vector<int> refine(std::vector< std::pair<int, int> > merges, std::vector<int> lbls);
 		//template function for coarsify so it works with both C and D types
