@@ -148,7 +148,7 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 		std::vector<int> lbls;
 		while(!coarsestack.empty()){
 			if (verbose){
-				cout << "libkerndynmeans: Running clustering at level " << coarsestack.size() << endl;
+				cout << "libkerndynmeans: Running clustering at level " << coarsestack.size() << " with " << coarsestack.top.size() << " nodes." << endl;
 			}
 			//optimize the labels for the current top of coarsestack
 			lbls = this->clusterAtLevel(coarsestack.top(), lbls); //lbls starts out empty, clusterAtLevel knows to use a base clustering
@@ -229,14 +229,44 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::
 
 template <typename D, typename C, typename P>
 template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::vector<int> lbls){
+	//get the unique labels
+	vector<int> unqlbls = lbls;
+	sort(unqlbls.begin(), unqlbls.end());
+	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+
+	//get the number of observations in each cluster
+	std::map<int, int> nInClus;
+	for (int i = 0; i < unqlbls.size(); i++){
+		nInClus[unqlbls[i]] = 0;
+	}
+	for (int i = 0; i < lbls.size(); i++){
+		nInClus[lbls[i]]++;
+	}
+
+	//minimize the cost associated with each observation individually based on the old labelling
+	std::vector<int> newlbls;
+	for (int i = 0; i < lbls.size(); i++){
+
+	}
+
+	return newlbls;
 }
 
 template <typename D, typename C, typename P>
 template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>& data, std::vector<int> lbls){
-	//get the unique labels from sdm output
+	//get the unique labels
 	vector<int> unqlbls = lbls;
 	sort(unqlbls.begin(), unqlbls.end());
 	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+
+	//get the number of observations in each cluster
+	std::map<int, int> nInClus;
+	for (int i = 0; i < unqlbls.size(); i++){
+		nInClus[unqlbls[i]] = 0;
+	}
+	for (int i = 0; i < lbls.size(); i++){
+		nInClus[lbls[i]]++;
+	}
 
 
 	//get the old/new correspondences from bipartite matching
@@ -246,10 +276,10 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespo
 		for (int j = 0; j < this->oldprmlbls.size(); j++){
 			nodePairs.push_back(std::pair<int, int>(unqlbls[i], this->oldprmlbls[j]) );
 			double ewt = this->agecosts[j];
-			ewt += this->gammas[j]*numInClus[unqlbls[i]]/(this->gammas[j]+numInClus[unqlbls[i]])*this->oldprms[j].sim(this->oldprms[j]);
+			ewt += this->gammas[j]*nInClus[unqlbls[i]]/(this->gammas[j]+nInClus[unqlbls[i]])*this->oldprms[j].sim(this->oldprms[j]);
 			for (int k = 0; k < initlbls.size(); k++){
 				if (lbls[k] == unqlbls[i]){
-					ewt += -2.0*this->gammas[j]/(this->gammas[j]+numInClus[unqlbls[i]])*this->oldprms[j].sim(data[k]);
+					ewt += -2.0*this->gammas[j]/(this->gammas[j]+nInClus[unqlbls[i]])*this->oldprms[j].sim(data[k]);
 				}
 			}
 			edgeWeights.push_back(ewt);

@@ -49,7 +49,7 @@ class KernDynMeans{
 		//compute the dynamic means objective given the current labels
 		double objective(std::vector<D>& data, std::vector<int> lbls);
 		//compute a minimum weight bipartite matching
-		map<int, int> getMinWtMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const;
+		std::map<int, int> getMinWtMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const;
 		//get the minimum weight old/new cluster correspondence
 		template <typename T> std::vector<int> updateOldNewCorrespondence(std::vector<T>& data, std::vector<int> lbls);
 		//get the updated data labels
