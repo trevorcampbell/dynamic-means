@@ -86,11 +86,7 @@ void KernDynMeans<D,C,P>::updateState(const vector<D>& data, const vector<int>& 
 		}
 	}
 
-	//update this->nextlbl if new clusters were created
-	int maxlbl = *max_element(lbls.begin(), lbls.end());
-	if (maxlbl >= this->nextlbl){
-		this->nextlbl = maxlbl+1;
-	}
+	//nextlbl is updated on the fly, no need to update it here like in specdynmeans
 
 	//done
 	return;
@@ -207,7 +203,8 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 
 
 template<typename D, typename C, typename P>
-template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::vector<T>& data, std::vector<int> lbls){
+template <typename T> 
+std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::vector<T>& data, std::vector<int> lbls){
 	if (initlbls.size() < data.size()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
 		//get the data labels from spectral clustering
 		SpecDynMeans<T, P> sdm(this->lambda, this->Q, this->tau);
@@ -224,8 +221,6 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::
 	double obj = this->objective(data, lbls);
 	for (int i = 0; i < 500; i++){
 		lbls = this->updateLabels(data, lbls);
-		lbls = this->clusterSplit(data, lbls);
-		lbls = this->clusterMerge(data, lbls);
 		lbls = this->updateOldNewCorrespondence(data, lbls);
 		obj = this->objective(data, lbls);
 		if (verbose){ cout << "libkerndynmeans: Objective = " << obj << "                           \r" << flush;}
@@ -235,234 +230,131 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::
 }
 
 template <typename D, typename C, typename P>
-template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::vector<int> lbls){
+template <typename T> 
+std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::vector<int> lbls){
 	//get the unique labels
 	vector<int> unqlbls = lbls;
 	sort(unqlbls.begin(), unqlbls.end());
 	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
 
-	//get the number of observations in each cluster
+	//get the observations in each cluster
 	std::map<int, std::vector<T> > dInClus;
 	for (int i = 0; i < lbls.size(); i++){
 		dInClus[lbls[i]].push_back(data[i]);
+	}
+	//precompute the squared cluster sums
+	//and the old cluster sums
+	std::map<int, double> sqClusterSum;
+	std::map<int, double> oldClusterSum;
+	for (int i = 0; i < unqlbls.size(); i++){
+		double sqsum = 0;
+		for (int k = 0; k < dInClus[unqlbls[i]].size(); k++){
+			sqsum += dInClus[unqlbls[i]][k].sim(dInClus[unqlbls[i]][k]);
+			for (int m = k+1; m < dInClus[unqlbls[i]].size(); m++){
+				sqsum += 2.0*dInClus[unqlbls[i]][k].sim(dInClus[unqlbls[i]][m]);
+			}
+		}
+		sqClusterSum[unqlbls[i]] = sqsum;
+		auto it = find(this->oldprms.begin(), this->oldprms.end(), unqlbls[i]);
+		if (it != this->oldprms.end()){
+			int oldidx = std::distance(this->oldprms.begin(), it);	
+			double oldsum = 0;
+			for (int k = 0; k < dInClus[unqlbls[i]].size(); k++){
+				oldsum += this->oldprms[oldidx].sim(dInClus[unqlbls[i]][k]);
+			}
+			oldClusterSum[unqlbls[i]] = oldsum;
+		}
 	}
 
 	//minimize the cost associated with each observation individually based on the old labelling
 	std::vector<int> newlbls(lbls.size(), 0);
 	for (int i = 0; i < lbls.size(); i++){
-		double minCost = std::numeric_limits<double>::max();
+		double minCost = this->lambda; //default to creating a new cluster, and then try to beat it 
 		int minLbl = -1;
 		for (int k = 0; k < unqlbls.size(); k++){
 			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[k]);
 			if (it == this->oldprmlbls.end()){
-				//new cluster
-				double cost = (1.0 - 1.0/dInClus[unqlbls[k]].size())*data[i].sim(data[i]);
+				//new instantiated cluster
+				double factor = 1.0/dInClus[unqlbls[k]].size();
+				double cost = data[i].sim(data[i]) + factor*factor*sqClusterSum[unqlbls[k]]; 
 				for (int j = 0; j < dInClus.size(); j++){
-					cost += -2.0/dInClus[unqlbls[k]].size()*data[i].sim(data[j]);
+					cost += -2.0*factor*data[i].sim(data[j]);
 				}
 				if (cost < minCost){
 					minCost = cost;
 					minLbl = unqlbls[k];
 				}
 			} else {
-				//old cluster
+				//old instantiated cluster
 				int oldidx = std::distance(this->oldprmlbls.begin(), it);
-				double cost = (1.0 - 1.0/(this->gammas[oldidx] + dInClus[unqlbls[k]].size()))*data[i].sim(data[i]);
+				double factor = 1.0/(this->gammas[oldidx] + dInClus[unqlbls[k]].size());
+				double cost = data[i].sim(data[i]) + factor*factor*sqClusterSum[unqlbls[k]];
+				cost += 2.0*this->gammas[oldidx]*factor*factor*oldClusterSum[unqlbls[k]];
+				cost += this->gammas[oldidx]*this->gammas[oldidx]*factor*factor*this->oldprms[oldidx].sim(this->oldprms);
 				for (int j = 0; j < dInClus.size(); j++){
-					cost += -2.0/(this->gammas[oldidx]+dInClus[unqlbls[k]].size())*data[i].sim(data[j]);
+					cost += -2.0*factor*data[i].sim(data[j]);
 				}
-				cost += -2.0*this->gammas[oldidx]/(this->gammas[oldidx]+dInClus[unqlbls[k]].size())*this->oldprms[oldidx].sim(data[i]);
+				cost += -2.0*this->gammas[oldidx]*factor*this->oldprms[oldidx].sim(data[i]);
 				if (cost < minCost){
 					minCost = cost;
 					minLbl = unqlbls[k];
 				}
 			}
 		}
-		newlbls[i] = minLbl;
+		//run through old uninstantiated clusters
+		for (int k = 0; k < this->oldprmlbls.size(); k++){
+			auto it = find(unqlbls.begin(), unqlbls.end(), this->oldprmlbls[k]);
+			if (it == unqlbls.end()){
+				double cost = this->agecosts[k];
+				cost += this->gammas[k]/(this->gammas[k]+1.0)*(data[i].sim(data[i])-2.0*this->oldprms[k].sim(data[i])+this->oldprms[k].sim(this->oldprms[k]));
+			}
+			if (cost < minCost){
+				minCost = cost;
+				minLbl = this->oldprmlbls[k];
+			}
+		}
+		if (minLbl == -1){
+			//create a new cluster
+			newlbls[i] = this->nextlbl;
+			unqlbls.push_back(this->nextlbl);
+			dInClus[this->nextlbl].push_back(data[i]); //no problem with duplicating the datapoint here (it will still exist in dInClus in the old cluster)
+													//this is because the distance comparisons to previous cluster centers shouldn't be affected by creating new centers
+													//ergo, leave the old dInClus alone, but create a new entry so that other observations can switch tothis cluster
+			sqClusterSum[this->nextlbl] = data[i].sim(data[i]);
+			this->nextlbl++;
+		} else {
+			newlbls[i] = minLbl;
+		}
 	}
 	return newlbls;
 }
 
 
 template <typename D, typename C, typename P>
-template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterSplit(std::vector<T>& data, std::vector<int> lbls){
-	//pick a random cluster
-	vector<int> unqlbls = lbls;
-	sort(unqlbls.begin(), unqlbls.end());
-	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> randclus(0, unqlbls.size()-1);
-	int ksp = unqlbls[randclus(gen)];
-
-	//pick a random node within the cluster
-	std::vector<int> clusidcs;
-	for (int i = 0; i < lbls.size(); i++){
-		if (lbls[i] == ksp){
-			clusidcs.push_back(i);
-		}
-	}
-	if (clusidcs.size() == 1){
-		//no split, the cluster had only one node in it
-		return lbls;
-	}
-
-	double preobj = this->objective(data, lbls);
-
-	std::uniform_int_distribution<> randnode(0, clusidcs.size()-1);
-	int isp1 =randnode(gen);
-	int isp2 = isp1;
-	while(isp2 == isp1){
-		isp2 = randnode(gen);
-	}
-
-	//grow the two clusters by weighted greedy search
-	auto paircomp = []( std::pair<int, double> a, std::pair<int, double> b){return a.second > b.second;};
-	std::vector<int> c1, c2;
-	std::vector<double> maxSimTo(clusidcs.size(), -std::numeric_limits<double>::max());
-	std::vector<bool> maxSimToVia1(clusidcs.size(), true);
-	maxSimTo[isp1] = std::numeric_limits<double>::max();
-	maxSimtoVia1[isp1] = true;
-	maxSimto[isp2] = std::numeric_limits<double>::max();
-	maxSimtoVia1[isp2] = false;
-	while(c1.size()+c2.size() < clusidcs.size()){
-		//get the next best node to add to a cluster
-		int idx = std::distance(maxSimTo.begin(), std::max_element(maxSimTo.begin(), maxSimTo.end()));
-		//if it was linked from 1, add it to 1
-		if (maxSimToVia1[idx] == true){
-			c1.push_back(idx);
-			//update all the maxsims
-			for (int i = 0; i < maxSimTo.size(); i++){
-				double sim = data[clusidcs[idx]].sim(data[clusidcs[i]]);
-				if(sim > maxSimTo[i]){
-					maxSimTo[i] = sim;
-					maxSimToVia1[i] = true;
-				}
-			}
-			//set all the max sims to anything already in c1 to -inf, therefore they'll never be repicked
-			for (int i = 0; i < c1.size(); i++){
-				maxSimTo[c1[i]] = -std::numeric_limits<double>::max();
-			}
-		} else {
-			c2.push_back(idx);
-			//update all the maxsims
-			for (int i = 0; i < maxSimTo.size(); i++){
-				double sim = data[clusidcs[idx]].sim(data[clusidcs[i]]);
-				if(sim > maxSimTo[i]){
-					maxSimTo[i] = sim;
-					maxSimToVia1[i] = false;
-				}
-			}
-			//set all the max sims to anything already in c1 to -inf, therefore they'll never be repicked
-			for (int i = 0; i < c2.size(); i++){
-				maxSimTo[c2[i]] = -std::numeric_limits<double>::max();
-			}
-		}
-	}
-
-	//if the cluster was new, just create a new label for isp2's cluster 
-	if (std::find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbls[clusidcs[isp2]]) == this->oldprmlbls.end()){
-		std::vector<int> newlbls = lbls;
-		int oldlbl = lbls[clusidcs[isp2]];
-		int newlbl = this->nextlbl; 
-		for (int i = 0; i < c2.size(); i++){
-			newlbls[clusidcs[c2[i]]] = newlbl;
-		}
-		double postobj = this->objective(data, newlbls);
-		if (postobj < preobj){
-			this->nextlbl++;
-			return newlbls;
-		} else{
-			return lbls;
-		}
-	} else {
-		//if the cluster was linked to an old one, pick the least costly linkage
-		std::vector<int> newlbls1 = lbls;
-		std::vector<int> newlbls2 = lbls;
-		int oldlbl = lbls[clusidcs[isp2]];
-		int newlbl = this->nextlbl; 
-		for (int i = 0; i < c1.size(); i++){
-			newlbls2[clusidcs[c1[i]]] = newlbl;
-		}
-		for (int i = 0; i < c2.size(); i++){
-			newlbls2[clusidcs[c2[i]]] = newlbl;
-		}
-		double postobj1 = this->objective(data, newlbls1);
-		double postobj2 = this->objective(data, newlbls2);
-		if (postobj1 < postobj2 && postobj1 < preobj){
-			this->nextlbl++;
-			return newlbls1;
-		} else if (postobj2 < postobj1 && postobj2 < preobj){
-			this->nextlbl++;
-			return newlbls2;
-		} else {
-			return lbls;
-		}
-	}
-}
-
-template <typename D, typename C, typename P>
-template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterMerge(std::vector<T>& data, std::vector<int> lbls){
-
-	//pick two random clusters
-	vector<int> unqlbls = lbls;
-	sort(unqlbls.begin(), unqlbls.end());
-	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
-	if (unqlbls.size() == 1){
-		//no merge, only one cluster
-		return lbls;
-	}
-
-	double preobj = this->objective(data, lbls);
-
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> randclus(0, unqlbls.size()-1);
-	int km1 = unqlbls[randclus(gen)];
-	int km2 = km1;
-	while(km2 == km1){
-		km2 = unqlbls[randclus(gen)];
-	}
-	//try merging both ways (due to asymmetry when one/both clusters are related to old clusters)
-	std::vector<int> newlbls1 = lbls;
-	std::vector<int> newlbls2 = lbls;
-	for (int i = 0; i < newlbls1.size(); i++){
-		if (newlbls1[i] == km2){
-			newlbls1[i] = km1;
-		}
-	}
-	double postobj1 = this->objective(data, newlbls1);
-	for (int i = 0; i < newlbls2.size(); i++){
-		if (newlbls2[i] == km1){
-			newlbls2[i] = km2;
-		}
-	}
-	double postobj2 = this->objective(data, newlbls2);
-	if (postobj1 < postobj2 && postobj1 < preobj){
-		return newlbls1;
-	} else if (postobj2 < postobj1 && postobj2 < preobj){
-		return newlbls2;
-	} else{
-		return lbls;
-	}
-}
-
-template <typename D, typename C, typename P>
-template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>& data, std::vector<int> lbls){
+template <typename T> 
+std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>& data, std::vector<int> lbls){
 	//get the unique labels
 	vector<int> unqlbls = lbls;
 	sort(unqlbls.begin(), unqlbls.end());
 	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
 
-	//get the number of observations in each cluster
-	std::map<int, int> nInClus;
-	for (int i = 0; i < unqlbls.size(); i++){
-		nInClus[unqlbls[i]] = 0;
-	}
+	//get the observations in each cluster
+	std::map<int, std::vector<T> > dInClus;
 	for (int i = 0; i < lbls.size(); i++){
-		nInClus[lbls[i]]++;
+		dInClus[lbls[i]].push_back(data[i]);
 	}
-
+	//compute the squared cluster sums
+	std::map<int, double> sqClusterSum;
+	for (int i = 0; i < unqlbls.size(); i++){
+		double sqsum = 0;
+		for (int k = 0; k < dInClus[unqlbls[i]].size(); k++){
+			sqsum += dInClus[unqlbls[i]][k].sim(dInClus[unqlbls[i]][k]);
+			for (int m = k+1; m < dInClus[unqlbls[i]].size(); m++){
+				sqsum += 2.0*dInClus[unqlbls[i]][k].sim(dInClus[unqlbls[i]][m]);
+			}
+		}
+		sqClusterSum[unqlbls[i]] = sqsum;
+	}
 
 	//get the old/new correspondences from bipartite matching
  	vector< pair<int, int> > nodePairs; //new clusters in index 0, old clusters + one null cluster in index 1
@@ -470,13 +362,9 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespo
 	for (int i = 0; i < unqlbls.size(); i++){
 		for (int j = 0; j < this->oldprmlbls.size(); j++){
 			nodePairs.push_back(std::pair<int, int>(unqlbls[i], this->oldprmlbls[j]) );
-			double ewt = this->agecosts[j];
-			ewt += this->gammas[j]*nInClus[unqlbls[i]]/(this->gammas[j]+nInClus[unqlbls[i]])*this->oldprms[j].sim(this->oldprms[j]);
-			for (int k = 0; k < initlbls.size(); k++){
-				if (lbls[k] == unqlbls[i]){
-					ewt += -2.0*this->gammas[j]/(this->gammas[j]+nInClus[unqlbls[i]])*this->oldprms[j].sim(data[k]);
-				}
-			}
+			double ewt = this->agecosts[j] 
+						+ this->gammas[j]*dInClus[unqlbls[i]].size()/(this->gammas[j]+dInClus[unqlbls[i]].size())*this->oldprms[j].sim(this->oldprms[j])
+						-this->gammas[j]/(this->gammas[j]+dInClus[unqlbls[i]].size())*sqClusterSum[unqlbls[i]];
 			edgeWeights.push_back(ewt);
 		}
 		//-1 is the new cluster option
@@ -485,11 +373,11 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespo
 	}
 	map<int, int> matching = this->getMinWtMatching(nodePairs, edgeWeights);
 
-	//relabel initlbls based on the old/new correspondences
+	//relabel lbls based on the old/new correspondences
 	for (auto it = matching.begin(); it != matching.end(); ++it){
 		if (it->second != -1){ //if the current cluster isn't new
-			//replace all labels in initlbls to the old cluster label
-			for (int i = 0; i < initlbls.size(); i++){
+			//replace all labels in lbls to the old cluster label
+			for (int i = 0; i < lbls.size(); i++){
 				if (lbls[i] == it->first){
 					lbls[i] = it->second;
 				}
@@ -599,7 +487,8 @@ std::vector<int> KernDynMeans<D,C,P>::refine(std::vector< std::pair<int, int> > 
 }
 
 template<typename D, typename C, typename P>
-template<typename T> std::pair< std::vector<C>, std::vector<std::pair<int, int> > >  KernDynMeans<D,C,P>::coarsify(std::vector<T>& data){
+template<typename T> 
+std::pair< std::vector<C>, std::vector<std::pair<int, int> > >  KernDynMeans<D,C,P>::coarsify(std::vector<T>& data){
 	//Pick a random order to traverse the data
 	std::vector<int> idcs(data.size());
 	std::iota(idcs.begin(), idcs.end(), 0);
@@ -677,6 +566,172 @@ double KernDynMeans<D,C,P>::objective(std::vector<D>& data, std::vector<int> lbl
 	}
 	return cost;
 }
+
+
+//template <typename D, typename C, typename P>
+//template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterSplit(std::vector<T>& data, std::vector<int> lbls){
+//	//pick a random cluster
+//	vector<int> unqlbls = lbls;
+//	sort(unqlbls.begin(), unqlbls.end());
+//	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+//	std::random_device rd;
+//	std::mt19937 gen(rd());
+//	std::uniform_int_distribution<> randclus(0, unqlbls.size()-1);
+//	int ksp = unqlbls[randclus(gen)];
+//
+//	//pick a random node within the cluster
+//	std::vector<int> clusidcs;
+//	for (int i = 0; i < lbls.size(); i++){
+//		if (lbls[i] == ksp){
+//			clusidcs.push_back(i);
+//		}
+//	}
+//	if (clusidcs.size() == 1){
+//		//no split, the cluster had only one node in it
+//		return lbls;
+//	}
+//
+//	double preobj = this->objective(data, lbls);
+//
+//	std::uniform_int_distribution<> randnode(0, clusidcs.size()-1);
+//	int isp1 =randnode(gen);
+//	int isp2 = isp1;
+//	while(isp2 == isp1){
+//		isp2 = randnode(gen);
+//	}
+//
+//	//grow the two clusters by weighted greedy search
+//	auto paircomp = []( std::pair<int, double> a, std::pair<int, double> b){return a.second > b.second;};
+//	std::vector<int> c1, c2;
+//	std::vector<double> maxSimTo(clusidcs.size(), -std::numeric_limits<double>::max());
+//	std::vector<bool> maxSimToVia1(clusidcs.size(), true);
+//	maxSimTo[isp1] = std::numeric_limits<double>::max();
+//	maxSimtoVia1[isp1] = true;
+//	maxSimto[isp2] = std::numeric_limits<double>::max();
+//	maxSimtoVia1[isp2] = false;
+//	while(c1.size()+c2.size() < clusidcs.size()){
+//		//get the next best node to add to a cluster
+//		int idx = std::distance(maxSimTo.begin(), std::max_element(maxSimTo.begin(), maxSimTo.end()));
+//		//if it was linked from 1, add it to 1
+//		if (maxSimToVia1[idx] == true){
+//			c1.push_back(idx);
+//			//update all the maxsims
+//			for (int i = 0; i < maxSimTo.size(); i++){
+//				double sim = data[clusidcs[idx]].sim(data[clusidcs[i]]);
+//				if(sim > maxSimTo[i]){
+//					maxSimTo[i] = sim;
+//					maxSimToVia1[i] = true;
+//				}
+//			}
+//			//set all the max sims to anything already in c1 to -inf, therefore they'll never be repicked
+//			for (int i = 0; i < c1.size(); i++){
+//				maxSimTo[c1[i]] = -std::numeric_limits<double>::max();
+//			}
+//		} else {
+//			c2.push_back(idx);
+//			//update all the maxsims
+//			for (int i = 0; i < maxSimTo.size(); i++){
+//				double sim = data[clusidcs[idx]].sim(data[clusidcs[i]]);
+//				if(sim > maxSimTo[i]){
+//					maxSimTo[i] = sim;
+//					maxSimToVia1[i] = false;
+//				}
+//			}
+//			//set all the max sims to anything already in c1 to -inf, therefore they'll never be repicked
+//			for (int i = 0; i < c2.size(); i++){
+//				maxSimTo[c2[i]] = -std::numeric_limits<double>::max();
+//			}
+//		}
+//	}
+//
+//	//if the cluster was new, just create a new label for isp2's cluster 
+//	if (std::find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbls[clusidcs[isp2]]) == this->oldprmlbls.end()){
+//		std::vector<int> newlbls = lbls;
+//		int oldlbl = lbls[clusidcs[isp2]];
+//		int newlbl = this->nextlbl; 
+//		for (int i = 0; i < c2.size(); i++){
+//			newlbls[clusidcs[c2[i]]] = newlbl;
+//		}
+//		double postobj = this->objective(data, newlbls);
+//		if (postobj < preobj){
+//			this->nextlbl++;
+//			return newlbls;
+//		} else{
+//			return lbls;
+//		}
+//	} else {
+//		//if the cluster was linked to an old one, pick the least costly linkage
+//		std::vector<int> newlbls1 = lbls;
+//		std::vector<int> newlbls2 = lbls;
+//		int oldlbl = lbls[clusidcs[isp2]];
+//		int newlbl = this->nextlbl; 
+//		for (int i = 0; i < c1.size(); i++){
+//			newlbls2[clusidcs[c1[i]]] = newlbl;
+//		}
+//		for (int i = 0; i < c2.size(); i++){
+//			newlbls2[clusidcs[c2[i]]] = newlbl;
+//		}
+//		double postobj1 = this->objective(data, newlbls1);
+//		double postobj2 = this->objective(data, newlbls2);
+//		if (postobj1 < postobj2 && postobj1 < preobj){
+//			this->nextlbl++;
+//			return newlbls1;
+//		} else if (postobj2 < postobj1 && postobj2 < preobj){
+//			this->nextlbl++;
+//			return newlbls2;
+//		} else {
+//			return lbls;
+//		}
+//	}
+//}
+//
+//template <typename D, typename C, typename P>
+//template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterMerge(std::vector<T>& data, std::vector<int> lbls){
+//
+//	//pick two random clusters
+//	vector<int> unqlbls = lbls;
+//	sort(unqlbls.begin(), unqlbls.end());
+//	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+//	if (unqlbls.size() == 1){
+//		//no merge, only one cluster
+//		return lbls;
+//	}
+//
+//	double preobj = this->objective(data, lbls);
+//
+//	std::random_device rd;
+//	std::mt19937 gen(rd());
+//	std::uniform_int_distribution<> randclus(0, unqlbls.size()-1);
+//	int km1 = unqlbls[randclus(gen)];
+//	int km2 = km1;
+//	while(km2 == km1){
+//		km2 = unqlbls[randclus(gen)];
+//	}
+//	//try merging both ways (due to asymmetry when one/both clusters are related to old clusters)
+//	std::vector<int> newlbls1 = lbls;
+//	std::vector<int> newlbls2 = lbls;
+//	for (int i = 0; i < newlbls1.size(); i++){
+//		if (newlbls1[i] == km2){
+//			newlbls1[i] = km1;
+//		}
+//	}
+//	double postobj1 = this->objective(data, newlbls1);
+//	for (int i = 0; i < newlbls2.size(); i++){
+//		if (newlbls2[i] == km1){
+//			newlbls2[i] = km2;
+//		}
+//	}
+//	double postobj2 = this->objective(data, newlbls2);
+//	if (postobj1 < postobj2 && postobj1 < preobj){
+//		return newlbls1;
+//	} else if (postobj2 < postobj1 && postobj2 < preobj){
+//		return newlbls2;
+//	} else{
+//		return lbls;
+//	}
+//}
+
+
 
 #define __KERNDYNMEANS_IMPL_HPP
 #endif /* __KERNDYNMEANS_IMPL_HPP */
