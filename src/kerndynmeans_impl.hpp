@@ -227,8 +227,9 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::
 		lbls = this->clusterMerge(data, lbls);
 		lbls = this->updateOldNewCorrespondence(data, lbls);
 		obj = this->objective(data, lbls);
+		if (verbose){ cout << "libkerndynmeans: Objective = " << obj << "                           \r" << flush;}
 	}
-
+	if (verbose){cout << endl;}
 	return lbls;
 }
 
@@ -412,7 +413,6 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterMerge(std::ve
 	}
 
 	double preobj = this->objective(data, lbls);
-
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
