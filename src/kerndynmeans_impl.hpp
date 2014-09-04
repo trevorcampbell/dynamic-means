@@ -235,20 +235,44 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::ve
 	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
 
 	//get the number of observations in each cluster
-	std::map<int, int> nInClus;
-	for (int i = 0; i < unqlbls.size(); i++){
-		nInClus[unqlbls[i]] = 0;
-	}
+	std::map<int, std::vector<T> > dInClus;
 	for (int i = 0; i < lbls.size(); i++){
-		nInClus[lbls[i]]++;
+		dInClus[lbls[i]].push_back(data[i]);
 	}
 
 	//minimize the cost associated with each observation individually based on the old labelling
-	std::vector<int> newlbls;
+	std::vector<int> newlbls(lbls.size(), 0);
 	for (int i = 0; i < lbls.size(); i++){
-
+		double minCost = std::numeric_limits<double>::max();
+		int minLbl = -1;
+		for (int k = 0; k < unqlbls.size(); k++){
+			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[k]);
+			if (it == this->oldprmlbls.end()){
+				//new cluster
+				double cost = (1.0 - 1.0/dInClus[unqlbls[k]].size())*data[i].sim(data[i]);
+				for (int j = 0; j < dInClus.size(); j++){
+					cost += -2.0/dInClus[unqlbls[k]].size()*data[i].sim(data[j]);
+				}
+				if (cost < minCost){
+					minCost = cost;
+					minLbl = unqlbls[k];
+				}
+			} else {
+				//old cluster
+				int oldidx = std::distance(this->oldprmlbls.begin(), it);
+				double cost = (1.0 - 1.0/(this->gammas[oldidx] + dInClus[unqlbls[k]].size()))*data[i].sim(data[i]);
+				for (int j = 0; j < dInClus.size(); j++){
+					cost += -2.0/(this->gammas[oldidx]+dInClus[unqlbls[k]].size())*data[i].sim(data[j]);
+				}
+				cost += -2.0*this->gammas[oldidx]/(this->gammas[oldidx]+dInClus[unqlbls[k]].size())*this->oldprms[oldidx].sim(data[i]);
+				if (cost < minCost){
+					minCost = cost;
+					minLbl = unqlbls[k];
+				}
+			}
+		}
+		newlbls[i] = minLbl;
 	}
-
 	return newlbls;
 }
 
