@@ -10,6 +10,7 @@
 #include<sys/time.h>
 #include <ctime>
 #include<dynmeans/specdynmeans.hpp>
+#include "gurobi_c++.h" //note: the use of this library requires gurobi!
 
 using namespace std;
 

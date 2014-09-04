@@ -209,20 +209,133 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 template<typename D, typename C, typename P>
 template <typename T> std::vector<int> KernDynMeans<D,C,P>::cluster_refinement(std::vector<T>& data, std::vector<int> initlbls){
 	if (initlbls.size() < data.size()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
-
 		//get the data labels from spectral clustering
 		SpecDynMeans<T, P> sdm(this->lambda, this->Q, this->tau);
 		double tmpobj = 0;
 		double tmpt = 0;
  		sdm.cluster(data, 1, data.size(), SpecDynMeans::EigenSolverType::REDSVD, initlbls, tmpobj, tmpt);
 
- 		//get the old/new correspondences from bipartite matching
+		//get the unique labels from sdm output
+		vector<int> unqlbls = initlbls;
+		sort(unqlbls.begin(), unqlbls.end());
+		unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+
+
+		//get the old/new correspondences from bipartite matching
+ 		vector< pair<int, int> > nodePairs; //old clusters in index 0, data clusters + one null cluster in index 1
+ 		vector< double > edgeWeights;
+		for (int i = 0; i < this->oldprmlbls.size(); i++){
+			for (int j = 0; j < unqlbls.size(); j++){
+				nodePairs.push_back(std::pair<int, int>(this->oldprmlbls[i], unqlbls[j]) );
+				double ewt = this->gammas[i]*numInClus[unqlbls[j]]/(this->gammas[i]+numInClus[unqlbls[j]])*this->oldprms[i].sim(this->oldprms[i]);
+				for (int k = 0; k < initlbls.size(); k++){
+					if (initlbls[k] == unqlbls[j]){
+						ewt += -2.0*this->gammas[i]/(this->gammas[i]+numInClus[unqlbls[j]])*this->oldprms[i].sim(data[k]);
+					}
+				}
+				edgeWeights.push_back(ewt);
+			}
+			//-1 is the null label
+			nodePairs.push_back( std::pair<int, int>(this->oldprmlbls[i], -1) );
+			edgeWeights.push_back(0.0);
+		}
+		map<int, int> matching = this->getOldNewMatching(nodePairs, edgeWeights);
 
 		//relabel initlbls based on the old/new correspondences
-	} else { //Refinement Clustering -- use batch label updates
+		for (auto it = matching.begin(); it != matching.end(); ++it){
+			if (it->second != -1){ //if the old cluster wasn't matched to null
+				//replace all labels in initlbls to the old cluster label
+				for (int i = 0; i < initlbls.size(); i++){
+					if (initlbls[i] == it->second){
+						initlbls[i] = it->first;
+					}
+				}
+			}
+		}
+		//initlbls is now ready for regular refinement iterations
+	}
 
+	//initlbls is properly initialized
+	//run the refinement iterations
+}
+
+template <typename D, typename C, typename P>
+map<int, int> KernDynMeans<D,C,P>::getOldNewMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const{
+	//get params
+	int nVars = edgeWeights.size();
+
+	//start up GRB
+	GRBEnv grbenv;
+	grbenv.set(GRB_IntParam_OutputFlag, 0);//controls the output of Gurobi - 0 means no output, 1 means normal output
+	grbenv.set(GRB_IntParam_Threads, 1);//controls the number of threads Gurobi uses - I force it to use 1 since the optimization in this algorithm is fairly small/simple
+									     	//											and it just ends up wasting time constantly creating/deleting threads otherwise
+	try{
+	GRBModel grbmodel(*grbenv);
+	//add variables/objective
+	double* obj = new double[nVars];
+	for (int i = 0; i < nVars; i++){
+		obj[i] = edgeWeights[i];
+	}
+	GRBVar* grbvars = grbmodel.addVars(NULL, NULL,obj, NULL, NULL, nVars);
+
+	grbmodel.update();
+
+	//one constraint for each A/B node, plus one constraint for each edge
+	vector<int> A, B;
+	for (int i = 0; i < nodePairs.size(); i++){
+		if (find(A.begin(), A.end(), nodePairs[i].first) == A.end()){
+			A.push_back(nodePairs[i].first);
+		}
+		if (find(B.begin(), B.end(), nodePairs[i].second) == B.end()){
+			B.push_back(nodePairs[i].second);
+		}
+	}
+	//add constraints
+	//constraint type 1: sum of outgoing edges from A nodes = 1
+	for (int i = 0; i < A.size(); i++){
+		GRBLinExpr constrlhs;
+		for (int j = 0; j < nVars; j++){
+			if (nodePairs[j].first == A[i]){
+				constrlhs += 1.0*grbvars[j];
+			}
+		}
+		grbmodel.addConstr(constrlhs, GRB_EQUAL, 1);
+	}
+	//constraint type 2: sum of incoming edges to B nodes <= 1
+	for (int i = 0; i < B.size(); i++){
+		GRBLinExpr constrlhs;
+		for (int j = 0; j < nVars; j++){
+			if (nodePairs[j].second == B[i]){
+				constrlhs += 1.0*grbvars[j];
+			}
+		}
+		grbmodel.addConstr(constrlhs, GRB_LESS_EQUAL, 1);
+	}
+	//constraint type 3: all edge variables >= 0
+	//the polytope has an implicit bound of >=0 on all variables, don't need this
+
+	//defaults to minimization
+	grbmodel.optimize();
+
+	map<int, int> retmap;
+	for (int j = 0; j < edgeWeights.size(); j++){
+		double val = grbvars[j].get(GRB_DoubleAttr_X);
+		if (fabs(val - 1.0) < 1e-10){
+			retmap[nodePairs[j].first] = nodePairs[j].second;
+			A.erase(remove(A.begin(), A.end(), nodePairs[j].first), A.end());
+		}
+	}
+	delete[] grbvars;
+	delete[] obj;
+	return retmap;
+	} catch (GRBException e){
+		cout << "libkerndynmeans: ERROR: Gurobi Error code = " << e.getErrorCode() << endl;
+		cout << e.getMessage() << endl;
+	} catch (...){
+		cout << "libkerndynmeans: ERROR: Unhandled Gurobi exception during optimization" << endl;
 	}
 }
+
 
 template<typename D, typename C, typename P>
 std::vector<int> KernDynMeans<D,C,P>::refine(std::vector< std::pair<int, int> > merges, std::vector<int> lbls){
