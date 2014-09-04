@@ -54,6 +54,10 @@ class KernDynMeans{
 		template <typename T> std::vector<int> updateOldNewCorrespondence(std::vector<T>& data, std::vector<int> lbls);
 		//get the updated data labels
 		template <typename T> std::vector<int> updateLabels(std::vector<T>& data, std::vector<int> lbls);
+		//try to split a cluster
+		template <typename T> std::vector<int> clusterSplit(std::vector<T>& data, std::vector<int> lbls);
+		//try to merge two clusters
+		template <typename T> std::vector<int> clusterMerge(std::vector<T>& data, std::vector<int> lbls);
 
 
 		double lambda, Q, tau;

@@ -220,9 +220,14 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::
 		//initlbls is now ready for regular refinement iterations
 	}
 	//run the refinement iterations
-	this->objective(data, lbls);
-	lbls = this->updateOldNewCorrespondence(data, lbls);
-	lbls = this->updateLabels(data, lbls);
+	double obj = this->objective(data, lbls);
+	for (int i = 0; i < 500; i++){
+		lbls = this->updateLabels(data, lbls);
+		lbls = this->clusterSplit(data, lbls);
+		lbls = this->clusterMerge(data, lbls);
+		lbls = this->updateOldNewCorrespondence(data, lbls);
+		obj = this->objective(data, lbls);
+	}
 
 	return lbls;
 }
@@ -274,6 +279,53 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::ve
 		newlbls[i] = minLbl;
 	}
 	return newlbls;
+}
+
+
+template <typename D, typename C, typename P>
+template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterSplit(std::vector<T>& data, std::vector<int> lbls){
+	//pick a random cluster
+	vector<int> unqlbls = lbls;
+	sort(unqlbls.begin(), unqlbls.end());
+	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> randclus(0, unqlbls.size()-1);
+	int ksp = unqlbls[randclus(gen)];
+
+	//pick a random node within the cluster
+	std::vector<int> clusidcs;
+	for (int i = 0; i < lbls.size(); i++){
+		if (lbls[i] == ksp){
+			clusidcs.push_back(i);
+		}
+	}
+	if (clusidcs.size() == 1){
+		//no split, the cluster had only one node in it
+		return lbls;
+	}
+
+	std::uniform_int_distribution<> randnode(0, clusidcs.size()-1);
+	int isp1 = clusidcs[randnode(gen)];
+	int isp2 = isp1;
+	while(isp2 == isp1){
+		isp2 = clusidcs[randnode(gen)];
+	}
+
+	//greedy growth of the two clusters by greedy search
+
+	//just randomly pick one of the splits to give a new label to (new/old assocaitions will be updated after properly)
+
+	//check objective function for decrease
+}
+
+template <typename D, typename C, typename P>
+template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterMerge(std::vector<T>& data, std::vector<int> lbls){
+	//pick two random clusters
+
+	//if they're both old, choose which old cluster to associate
+
+	//check objective function for decrease
 }
 
 template <typename D, typename C, typename P>
