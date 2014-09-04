@@ -11,7 +11,9 @@ at once. This allows it to capture clusters that change over time (via (a) motio
 cluster large datasets by considering small chunks of data at a time. Spectral Dynamic Means is an extension 
 to Dynamic Means that captures cluster motion, creation and deletion in general similarity graphs -- this allows
 it to capture more general data types and cluster shapes, at the expense of increased computational cost.
-Efficient C++ implementations of both algorithms are provided in this repository.
+Kernelized Dynamic Means is another extension which also operates on similarity graphs, but does not require
+the computationally expensive step of computing eigenvectors that the spectral code performs.
+Efficient C++ implementations of all algorithms are provided in this repository.
 
 <p align="center">
 <img src="https://github.com/tc4mp/dynamic-means/blob/master/imgs/clustermotion.png?raw=true"/>
@@ -28,15 +30,15 @@ Efficient C++ implementations of both algorithms are provided in this repository
 	<pre>
 	sudo ./install
 	</pre>
-3. In your code, include the header:
+3. In your code, include one or more of the following headers,
 	<pre>
 	#include &lt;dynmeans/dynmeans.hpp>
+	#include &lt;dynmeans/specdynmeans.hpp>
+	#include &lt;dynmeans/kerndynmeans.hpp>
 	</pre>
-   for Dynamic Means, and:
-	<pre>
-	#include &lt;specdynmeans/specdynmeans.hpp>
-	</pre>
-   for Spectral Dynamic Means. Make sure [Gurobi](www.gurobi.com) is installed (free for academic use) if 
+    depending on whether you want to use regular Dynamic Means,
+    Spectral Dynamic Means, or 
+    Kernelized Dynamic Means. Make sure [Gurobi](www.gurobi.com) is installed (free for academic use) if 
    you want to use Spectral Dynamic Means. If you can't get access to Gurobi, feel free to modify
    the `SpecDynMeans::getOldNewMatching` function in `src/specdynmeans_impl.hpp` to use a different
    LP solver.

@@ -208,12 +208,20 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 
 template<typename D, typename C, typename P>
 template <typename T> std::vector<int> KernDynMeans<D,C,P>::cluster_refinement(std::vector<T>& data, std::vector<int> initlbls){
+	if (initlbls.size() < data.size()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
 
-}
+		//get the data labels from spectral clustering
+		SpecDynMeans<T, P> sdm(this->lambda, this->Q, this->tau);
+		double tmpobj = 0;
+		double tmpt = 0;
+ 		sdm.cluster(data, 1, data.size(), SpecDynMeans::EigenSolverType::REDSVD, initlbls, tmpobj, tmpt);
 
-template<typename D, typename C, typename P>
-std::vector<int> KernDynMeans<D,C,P>::cluster_base(std::vector<C>& data){
+ 		//get the old/new correspondences from bipartite matching
 
+		//relabel initlbls based on the old/new correspondences
+	} else { //Refinement Clustering -- use batch label updates
+
+	}
 }
 
 template<typename D, typename C, typename P>

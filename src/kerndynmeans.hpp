@@ -9,6 +9,7 @@
 #include<boost/bind.hpp>
 #include<sys/time.h>
 #include <ctime>
+#include<specdynmeans/specdynmeans.hpp>
 
 using namespace std;
 
