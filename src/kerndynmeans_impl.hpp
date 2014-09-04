@@ -269,7 +269,43 @@ template<typename T> std::pair< std::vector<C>, std::vector<std::pair<int, int> 
 
 template<typename D, typename C, typename P>
 double KernDynMeans<D,C,P>::objective(std::vector<D>& data, std::vector<int> lbls){
-
+	double cost = 0;
+	//get a map from label to clusters
+	map<int, vector<D> > m;
+	for (int i = 0; i < data.size(); i++){
+		m[lbls[i]].push_back(data[i]);
+	}
+	//for every current cluster
+	for (auto it = m.begin(); it != m.end(); ++it){
+		//check if it's an old label
+		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), it->first);
+		if (it2 == this->oldprmlbls.end()){ //it's a new cluster
+			cost += this->lambda;//new cluster penalty
+			//ratio association term
+			for (int i = 0; i < it->second.size(); i++){
+				cost += (1.0 - 1.0/it->second.size())*it->second[i].sim(it->second[i]) //diagonal elements
+				for (int j = i+1; j < it->second.size(); j++){
+					cost -= 2.0/it->second.size()*it->second[i].sim(it->second[j]); //off-diagonal elements
+				}
+			}
+		} else { //it's an old cluster
+			int oldidx = distance(this->oldprmlbls.begin(), it2);
+			cost += this->agecosts[oldidx];//old cluster penalty
+			//ratio association term
+			for (int i = 0; i < it->second.size(); i++){
+				cost += (1.0 - 1.0/it->second.size())*it->second[i].sim(it->second[i]) //diagonal elements
+				for (int j = i+1; j < it->second.size(); j++){
+					cost += -2.0/it->second.size()*it->second[i].sim(it->second[j]); //off-diagonal elements
+				}
+			}
+			cost += this->gammas[oldidx]*it->second.size()/(this->gammas[oldidx]+it->second.size())*this->oldprms[oldidx].sim(this->oldprms[oldidx]);//old prm self-similarity
+			//old prm ratio association term
+			for (int i = 0; i < it->second.size(); i++){
+				cost += -2.0*this->gammas[oldidx]/(this->gammas[oldidx]+it->second.size())*this->oldprms[oldidx].sim(it->second[i]);
+			}
+		}
+	}
+	return cost;
 }
 
 #define __KERNDYNMEANS_IMPL_HPP
