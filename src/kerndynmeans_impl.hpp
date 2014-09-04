@@ -222,11 +222,14 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::cluster_refinement(s
 
 
 		//get the old/new correspondences from bipartite matching
- 		vector< pair<int, int> > nodePairs; //old clusters in index 0, data clusters + one null cluster in index 1
+ 		vector< pair<int, int> > nodePairs; //new clusters in index 0, old clusters + one null cluster in index 1
  		vector< double > edgeWeights;
-		for (int i = 0; i < this->oldprmlbls.size(); i++){
-			for (int j = 0; j < unqlbls.size(); j++){
-				nodePairs.push_back(std::pair<int, int>(this->oldprmlbls[i], unqlbls[j]) );
+		for (int i = 0; i < unqlbls.size(); i++){
+			for (int j = 0; j < this->oldprmlbls.size(); j++){
+				//TODO
+				//TODO FIX THE BELOW TO BE CUR CLUSTERS ON THE LEFt, OLD NODES/NULL ON THE RIGHT
+				//TODO
+				nodePairs.push_back(std::pair<int, int>(unqlbls[j], this->oldprmlbls[i]) );
 				double ewt = this->gammas[i]*numInClus[unqlbls[j]]/(this->gammas[i]+numInClus[unqlbls[j]])*this->oldprms[i].sim(this->oldprms[i]);
 				for (int k = 0; k < initlbls.size(); k++){
 					if (initlbls[k] == unqlbls[j]){
