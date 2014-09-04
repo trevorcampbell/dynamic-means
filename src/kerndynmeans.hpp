@@ -41,14 +41,19 @@ class KernDynMeans{
 	private:
 		//clusters a refinement level with kernelized dyn means batch updates
 		//tempalte so it works with C/D
-		template <typename T> std::vector<int> cluster_refinement(std::vector<T>& data, std::vector<int> initlbls);
+		template <typename T> std::vector<int> clusterAtLevel(std::vector<T>& data, std::vector<int> initlbls);
 		//expands the labels to the new refinement level
 		std::vector<int> refine(std::vector< std::pair<int, int> > merges, std::vector<int> lbls);
 		//template function for coarsify so it works with both C and D types
-		template<typename T> std::pair< std::vector<C>, std::vector<std::pair<int, int> > > 
-			coarsify(std::vector<T>& data);
+		template<typename T> std::pair< std::vector<C>, std::vector<std::pair<int, int> > > coarsify(std::vector<T>& data);
 		//compute the dynamic means objective given the current labels
 		double objective(std::vector<D>& data, std::vector<int> lbls);
+		//compute a minimum weight bipartite matching
+		map<int, int> getMinWtMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const;
+		//get the minimum weight old/new cluster correspondence
+		template <typename T> std::vector<int> updateOldNewCorrespondence(std::vector<T>& data, std::vector<int> lbls);
+		//get the updated data labels
+		template <typename T> std::vector<int> updateLabels(std::vector<T>& data, std::vector<int> lbls);
 
 
 		double lambda, Q, tau;

@@ -151,7 +151,7 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 				cout << "libkerndynmeans: Running clustering at level " << coarsestack.size() << endl;
 			}
 			//optimize the labels for the current top of coarsestack
-			lbls = this->cluster_refinement(coarsestack.top(), lbls); //lbls starts out empty, cluster_refinement knows to use a base clustering
+			lbls = this->clusterAtLevel(coarsestack.top(), lbls); //lbls starts out empty, clusterAtLevel knows to use a base clustering
 			coarsestack.pop();
 			//distribute the labels to the next level down
 			lbls = this->refine(mergestack.top(), lbls);
@@ -161,7 +161,7 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 			cout << "libkerndynmeans: Running final clustering at data level." << endl;
 		}
 		//final clustering at the data level
-		lbls = this->cluster_refinement(data, lbls);
+		lbls = this->clusterAtLevel(data, lbls);
 
 		//finally, compute the kernelized dynamic means objective
 		if (verbose){
@@ -207,63 +207,75 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 
 
 template<typename D, typename C, typename P>
-template <typename T> std::vector<int> KernDynMeans<D,C,P>::cluster_refinement(std::vector<T>& data, std::vector<int> initlbls){
+template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::vector<T>& data, std::vector<int> lbls){
 	if (initlbls.size() < data.size()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
 		//get the data labels from spectral clustering
 		SpecDynMeans<T, P> sdm(this->lambda, this->Q, this->tau);
 		double tmpobj = 0;
 		double tmpt = 0;
- 		sdm.cluster(data, 1, data.size(), SpecDynMeans::EigenSolverType::REDSVD, initlbls, tmpobj, tmpt);
+ 		sdm.cluster(data, 1, data.size(), SpecDynMeans::EigenSolverType::REDSVD, lbls, tmpobj, tmpt);
 
-		//get the unique labels from sdm output
-		vector<int> unqlbls = initlbls;
-		sort(unqlbls.begin(), unqlbls.end());
-		unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
-
-
-		//get the old/new correspondences from bipartite matching
- 		vector< pair<int, int> > nodePairs; //new clusters in index 0, old clusters + one null cluster in index 1
- 		vector< double > edgeWeights;
-		for (int i = 0; i < unqlbls.size(); i++){
-			for (int j = 0; j < this->oldprmlbls.size(); j++){
-				//TODO
-				//TODO FIX THE BELOW TO BE CUR CLUSTERS ON THE LEFt, OLD NODES/NULL ON THE RIGHT
-				//TODO
-				nodePairs.push_back(std::pair<int, int>(unqlbls[j], this->oldprmlbls[i]) );
-				double ewt = this->gammas[i]*numInClus[unqlbls[j]]/(this->gammas[i]+numInClus[unqlbls[j]])*this->oldprms[i].sim(this->oldprms[i]);
-				for (int k = 0; k < initlbls.size(); k++){
-					if (initlbls[k] == unqlbls[j]){
-						ewt += -2.0*this->gammas[i]/(this->gammas[i]+numInClus[unqlbls[j]])*this->oldprms[i].sim(data[k]);
-					}
-				}
-				edgeWeights.push_back(ewt);
-			}
-			//-1 is the null label
-			nodePairs.push_back( std::pair<int, int>(this->oldprmlbls[i], -1) );
-			edgeWeights.push_back(0.0);
-		}
-		map<int, int> matching = this->getOldNewMatching(nodePairs, edgeWeights);
-
-		//relabel initlbls based on the old/new correspondences
-		for (auto it = matching.begin(); it != matching.end(); ++it){
-			if (it->second != -1){ //if the old cluster wasn't matched to null
-				//replace all labels in initlbls to the old cluster label
-				for (int i = 0; i < initlbls.size(); i++){
-					if (initlbls[i] == it->second){
-						initlbls[i] = it->first;
-					}
-				}
-			}
-		}
+		//find the optimal correspondence between old/current clusters
+		lbls = this->updateOldNewCorrespondence(data, lbls);
 		//initlbls is now ready for regular refinement iterations
 	}
-
-	//initlbls is properly initialized
 	//run the refinement iterations
+	this->objective(data, lbls);
+	lbls = this->updateOldNewCorrespondence(data, lbls);
+	lbls = this->updateLabels(data, lbls);
+
+	return lbls;
 }
 
 template <typename D, typename C, typename P>
-map<int, int> KernDynMeans<D,C,P>::getOldNewMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const{
+template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::vector<int> lbls){
+}
+
+template <typename D, typename C, typename P>
+template <typename T> std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>& data, std::vector<int> lbls){
+	//get the unique labels from sdm output
+	vector<int> unqlbls = lbls;
+	sort(unqlbls.begin(), unqlbls.end());
+	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+
+
+	//get the old/new correspondences from bipartite matching
+ 	vector< pair<int, int> > nodePairs; //new clusters in index 0, old clusters + one null cluster in index 1
+ 	vector< double > edgeWeights;
+	for (int i = 0; i < unqlbls.size(); i++){
+		for (int j = 0; j < this->oldprmlbls.size(); j++){
+			nodePairs.push_back(std::pair<int, int>(unqlbls[i], this->oldprmlbls[j]) );
+			double ewt = this->agecosts[j];
+			ewt += this->gammas[j]*numInClus[unqlbls[i]]/(this->gammas[j]+numInClus[unqlbls[i]])*this->oldprms[j].sim(this->oldprms[j]);
+			for (int k = 0; k < initlbls.size(); k++){
+				if (lbls[k] == unqlbls[i]){
+					ewt += -2.0*this->gammas[j]/(this->gammas[j]+numInClus[unqlbls[i]])*this->oldprms[j].sim(data[k]);
+				}
+			}
+			edgeWeights.push_back(ewt);
+		}
+		//-1 is the new cluster option
+		nodePairs.push_back( std::pair<int, int>(unqlbls[i], -1) );
+		edgeWeights.push_back(this->lambda);
+	}
+	map<int, int> matching = this->getMinWtMatching(nodePairs, edgeWeights);
+
+	//relabel initlbls based on the old/new correspondences
+	for (auto it = matching.begin(); it != matching.end(); ++it){
+		if (it->second != -1){ //if the current cluster isn't new
+			//replace all labels in initlbls to the old cluster label
+			for (int i = 0; i < initlbls.size(); i++){
+				if (lbls[i] == it->first){
+					lbls[i] = it->second;
+				}
+			}
+		}
+	}
+	return lbls;
+}
+
+template <typename D, typename C, typename P>
+map<int, int> KernDynMeans<D,C,P>::getMinWtMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const{
 	//get params
 	int nVars = edgeWeights.size();
 
