@@ -219,6 +219,7 @@ template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::
 		lbls = this->updateOldNewCorrespondence(data, lbls);
 		//initlbls is now ready for regular refinement iterations
 	}
+
 	//run the refinement iterations
 	double obj = this->objective(data, lbls);
 	for (int i = 0; i < 500; i++){
