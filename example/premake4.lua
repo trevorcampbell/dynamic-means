@@ -19,7 +19,7 @@ solution "Examples"
 		location "build"
 		files {"mainsdm.cpp"}
 		links {"lpsolve55", "gurobi_c++", "gurobi55"}
-		includedirs{"/usr/local/include/eigen3", "/opt/gurobi550/linux64/include", "/usr/local/include/specdynmeans"}
+		includedirs{"/usr/local/include/eigen3", "/opt/gurobi550/linux64/include", "/usr/local/include/dynmeans"}
 		libdirs{"/opt/gurobi550/linux64/lib"}
 		configuration "debug"
 			flags{"Symbols", "ExtraWarnings"}

@@ -11,7 +11,7 @@
 #include <cmath>
 #include <random>
 
-#include <specdynmeans/specdynmeans.hpp>
+#include <dynmeans/specdynmeans.hpp>
 #include "maxmatching.hpp"
 
 using namespace std;
