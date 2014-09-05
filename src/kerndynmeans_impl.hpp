@@ -503,9 +503,9 @@ std::pair< std::vector<C>, std::vector<std::pair<int, int> > >  KernDynMeans<D,C
 			double maxSim = 0;
 			int maxId = -1;
 			for (int j = i+1; j < idcs.size(); j++){//search all vertices after i (since all beforehave been merged)
-				if (!marks[j]){
+				if (!marks[j]){//only check it if it hasn't been marked
 					double sim = data[i].sim(data[j]);
-					if (sim > maxSim && sim > 1e-16){//1e-16 for keeping sparsity, only choose those whose mark is false
+					if (sim > maxSim && sim > 1e-16){//1e-16 for keeping sparsity
 						maxSim = sim;
 						maxId = j;
 					}
@@ -529,40 +529,48 @@ std::pair< std::vector<C>, std::vector<std::pair<int, int> > >  KernDynMeans<D,C
 }
 
 template<typename D, typename C, typename P>
-double KernDynMeans<D,C,P>::objective(std::vector<D>& data, std::vector<int> lbls){
+template<typename T> 
+double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbls){
 	double cost = 0;
 	//get a map from label to clusters
-	map<int, vector<D> > m;
+	map<int, vector<T> > dInClus;
+	map<int, double> nInClus;
 	for (int i = 0; i < data.size(); i++){
-		m[lbls[i]].push_back(data[i]);
+		dInClus[lbls[i]].push_back(data[i]);
+		if(nInClus.count(lbls[i]) == 0){
+			nInClus[lbls[i]] = 0;
+		}
+		nInclus[lbls[i]] += data[i].nv
 	}
 	//for every current cluster
-	for (auto it = m.begin(); it != m.end(); ++it){
+	for (auto it = dInClus.begin(); it != dInClus.end(); ++it){
 		//check if it's an old label
 		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), it->first);
+		const int& lbl = it->first;
+		const std::vector<T>& clus = it->second;
 		if (it2 == this->oldprmlbls.end()){ //it's a new cluster
 			cost += this->lambda;//new cluster penalty
 			//ratio association term
-			for (int i = 0; i < it->second.size(); i++){
-				cost += (1.0 - 1.0/it->second.size())*it->second[i].sim(it->second[i]) //diagonal elements
-				for (int j = i+1; j < it->second.size(); j++){
-					cost -= 2.0/it->second.size()*it->second[i].sim(it->second[j]); //off-diagonal elements
+			for (int i = 0; i < clus.size(); i++){
+				cost += (1.0 - 1.0/nInClus[lbl])*clus[i].sim(clus[i]) //diagonal elements
+				for (int j = i+1; j < clus.size(); j++){
+					cost -= 2.0/nInClus[lbl]*clus[i].sim(clus[j]); //off-diagonal elements
 				}
 			}
 		} else { //it's an old cluster
 			int oldidx = distance(this->oldprmlbls.begin(), it2);
 			cost += this->agecosts[oldidx];//old cluster penalty
 			//ratio association term
-			for (int i = 0; i < it->second.size(); i++){
-				cost += (1.0 - 1.0/it->second.size())*it->second[i].sim(it->second[i]) //diagonal elements
-				for (int j = i+1; j < it->second.size(); j++){
-					cost += -2.0/it->second.size()*it->second[i].sim(it->second[j]); //off-diagonal elements
+			for (int i = 0; i < clus.size(); i++){
+				cost += (1.0 - 1.0/nInClus[lbl])*clus[i].sim(clus[i]) //diagonal elements
+				for (int j = i+1; j < clus.size(); j++){
+					cost += -2.0/nInClus[lbl]*clus[i].sim(clus[j]); //off-diagonal elements
 				}
 			}
-			cost += this->gammas[oldidx]*it->second.size()/(this->gammas[oldidx]+it->second.size())*this->oldprms[oldidx].sim(this->oldprms[oldidx]);//old prm self-similarity
+			cost += this->gammas[oldidx]*nInClus[lbl]/(this->gammas[oldidx]+nInClus[lbl])*this->oldprms[oldidx].sim(this->oldprms[oldidx]);//old prm self-similarity
 			//old prm ratio association term
-			for (int i = 0; i < it->second.size(); i++){
-				cost += -2.0*this->gammas[oldidx]/(this->gammas[oldidx]+it->second.size())*this->oldprms[oldidx].sim(it->second[i]);
+			for (int i = 0; i < clus.size(); i++){
+				cost += -2.0*this->gammas[oldidx]/(this->gammas[oldidx]+nInClus[lbl])*this->oldprms[oldidx].sim(clus[i]);
 			}
 		}
 	}
