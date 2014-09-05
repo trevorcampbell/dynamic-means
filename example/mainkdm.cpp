@@ -101,6 +101,16 @@ class KP{
 			}
 			this->v /= (gamma+rhs.size());
 		}
+
+
+		//bogus functions for specdynmeans to use
+		//TODO: delete these once I implement spectral clustering w/o sdm
+		KP(const vector<KC>& rhs){
+			this->v = V2d::Zero();
+		}
+		void update(const vector<KC>& rhs, const double gamma){
+			this->v = V2d::Zero();
+		}
 };
 
 //random number generator
@@ -152,7 +162,7 @@ int main(int argc, char** argv){
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
 	int nCoarsest = 20;
-	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau, verbose=true);
+	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau, true);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step

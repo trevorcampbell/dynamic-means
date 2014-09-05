@@ -49,6 +49,7 @@ class KernDynMeans{
 		//template <typename T> std::vector<int> clusterSplit(std::vector<T>& data, std::vector<int> lbls);
 		////try to merge two clusters
 		//template <typename T> std::vector<int> clusterMerge(std::vector<T>& data, std::vector<int> lbls);
+		void updateState(const vector<D>& data, const vector<int>& lbls);
 
 
 		GRBEnv* grbenv;

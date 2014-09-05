@@ -77,7 +77,7 @@ void KernDynMeans<D,C,P>::updateState(const vector<D>& data, const vector<int>& 
 
 	//delete any old cluster whose age cost exceeds lambda
 	for (int i = 0; i < this->ages.size(); i++){
-		if (this->agecosts[i] > this->lamb){
+		if (this->agecosts[i] > this->lambda){
 			this->weights.erase(this->weights.begin()+i);
 			this->ages.erase(this->ages.begin()+i);
 			this->gammas.erase(this->gammas.begin()+i);
@@ -105,7 +105,7 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 	if (data.size() <= 0){
 		cout << "libkerndynmeans: WARNING: data size <=0 (= " << nA << "); Returning empty labels."<<  endl;
 		finalLabels = vector<int>();
-		timeTaken = 0;
+		tTaken = 0;
 		finalObj = 0;
 		return;
 	}
@@ -148,7 +148,7 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 		std::vector<int> lbls;
 		while(!coarsestack.empty()){
 			if (verbose){
-				cout << "libkerndynmeans: Running clustering at level " << coarsestack.size() << " with " << coarsestack.top.size() << " nodes." << endl;
+				cout << "libkerndynmeans: Running clustering at level " << coarsestack.size() << " with " << coarsestack.top().size() << " nodes." << endl;
 			}
 			//optimize the labels for the current top of coarsestack
 			lbls = this->clusterAtLevel(coarsestack.top(), lbls); //lbls starts out empty, clusterAtLevel knows to use a base clustering
@@ -201,7 +201,7 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 	//get final time taken
 	timeval tCur;
 	gettimeofday(&tCur, NULL);
-	timeTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
+	tTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
 	return;
 }
 
@@ -209,12 +209,12 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 template<typename D, typename C, typename P>
 template <typename T> 
 std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::vector<T>& data, std::vector<int> lbls){
-	if (initlbls.size() < data.size()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
+	if (lbls.size() < data.size()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
 		//get the data labels from spectral clustering
 		SpecDynMeans<T, P> sdm(this->lambda, this->Q, this->tau);
 		double tmpobj = 0;
 		double tmpt = 0;
- 		sdm.cluster(data, 1, data.size(), SpecDynMeans::EigenSolverType::REDSVD, lbls, tmpobj, tmpt);
+ 		sdm.cluster(data, 1, data.size(), SpecDynMeans<T, P>::EigenSolverType::REDSVD, lbls, tmpobj, tmpt);
 
 		//find the optimal correspondence between old/current clusters
 		lbls = this->updateOldNewCorrespondence(data, lbls);
@@ -251,7 +251,7 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 		if(nInClus.count(lbls[i]) == 0){
 			nInClus[lbls[i]] = 0;
 		}
-		nInclus[lbls[i]] += data[i].getN();
+		nInClus[lbls[i]] += data[i].getN();
 	}
 
 	//precompute the squared cluster sums
@@ -269,9 +269,9 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 			}
 		}
 		sqClusterSum[lbl] = sqsum;
-		auto it = find(this->oldprms.begin(), this->oldprms.end(), lbl);
-		if (it != this->oldprms.end()){
-			int oldidx = std::distance(this->oldprms.begin(), it);	
+		auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
+		if (it != this->oldprmlbls.end()){
+			int oldidx = std::distance(this->oldprmlbls.begin(), it);	
 			double oldsum = 0;
 			for (int k = 0; k < clus.size(); k++){
 				oldsum += this->oldprms[oldidx].sim(clus[k]);
@@ -306,7 +306,7 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 				double factor = 1.0/(this->gammas[oldidx] + nInClus[lbl]);
 				double cost = data[i].sim(data[i]) + factor*factor*sqClusterSum[lbl];
 				cost += 2.0*this->gammas[oldidx]*factor*factor*oldClusterSum[lbl];
-				cost += this->gammas[oldidx]*this->gammas[oldidx]*factor*factor*this->oldprms[oldidx].sim(this->oldprms);
+				cost += this->gammas[oldidx]*this->gammas[oldidx]*factor*factor*this->oldprms[oldidx].sim(this->oldprms[oldidx]);
 				for (int j = 0; j < clus.size(); j++){
 					cost += -2.0*factor*data[i].sim(clus[j]);
 				}
@@ -363,7 +363,7 @@ std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>&
 		if(nInClus.count(lbls[i]) == 0){
 			nInClus[lbls[i]] = 0;
 		}
-		nInclus[lbls[i]] += data[i].getN();
+		nInClus[lbls[i]] += data[i].getN();
 	}
 	//compute the squared cluster sums
 	std::map<int, double> sqClusterSum;
@@ -563,7 +563,7 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 		if(nInClus.count(lbls[i]) == 0){
 			nInClus[lbls[i]] = 0;
 		}
-		nInclus[lbls[i]] += data[i].getN();
+		nInClus[lbls[i]] += data[i].getN();
 	}
 	//for every current cluster
 	for (auto it = dInClus.begin(); it != dInClus.end(); ++it){
@@ -575,7 +575,7 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 			cost += this->lambda;//new cluster penalty
 			//ratio association term
 			for (int i = 0; i < clus.size(); i++){
-				cost += (1.0 - 1.0/nInClus[lbl])*clus[i].sim(clus[i]) //diagonal elements
+				cost += (1.0 - 1.0/nInClus[lbl])*clus[i].sim(clus[i]); //diagonal elements
 				for (int j = i+1; j < clus.size(); j++){
 					cost -= 2.0/nInClus[lbl]*clus[i].sim(clus[j]); //off-diagonal elements
 				}
@@ -585,7 +585,7 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 			cost += this->agecosts[oldidx];//old cluster penalty
 			//ratio association term
 			for (int i = 0; i < clus.size(); i++){
-				cost += (1.0 - 1.0/nInClus[lbl])*clus[i].sim(clus[i]) //diagonal elements
+				cost += (1.0 - 1.0/nInClus[lbl])*clus[i].sim(clus[i]); //diagonal elements
 				for (int j = i+1; j < clus.size(); j++){
 					cost += -2.0/nInClus[lbl]*clus[i].sim(clus[j]); //off-diagonal elements
 				}

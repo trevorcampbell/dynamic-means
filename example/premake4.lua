@@ -27,3 +27,17 @@ solution "Examples"
 		configuration "release"
 			flags{"Optimize"}
 			buildoptions{"-std=c++0x"}
+	project "KernDynMeansExample"
+		kind "ConsoleApp"
+		language "C++"
+		location "build"
+		files {"mainkdm.cpp"}
+		links {"lpsolve55", "gurobi_c++", "gurobi55"}
+		includedirs{"/usr/local/include/eigen3", "/opt/gurobi550/linux64/include", "/usr/local/include/dynmeans"}
+		libdirs{"/opt/gurobi550/linux64/lib"}
+		configuration "debug"
+			flags{"Symbols", "ExtraWarnings"}
+			buildoptions{"-std=c++0x"}
+		configuration "release"
+			flags{"Optimize"}
+			buildoptions{"-std=c++0x"}
