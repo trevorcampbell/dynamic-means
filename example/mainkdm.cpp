@@ -23,17 +23,10 @@ double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> m
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
 void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<V2d>& clusterData, vector<int>& trueLabels);
 
-int nextId = 0;
-
 //kernel data class
 class KD{
 	public:
-		int id;
 		V2d v;
-		KD(){
-			this->id = nextId;
-			nextId++;
-		}
 		//similarity function from data->data is just exp(-|| ||^2 / w^2)
 		double sim(const KD& rhs) const{
 			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
@@ -44,54 +37,29 @@ class KD{
 };
 
 //kernel coarse node class
-
 class KC{
 	public:
-		int id;
 		int nv;
-		std::map<int, double> savedEdges;
-		KD *d1, *d2;
-		KC *c1, *c2;
+		std::vector<V2d> vs;
 		KC(const KD& d1, const KD& d2){
-			this->id = nextId;
-			nextId++;
 			this->nv = 2;
-			this->d1 = &d1;
-			this->d2 = &d2;
-			this->c1 = NULL;
-			this->c2 = NULL;
+			this->vs.push_back(d1.v);
+			this->vs.push_back(d2.v);
 		}
-		KC(const KC& d1, const KC& d2){
-			this->id = nextId;
-			nextId++;
-			this->nv = d1.nv + d2.nv;
-			this->c1 = &c1;
-			this->c2 = &c2;
-			this->d1 = NULL;
-			this->d2 = NULL;
+		KC(const KC& c1, const KC& c2){
+			this->nv = c1.nv + c2.nv;
+			this->vs.insert(this->vs.end(), c1.vs.begin(), c1.vs.end());
+			this->vs.insert(this->vs.end(), c2.vs.begin(), c2.vs.end());
 		}
 		double sim(const KC& rhs) const{
-			if(this->savedEdges.count(rhs.id) == 0){
-				if (rhs.savedEdges.count(this->id) == 0){
-					//neither me nor rhs have the similarity stored, so traverse down the tree
-					if (this->d1 == NULL){
-						//coarse children nodes
-						double s = this->c1;
-					} else {
-						//data children nodes
-						double s = this->d1->
-
-					}
-				} else {
-					double s = rhs.savedEdges[this->id];
-					this->savedEdges[rhs.id] = s; //make sure I have sim to rhs as well
-					return s;
+			std::vector<double> sims;
+			for (int i = 0; i < this->vs.size(); i++){
+				for (int j = 0; j < rhs.vs.size(); j++){
+					sims.push_back(exp(-(this->vs[i]-rhs.vs[j]).squaredNorm()/(2*0.1*0.1)));
 				}
-			} else {
-				double s = this->savedEdges[rhs.id];
-				rhs.savedEdges[this->id] = s; //make sure rhs has sim to me as well
-				return s;
 			}
+			std::sort(sims.begin(), sims.end());
+			return std::accumulate(sims.begin(), sims.end(), 0);
 		}
 		double getN(){
 			return this->nv;
@@ -115,7 +83,12 @@ class KP{
 			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 		double sim(const KC& rhs) const{
-			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+			std::vector<double> sims;
+			for (int i = 0; i < rhs.vs.size(); i++){
+				sims.push_back(exp(-(this->v-rhs.vs[i]).squaredNorm()/(2*0.1*0.1)));
+			}
+			std::sort(sims.begin(), sims.end());
+			return std::accumulate(sims.begin(), sims.end(), 0);
 		}
 		double sim(const KP& rhs) const{
 			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
@@ -172,9 +145,9 @@ int main(int argc, char** argv){
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
-	double lambda = 0.05;
-	double T_Q = 6.8;
-	double K_tau = 1.01;
+	double lambda = 10;
+	double T_Q = 5;
+	double K_tau = 1.05;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
