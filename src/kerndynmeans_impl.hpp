@@ -341,36 +341,46 @@ std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>&
 	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
 
 	//get the observations in each cluster
-	std::map<int, std::vector<T> > dInClus;
-	for (int i = 0; i < lbls.size(); i++){
+	//and the sizes of each cluster
+	map<int, vector<T> > dInClus;
+	map<int, double> nInClus;
+	for (int i = 0; i < data.size(); i++){
 		dInClus[lbls[i]].push_back(data[i]);
+		if(nInClus.count(lbls[i]) == 0){
+			nInClus[lbls[i]] = 0;
+		}
+		nInclus[lbls[i]] += data[i].nv
 	}
 	//compute the squared cluster sums
 	std::map<int, double> sqClusterSum;
 	for (int i = 0; i < unqlbls.size(); i++){
 		double sqsum = 0;
-		for (int k = 0; k < dInClus[unqlbls[i]].size(); k++){
-			sqsum += dInClus[unqlbls[i]][k].sim(dInClus[unqlbls[i]][k]);
-			for (int m = k+1; m < dInClus[unqlbls[i]].size(); m++){
-				sqsum += 2.0*dInClus[unqlbls[i]][k].sim(dInClus[unqlbls[i]][m]);
+		const std::vector<T>& clus = dInClus[unqlbls[i]];
+		const int& lbl = unqlbls[i];
+		for (int k = 0; k < clus.size(); k++){
+			sqsum += clus[k].sim(clus[k]);
+			for (int m = k+1; m < clus.size(); m++){
+				sqsum += 2.0*clus[k].sim(clus[m]);
 			}
 		}
-		sqClusterSum[unqlbls[i]] = sqsum;
+		sqClusterSum[lbl] = sqsum;
 	}
 
 	//get the old/new correspondences from bipartite matching
  	vector< pair<int, int> > nodePairs; //new clusters in index 0, old clusters + one null cluster in index 1
  	vector< double > edgeWeights;
 	for (int i = 0; i < unqlbls.size(); i++){
+		const std::vector<T>& clus = dInClus[unqlbls[i]];
+		const int& lbl = unqlbls[i];
 		for (int j = 0; j < this->oldprmlbls.size(); j++){
-			nodePairs.push_back(std::pair<int, int>(unqlbls[i], this->oldprmlbls[j]) );
+			nodePairs.push_back(std::pair<int, int>(lbl, this->oldprmlbls[j]) );
 			double ewt = this->agecosts[j] 
-						+ this->gammas[j]*dInClus[unqlbls[i]].size()/(this->gammas[j]+dInClus[unqlbls[i]].size())*this->oldprms[j].sim(this->oldprms[j])
-						-this->gammas[j]/(this->gammas[j]+dInClus[unqlbls[i]].size())*sqClusterSum[unqlbls[i]];
+						+ this->gammas[j]*nInClus[lbl]/(this->gammas[j]+nInClus[lbl])*this->oldprms[j].sim(this->oldprms[j])
+						-this->gammas[j]/(this->gammas[j]+nInClus[lbl])*sqClusterSum[lbl];
 			edgeWeights.push_back(ewt);
 		}
 		//-1 is the new cluster option
-		nodePairs.push_back( std::pair<int, int>(unqlbls[i], -1) );
+		nodePairs.push_back( std::pair<int, int>(lbl, -1) );
 		edgeWeights.push_back(this->lambda);
 	}
 	map<int, int> matching = this->getMinWtMatching(nodePairs, edgeWeights);

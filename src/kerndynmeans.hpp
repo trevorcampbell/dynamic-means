@@ -38,7 +38,7 @@ class KernDynMeans{
 		//template function for coarsify so it works with both C and D types
 		template<typename T> std::pair< std::vector<C>, std::vector<std::pair<int, int> > > coarsify(std::vector<T>& data);
 		//compute the dynamic means objective given the current labels
-		double objective(std::vector<D>& data, std::vector<int> lbls);
+		template<typename T> double objective(std::vector<T>& data, std::vector<int> lbls);
 		//compute a minimum weight bipartite matching
 		std::map<int, int> getMinWtMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const;
 		//get the minimum weight old/new cluster correspondence
