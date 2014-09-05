@@ -239,32 +239,42 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 	sort(unqlbls.begin(), unqlbls.end());
 	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
 
+
 	//get the observations in each cluster
-	std::map<int, std::vector<T> > dInClus;
-	for (int i = 0; i < lbls.size(); i++){
+	//and the sizes of each cluster
+	map<int, vector<T> > dInClus;
+	map<int, double> nInClus;
+	for (int i = 0; i < data.size(); i++){
 		dInClus[lbls[i]].push_back(data[i]);
+		if(nInClus.count(lbls[i]) == 0){
+			nInClus[lbls[i]] = 0;
+		}
+		nInclus[lbls[i]] += data[i].nv
 	}
+
 	//precompute the squared cluster sums
 	//and the old cluster sums
 	std::map<int, double> sqClusterSum;
 	std::map<int, double> oldClusterSum;
 	for (int i = 0; i < unqlbls.size(); i++){
 		double sqsum = 0;
-		for (int k = 0; k < dInClus[unqlbls[i]].size(); k++){
-			sqsum += dInClus[unqlbls[i]][k].sim(dInClus[unqlbls[i]][k]);
-			for (int m = k+1; m < dInClus[unqlbls[i]].size(); m++){
-				sqsum += 2.0*dInClus[unqlbls[i]][k].sim(dInClus[unqlbls[i]][m]);
+		const std::vector<T>& clus = dInClus[unqlbls[i]];
+		const int& lbl = unqlbls[i];
+		for (int k = 0; k < clus.size(); k++){
+			sqsum += clus[k].sim(clus[k]);
+			for (int m = k+1; m < clus.size(); m++){
+				sqsum += 2.0*clus[k].sim(clus[m]);
 			}
 		}
-		sqClusterSum[unqlbls[i]] = sqsum;
-		auto it = find(this->oldprms.begin(), this->oldprms.end(), unqlbls[i]);
+		sqClusterSum[lbl] = sqsum;
+		auto it = find(this->oldprms.begin(), this->oldprms.end(), lbl);
 		if (it != this->oldprms.end()){
 			int oldidx = std::distance(this->oldprms.begin(), it);	
 			double oldsum = 0;
-			for (int k = 0; k < dInClus[unqlbls[i]].size(); k++){
-				oldsum += this->oldprms[oldidx].sim(dInClus[unqlbls[i]][k]);
+			for (int k = 0; k < clus.size(); k++){
+				oldsum += this->oldprms[oldidx].sim(clus[k]);
 			}
-			oldClusterSum[unqlbls[i]] = oldsum;
+			oldClusterSum[lbl] = oldsum;
 		}
 	}
 
@@ -274,32 +284,34 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 		double minCost = this->lambda; //default to creating a new cluster, and then try to beat it 
 		int minLbl = -1;
 		for (int k = 0; k < unqlbls.size(); k++){
-			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[k]);
+			const std::vector<T>& clus = dInClus[unqlbls[k]];
+			const int& lbl = unqlbls[k];
+			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
 			if (it == this->oldprmlbls.end()){
 				//new instantiated cluster
-				double factor = 1.0/dInClus[unqlbls[k]].size();
-				double cost = data[i].sim(data[i]) + factor*factor*sqClusterSum[unqlbls[k]]; 
-				for (int j = 0; j < dInClus.size(); j++){
-					cost += -2.0*factor*data[i].sim(data[j]);
+				double factor = 1.0/nInClus[lbl];
+				double cost = data[i].sim(data[i]) + factor*factor*sqClusterSum[lbl]; 
+				for (int j = 0; j < clus.size(); j++){
+					cost += -2.0*factor*data[i].sim(clus[j]);
 				}
 				if (cost < minCost){
 					minCost = cost;
-					minLbl = unqlbls[k];
+					minLbl = lbl;
 				}
 			} else {
 				//old instantiated cluster
 				int oldidx = std::distance(this->oldprmlbls.begin(), it);
-				double factor = 1.0/(this->gammas[oldidx] + dInClus[unqlbls[k]].size());
-				double cost = data[i].sim(data[i]) + factor*factor*sqClusterSum[unqlbls[k]];
-				cost += 2.0*this->gammas[oldidx]*factor*factor*oldClusterSum[unqlbls[k]];
+				double factor = 1.0/(this->gammas[oldidx] + nInClus[lbl]);
+				double cost = data[i].sim(data[i]) + factor*factor*sqClusterSum[lbl];
+				cost += 2.0*this->gammas[oldidx]*factor*factor*oldClusterSum[lbl];
 				cost += this->gammas[oldidx]*this->gammas[oldidx]*factor*factor*this->oldprms[oldidx].sim(this->oldprms);
-				for (int j = 0; j < dInClus.size(); j++){
-					cost += -2.0*factor*data[i].sim(data[j]);
+				for (int j = 0; j < clus.size(); j++){
+					cost += -2.0*factor*data[i].sim(clus[j]);
 				}
 				cost += -2.0*this->gammas[oldidx]*factor*this->oldprms[oldidx].sim(data[i]);
 				if (cost < minCost){
 					minCost = cost;
-					minLbl = unqlbls[k];
+					minLbl = lbl;
 				}
 			}
 		}
@@ -307,12 +319,12 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 		for (int k = 0; k < this->oldprmlbls.size(); k++){
 			auto it = find(unqlbls.begin(), unqlbls.end(), this->oldprmlbls[k]);
 			if (it == unqlbls.end()){
-				double cost = this->agecosts[k];
-				cost += this->gammas[k]/(this->gammas[k]+1.0)*(data[i].sim(data[i])-2.0*this->oldprms[k].sim(data[i])+this->oldprms[k].sim(this->oldprms[k]));
-			}
-			if (cost < minCost){
-				minCost = cost;
-				minLbl = this->oldprmlbls[k];
+				double cost = this->agecosts[k] + 
+						this->gammas[k]/(this->gammas[k]+1.0)*(data[i].sim(data[i])-2.0*this->oldprms[k].sim(data[i])+this->oldprms[k].sim(this->oldprms[k]));
+				if (cost < minCost){
+					minCost = cost;
+					minLbl = this->oldprmlbls[k];
+				}
 			}
 		}
 		if (minLbl == -1){
