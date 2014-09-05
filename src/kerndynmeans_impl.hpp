@@ -30,7 +30,7 @@ void KernDynMeans<D,C,P>::reset(){
 }
 
 //This function updates the weights/ages of all the clusters after each clustering step is complete
-template <typename D, typename P>
+template <typename D, typename C, typename P>
 void KernDynMeans<D,C,P>::updateState(const vector<D>& data, const vector<int>& lbls){
 	//first increment the age of everything
 	//this will be undone below for any current clusters
