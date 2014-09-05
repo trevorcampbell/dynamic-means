@@ -224,11 +224,7 @@ template <typename T>
 std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::vector<T>& data, std::vector<int> lbls){
 	if (lbls.size() < data.size()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
 		//get the data labels from spectral clustering
-		SpecDynMeans<T, P> sdm(this->lambda, this->Q, this->tau);
-		double tmpobj = 0;
-		double tmpt = 0;
- 		sdm.cluster(data, 1, data.size(), SpecDynMeans<T, P>::EigenSolverType::REDSVD, lbls, tmpobj, tmpt);
-
+		lbls = this->baseCluster(data);
 		//find the optimal correspondence between old/current clusters
 		lbls = this->updateOldNewCorrespondence(data, lbls);
 		//initlbls is now ready for regular refinement iterations
@@ -611,34 +607,32 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 }
 
 template<typename D, typename C, typename P>
-std::vector<int> KernDynMeans<D,C,P>::spectralCluster(std::vector<T>& data){
-	//TODO: FINISH CODING THIS FUNCTION
+std::vector<int> KernDynMeans<D,C,P>::baseCluster(std::vector<T>& data){
 	//compute the kernel matrix
 	int nA = data.size();
 	MXd K = MXd::Zeros(nA, nA);
 	//solve the eigensystem for eigenvectors
-	Eigen::SelfAdjointEigenSolver<MXd> eigB;
-	eigB.compute(MXd(kUpper));
+	Eigen::SelfAdjointEigenSolver<MXd> eigsol;
+	eigsol.compute(K);
 	//since the eigenvalues are sorted in increasing order, chop off the ones at the front
-	eigvals = eigB.eigenvalues();
-	eigvecs = eigB.eigenvectors();
+	VXd eigvals = eigsol.eigenvalues();
+	MXd Z = eigsol.eigenvectors();
 	int chopIdx = 0;
-	while (chopIdx < eigvals.size() && eigvals(chopIdx) < this->lamb) chopIdx++; 
+	while (chopIdx < eigvals.size() && eigvals(chopIdx) < this->lambda) chopIdx++; 
 	if (chopIdx == eigvals.size()){
 		eigvals = eigvals.tail(1).eval();
-		eigvecs = eigvecs.col(eigvecs.cols()-1).eval();
+		Z = Z.col(Z.cols()-1).eval();
 	} else {
 		int nLeftOver = eigvals.size()-chopIdx;
 		eigvals = eigvals.tail(nLeftOver).eval();
-		eigvecs = eigvecs.topRightCorner(eigvecs.rows(), nLeftOver).eval();
+		Z = Z.topRightCorner(Z.rows(), nLeftOver).eval();
 	}
-	//normalize the new rows of Z
+	//normalize the rows of Z
 	const int nZCols = Z.cols(); //number of clusters currently instantiated
-
-	//normalize the new rows of Z
 	for (int j = 0; j < nA; j++){
 		double rownorm = sqrt(Z.row(j).squaredNorm());
-		if (rownorm == 0){ //if rownorm is a hard zero, just set the row to ones -- it's the only thing we can do, lambda was set too high
+		if (rownorm == 0){ //if rownorm is a hard zero, just set the row to ones -- 
+							//it's the only thing we can do, lambda was set too high
 			Z.row(j) = MXd::Ones(1, nZCols);
 			rownorm = sqrt(Z.row(j).squaredNorm());
 		}
@@ -652,9 +646,12 @@ std::vector<int> KernDynMeans<D,C,P>::spectralCluster(std::vector<T>& data){
 	//propose nRestarts V trials
 	V.setZero();
 	//initialize unitary V via ``most orthogonal rows'' method
-	int rndRow = this->rng()%(nA+nB);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> uniint(0, nA-1);
+	int rndRow = uniint(gen);
 	V.col(0) = Z.row(rndRow).transpose();
-	MXd c(nA+nB, 1);
+	MXd c(nA, 1);
 	c.setZero();
 	for (int j = 1; j < nZCols; j++){
 		c += (Z*V.col(j-1)).cwiseAbs();
@@ -664,21 +661,126 @@ std::vector<int> KernDynMeans<D,C,P>::spectralCluster(std::vector<T>& data){
 	}
 	this->orthonormalize(V);
 
-	//initialize X
-	X.setZero();
-
-	//solve the alternating minimization for X
+	//solve the alternating minimization for X, V
 	double obj, prevobj;
 	obj = prevobj = numeric_limits<double>::infinity();
 	do{
 		prevobj = obj;
+		MXd ZV = Z*V;
+		//Solve for X via nonmaximum suppression
+		X.setZero();
+		for (int i = 0; i < nA; i++){
+			int unused, maxCol;
+			ZV.row(i).maxCoeff(&unused, &maxCol);
+			X(i, maxCol) = 1;
+		}
 
-		this->findClosestConstrained(Z*V, X);
-
-		this->findClosestRelaxed(Z, X, V);
+		//solve for V via SVD orthonormalization
+		V = X.transpose()*Z;
+		this->orthonormalize(V);
 
 		obj = (X-Z*V).squaredNorm();
 	} while( fabs(obj - prevobj)/obj > 1e-6);
+
+	//Done -- pick out labels from X
+	std::vector<int> lbls;
+	for (int i = 0; i < nA; i++){
+		int unused, maxCol;
+		X.row(i).maxCoeff(&unused, &maxCol);
+		lbls.push_back(maxCol);
+	}
+	return lbls;
+}
+
+template <typename D, typename C, typename P>
+void KernDynMeans<D,C,P>::orthonormalize(MXd& V) const{ 
+	//do a safe svd, with guaranteed orthonormal columns even in the event of numerically small singular values
+	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::HouseholderQRPreconditioner> svd(V, Eigen::ComputeFullU | Eigen::ComputeFullV); //slowest/safest preconditioning
+	MXd U = svd.matrixU();
+	MXd W = svd.matrixV();
+	MXd id = MXd::Identity(V.rows(), V.cols());
+	if ( (U.transpose()*U - id).squaredNorm() > 1e-6 || 
+		 (W.transpose()*W - id).squaredNorm() > 1e-6  ){
+		//buggy eigen sometimes spits out non-unitary U/W matrices
+		//however, this only happens when the singular value is numerical-precision small, like 1e-34ish
+		//so just pull those columns cause they don't matter anyway
+
+		//find good columns
+		vector<int> goodCols;
+		for (int i = 0; i < U.cols(); i++){
+			if ( fabs(U.col(i).squaredNorm()-1.0) < 1e-6 && fabs(W.col(i).squaredNorm()-1.0) < 1e-6){
+				goodCols.push_back(i);
+			}
+		}
+		//shift them up -- aliasing doesn't occur since goodcols increases by at least 1 each time
+		for (int i = 0; i < goodCols.size(); i++){
+			U.col(i) = U.col(goodCols[i]);
+			W.col(i) = W.col(goodCols[i]);
+		}
+		//gram schmidt them just to be sure
+		for (int i = 0; i < goodCols.size(); i++){
+			for (int j = 0; j < i; j++){
+				double dd = U.col(i).transpose()*U.col(j);
+				U.col(i) -= U.col(j)*dd;
+			}
+			U.col(i) /= U.col(i).norm();
+			for (int j = 0; j < i; j++){
+				double dd = W.col(i).transpose()*W.col(j);
+				W.col(i) -= W.col(j)*dd;
+			}
+			W.col(i) /= W.col(i).norm();
+		}
+		
+		//graham schmidt to create the last few columns
+		//U first
+		int nGoodCols = goodCols.size();
+		for (int i = 0; i < U.cols(); i++){
+			if (nGoodCols == U.cols()){
+				break;
+			}
+			VXd gscol = VXd::Zero(U.rows());
+			gscol(i) = 1.0;
+			//subtract the projections
+			for (int j = 0; j < nGoodCols; j++){
+				double dd = gscol.transpose()*U.col(j);
+				gscol -= dd*U.col(j);
+			}
+			if (gscol.squaredNorm() > 1e-6){
+				U.col(nGoodCols) = gscol/gscol.norm();
+				nGoodCols++;
+			}
+		}
+		if(nGoodCols != U.cols()){
+			cout << "libspecdynmeans: ERROR: GRAHAM SCHMIDT DID NOT ORTHONORMALIZE U!" << endl;
+			int ddd;
+			cin >> ddd;
+		}
+		//now W
+		nGoodCols = goodCols.size();
+		for (int i = 0; i < W.cols(); i++){
+			if (nGoodCols == W.cols()){
+				break;
+			}
+			VXd gscol = VXd::Zero(U.rows());
+			gscol(i) = 1.0;
+			//subtract the projections
+			for (int j = 0; j < nGoodCols; j++){
+				double dd = gscol.transpose()*W.col(j);
+				gscol -= dd*W.col(j);
+			}
+			if (gscol.squaredNorm() > 1e-6){
+				W.col(nGoodCols) = gscol/gscol.norm();
+				nGoodCols++;
+			}
+		}
+		if(nGoodCols != W.cols()){
+			cout << "libspecdynmeans: ERROR: GRAHAM SCHMIDT DID NOT ORTHONORMALIZE W!" << endl;
+			int ddd;
+			cin >> ddd;
+		}
+	}
+	V  = W*U.transpose();
+	return; 
 }
 
 //template <typename D, typename C, typename P>

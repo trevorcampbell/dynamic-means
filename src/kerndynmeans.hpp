@@ -10,8 +10,8 @@
 #include<boost/bind.hpp>
 #include<sys/time.h>
 #include <ctime>
-#include<dynmeans/specdynmeans.hpp>
 #include "gurobi_c++.h" //note: the use of this library requires gurobi!
+#include <eigen3/Eigen/Dense>
 
 using namespace std;
 
@@ -50,7 +50,8 @@ class KernDynMeans{
 		////try to merge two clusters
 		//template <typename T> std::vector<int> clusterMerge(std::vector<T>& data, std::vector<int> lbls);
 		void updateState(const vector<D>& data, const vector<int>& lbls);
-		std::vector<int> spectralCluster(std::vector<T>& data);
+		std::vector<int> baseCluster(std::vector<T>& data);
+		void orthonormalize(MXd& V) const; 
 
 
 		GRBEnv* grbenv;
