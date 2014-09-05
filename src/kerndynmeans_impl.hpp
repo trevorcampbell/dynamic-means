@@ -1,6 +1,7 @@
 #ifndef __KERNDYNMEANS_IMPL_HPP
 template<typename D, typename C, typename P>
 KernDynMeans<D,C,P>::KernDynMeans(double lambda, double Q, double tau, bool verbose){
+	this->grbenv = new GRBEnv();
 	this->verbose = verbose;
 	this->nextlbl = 0;
 	this->ages.clear();
@@ -16,6 +17,7 @@ KernDynMeans<D,C,P>::KernDynMeans(double lambda, double Q, double tau, bool verb
 
 template<typename D, typename C, typename P>
 KernDynMeans<D,C,P>::~KernDynMeans(){
+	delete this->grbenv;
 }
 
 template<typename D, typename C, typename P>
@@ -249,7 +251,7 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 		if(nInClus.count(lbls[i]) == 0){
 			nInClus[lbls[i]] = 0;
 		}
-		nInclus[lbls[i]] += data[i].nv
+		nInclus[lbls[i]] += data[i].getN();
 	}
 
 	//precompute the squared cluster sums
@@ -361,7 +363,7 @@ std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>&
 		if(nInClus.count(lbls[i]) == 0){
 			nInClus[lbls[i]] = 0;
 		}
-		nInclus[lbls[i]] += data[i].nv
+		nInclus[lbls[i]] += data[i].getN();
 	}
 	//compute the squared cluster sums
 	std::map<int, double> sqClusterSum;
@@ -417,9 +419,8 @@ map<int, int> KernDynMeans<D,C,P>::getMinWtMatching(vector< pair<int, int> > nod
 	int nVars = edgeWeights.size();
 
 	//start up GRB
-	GRBEnv grbenv;
-	grbenv.set(GRB_IntParam_OutputFlag, 0);//controls the output of Gurobi - 0 means no output, 1 means normal output
-	grbenv.set(GRB_IntParam_Threads, 1);//controls the number of threads Gurobi uses - I force it to use 1 since the optimization in this algorithm is fairly small/simple
+	grbenv->set(GRB_IntParam_OutputFlag, 0);//controls the output of Gurobi - 0 means no output, 1 means normal output
+	grbenv->set(GRB_IntParam_Threads, 1);//controls the number of threads Gurobi uses - I force it to use 1 since the optimization in this algorithm is fairly small/simple
 									     	//											and it just ends up wasting time constantly creating/deleting threads otherwise
 	try{
 	GRBModel grbmodel(*grbenv);
@@ -562,7 +563,7 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 		if(nInClus.count(lbls[i]) == 0){
 			nInClus[lbls[i]] = 0;
 		}
-		nInclus[lbls[i]] += data[i].nv
+		nInclus[lbls[i]] += data[i].getN();
 	}
 	//for every current cluster
 	for (auto it = dInClus.begin(); it != dInClus.end(); ++it){

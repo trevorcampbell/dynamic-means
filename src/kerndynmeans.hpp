@@ -51,6 +51,7 @@ class KernDynMeans{
 		//template <typename T> std::vector<int> clusterMerge(std::vector<T>& data, std::vector<int> lbls);
 
 
+		GRBEnv* grbenv;
 		double lambda, Q, tau;
 		bool verbose;
 

@@ -23,14 +23,23 @@ double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> m
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
 void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<V2d>& clusterData, vector<int>& trueLabels);
 
+int nextId = 0;
 
-//kernel data class 
+//kernel data class
 class KD{
 	public:
+		int id;
 		V2d v;
+		KD(){
+			this->id = nextId;
+			nextId++;
+		}
 		//similarity function from data->data is just exp(-|| ||^2 / w^2)
 		double sim(const KD& rhs) const{
 			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+		}
+		double getN(){
+			return 1.0;
 		}
 };
 
@@ -38,10 +47,58 @@ class KD{
 
 class KC{
 	public:
+		int id;
+		int nv;
+		std::map<int, double> savedEdges;
+		KD *d1, *d2;
+		KC *c1, *c2;
+		KC(const KD& d1, const KD& d2){
+			this->id = nextId;
+			nextId++;
+			this->nv = 2;
+			this->d1 = &d1;
+			this->d2 = &d2;
+			this->c1 = NULL;
+			this->c2 = NULL;
+		}
+		KC(const KC& d1, const KC& d2){
+			this->id = nextId;
+			nextId++;
+			this->nv = d1.nv + d2.nv;
+			this->c1 = &c1;
+			this->c2 = &c2;
+			this->d1 = NULL;
+			this->d2 = NULL;
+		}
+		double sim(const KC& rhs) const{
+			if(this->savedEdges.count(rhs.id) == 0){
+				if (rhs.savedEdges.count(this->id) == 0){
+					//neither me nor rhs have the similarity stored, so traverse down the tree
+					if (this->d1 == NULL){
+						//coarse children nodes
+						double s = this->c1;
+					} else {
+						//data children nodes
+						double s = this->d1->
 
+					}
+				} else {
+					double s = rhs.savedEdges[this->id];
+					this->savedEdges[rhs.id] = s; //make sure I have sim to rhs as well
+					return s;
+				}
+			} else {
+				double s = this->savedEdges[rhs.id];
+				rhs.savedEdges[this->id] = s; //make sure rhs has sim to me as well
+				return s;
+			}
+		}
+		double getN(){
+			return this->nv;
+		}
 };
 
-//kernel parameter class 
+//kernel parameter class
 class KP{
 	public:
 		V2d v;
@@ -55,6 +112,12 @@ class KP{
 		}
 		//similarity function from parameter->data is just exp(-|| ||^2 / w^2)
 		double sim(const KD& rhs) const{
+			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+		}
+		double sim(const KC& rhs) const{
+			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+		}
+		double sim(const KP& rhs) const{
 			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 		//This is the typical prior-weighted least squares Dynamic Means paramter update
