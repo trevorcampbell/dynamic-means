@@ -1,7 +1,10 @@
 #ifndef __KERNDYNMEANS_IMPL_HPP
 template<typename D, typename C, typename P>
 KernDynMeans<D,C,P>::KernDynMeans(double lambda, double Q, double tau, bool verbose){
-	this->grbenv = new GRBEnv();
+	if (lambda < 0 || Q < 0 || tau < 0){
+		cout << "libkerndynmeans: ERROR: Parameters of Kernel Dynamic Means cannot be < 0." << endl;
+		cout << "libkerndynmeans: Lambda: " << lambda << " Q: " << Q << " tau: " << tau << endl;
+	}
 	this->verbose = verbose;
 	this->nextlbl = 0;
 	this->ages.clear();
@@ -13,6 +16,16 @@ KernDynMeans<D,C,P>::KernDynMeans(double lambda, double Q, double tau, bool verb
 	this->lambda = lambda;
 	this->Q = Q;
 	this->tau = tau;
+	try{
+		this->grbenv = new GRBEnv();
+		//start up GRB
+		grbenv->set(GRB_IntParam_OutputFlag, 0);//controls the output of Gurobi - 0 means no output, 1 means normal output
+		//grbenv->set(GRB_IntParam_Method, 1);//controls which method Gurobi uses - default -1 (auto), 0=primal simplex, 1=dual simplex, 2=barrier, 3=concurrent, 4=deterministic concurrent
+		grbenv->set(GRB_IntParam_Threads, 1);//controls the number of threads Gurobi uses - I force it to use 1 since the optimization in this algorithm is fairly small/simple
+										     	//											and it just ends up wasting time constantly creating/deleting threads otherwise
+	} catch (GRBException e){
+		cout << e.getErrorCode() << " " << e.getMessage() << endl;
+	}
 }
 
 template<typename D, typename C, typename P>
@@ -418,10 +431,7 @@ map<int, int> KernDynMeans<D,C,P>::getMinWtMatching(vector< pair<int, int> > nod
 	//get params
 	int nVars = edgeWeights.size();
 
-	//start up GRB
-	grbenv->set(GRB_IntParam_OutputFlag, 0);//controls the output of Gurobi - 0 means no output, 1 means normal output
-	grbenv->set(GRB_IntParam_Threads, 1);//controls the number of threads Gurobi uses - I force it to use 1 since the optimization in this algorithm is fairly small/simple
-									     	//											and it just ends up wasting time constantly creating/deleting threads otherwise
+	
 	try{
 	GRBModel grbmodel(*grbenv);
 	//add variables/objective
@@ -599,7 +609,64 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 	}
 	return cost;
 }
+template<typename D, typename C, typename P>
+std::vector<int> KernDynMeans<D,C,P>::spectralCluster(std::vector<T>& data){
+	//compute the kernel matrix
+	//solve the eigensystem for eigenvectors
+	//normalize the new rows of Z
+	//initialize X (constrained version of Z) 
+	MXd X(nA+nB, nZCols);
+	//initialize V (rotation matrix on Z to make Z*V close to X)
+	MXd V(nZCols, nZCols);
 
+	//propose nRestarts V trials
+	if (verbose){
+		cout << "libspecdynmeans: Finding discretized solution with " << nRestarts << " restarts" << endl;
+	}
+	for (int i = 0; i < nRestarts; i++){
+		V.setZero();
+		//initialize unitary V via ``most orthogonal rows'' method
+		int rndRow = this->rng()%(nA+nB);
+		V.col(0) = Z.row(rndRow).transpose();
+		MXd c(nA+nB, 1);
+		c.setZero();
+		for (int j = 1; j < nZCols; j++){
+			c += (Z*V.col(j-1)).cwiseAbs();
+			int unused, nxtRow;
+			c.minCoeff(&nxtRow, &unused);
+			V.col(j) = Z.row(nxtRow).transpose();
+		}
+		this->orthonormalize(V);
+
+		//initialize X
+		X.setZero();
+
+		//solve the alternating minimization for X
+		double obj, prevobj;
+		obj = prevobj = numeric_limits<double>::infinity();
+		do{
+			prevobj = obj;
+
+			this->findClosestConstrained(Z*V, X);
+
+			this->findClosestRelaxed(Z, X, V); 
+
+			obj = (X-Z*V).squaredNorm();
+		} while( fabs(obj - prevobj)/obj > 1e-6);
+		//compute the normalized cuts objective
+		vector<int> tmplbls = this->getLblsFromIndicatorMat(X);
+		double nCutsObj = this->getNormalizedCutsObj(kUpper, tmplbls);
+		if (nCutsObj < minNCutsObj){
+			minNCutsObj = nCutsObj;
+			minLbls = tmplbls;
+		}
+
+		if (verbose){
+			cout << "libspecdynmeans: Attempt " << i+1 << "/" << nRestarts << ", Obj = " << nCutsObj << " MinObj = " << minNCutsObj << "                                       \r" <<  flush;
+		}
+	}
+
+}
 
 //template <typename D, typename C, typename P>
 //template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterSplit(std::vector<T>& data, std::vector<int> lbls){

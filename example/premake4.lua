@@ -18,9 +18,9 @@ solution "Examples"
 		language "C++"
 		location "build"
 		files {"mainsdm.cpp"}
-		links {"lpsolve55", "gurobi_c++", "gurobi55"}
-		includedirs{"/usr/local/include/eigen3", "/opt/gurobi550/linux64/include", "/usr/local/include/dynmeans"}
-		libdirs{"/opt/gurobi550/linux64/lib"}
+		links {"lpsolve55", "gurobi_c++", "gurobi56"}
+		includedirs{"/usr/local/include/eigen3", "/opt/gurobi563/linux64/include", "/usr/local/include/dynmeans"}
+		libdirs{"/opt/gurobi563/linux64/lib"}
 		configuration "debug"
 			flags{"Symbols", "ExtraWarnings"}
 			buildoptions{"-std=c++0x"}
@@ -32,9 +32,9 @@ solution "Examples"
 		language "C++"
 		location "build"
 		files {"mainkdm.cpp"}
-		links {"lpsolve55", "gurobi_c++", "gurobi55"}
-		includedirs{"/usr/local/include/eigen3", "/opt/gurobi550/linux64/include", "/usr/local/include/dynmeans"}
-		libdirs{"/opt/gurobi550/linux64/lib"}
+		links {"lpsolve55", "gurobi_c++", "gurobi56"}
+		includedirs{"/usr/local/include/eigen3", "/opt/gurobi563/linux64/include", "/usr/local/include/dynmeans"}
+		libdirs{"/opt/gurobi563/linux64/lib"}
 		configuration "debug"
 			flags{"Symbols", "ExtraWarnings"}
 			buildoptions{"-std=c++0x"}
