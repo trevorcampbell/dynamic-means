@@ -20,17 +20,7 @@ typedef Eigen::VectorXd VXd;
 typedef Eigen::SparseMatrix<double> SMXd;
 typedef Eigen::Triplet<double> TD;
 
-
-//TODO
-//TODO
-//TODO
-//Make numInClus reflect coarsification levels, i.e. datapoints should be weighted heavier if they
-//subsume more nodes in the original graph
-//TODO
-//TODO
-//TODO
-
-template <class D, class P>
+template <class D, class C, class P>
 class KernDynMeans{
 	public:
 		KernDynMeans(double lambda, double Q, double tau, bool verbose = false);

@@ -126,14 +126,16 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 		//first, form the coarsification levels in the graph
 		std::stack<std::vector<C> > coarsestack; //stores coarsified nodes
 		std::stack<std::vector<std::pair<int, int> > > mergestack; //mergestack.top() stores the pairs that were merged to form coarsestack.top()
-		auto crs = this->coarsify(data);
-		coarsestack.push(crs.first);
-		mergestack.push(crs.second);
+		if(data.size() > nCoarsest){
+			auto crs = this->coarsify(data);
+			coarsestack.push(crs.first);
+			mergestack.push(crs.second);
+		}
 		while(coarsestack.top().size() > nCoarsest){
 			if (verbose){
 				cout << "libkerndynmeans: Coarsifying " << coarsestack.top().size() << " nodes at level " << coarsestack.size() << "." << endl;
 			}
-			crs = this->coarsify(coarsestack.top());
+			auto crs = this->coarsify(coarsestack.top());
 			coarsestack.push(crs.first);
 			mergestack.push(crs.second);
 		}
