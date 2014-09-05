@@ -609,63 +609,76 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 	}
 	return cost;
 }
+
 template<typename D, typename C, typename P>
 std::vector<int> KernDynMeans<D,C,P>::spectralCluster(std::vector<T>& data){
+	//TODO: FINISH CODING THIS FUNCTION
 	//compute the kernel matrix
+	int nA = data.size();
+	MXd K = MXd::Zeros(nA, nA);
 	//solve the eigensystem for eigenvectors
+	Eigen::SelfAdjointEigenSolver<MXd> eigB;
+	eigB.compute(MXd(kUpper));
+	//since the eigenvalues are sorted in increasing order, chop off the ones at the front
+	eigvals = eigB.eigenvalues();
+	eigvecs = eigB.eigenvectors();
+	int chopIdx = 0;
+	while (chopIdx < eigvals.size() && eigvals(chopIdx) < this->lamb) chopIdx++; 
+	if (chopIdx == eigvals.size()){
+		eigvals = eigvals.tail(1).eval();
+		eigvecs = eigvecs.col(eigvecs.cols()-1).eval();
+	} else {
+		int nLeftOver = eigvals.size()-chopIdx;
+		eigvals = eigvals.tail(nLeftOver).eval();
+		eigvecs = eigvecs.topRightCorner(eigvecs.rows(), nLeftOver).eval();
+	}
 	//normalize the new rows of Z
+	const int nZCols = Z.cols(); //number of clusters currently instantiated
+
+	//normalize the new rows of Z
+	for (int j = 0; j < nA; j++){
+		double rownorm = sqrt(Z.row(j).squaredNorm());
+		if (rownorm == 0){ //if rownorm is a hard zero, just set the row to ones -- it's the only thing we can do, lambda was set too high
+			Z.row(j) = MXd::Ones(1, nZCols);
+			rownorm = sqrt(Z.row(j).squaredNorm());
+		}
+		Z.row(j) *= (1.0/rownorm);
+	}
 	//initialize X (constrained version of Z) 
-	MXd X(nA+nB, nZCols);
+	MXd X(nA, nZCols);
 	//initialize V (rotation matrix on Z to make Z*V close to X)
 	MXd V(nZCols, nZCols);
 
 	//propose nRestarts V trials
-	if (verbose){
-		cout << "libspecdynmeans: Finding discretized solution with " << nRestarts << " restarts" << endl;
+	V.setZero();
+	//initialize unitary V via ``most orthogonal rows'' method
+	int rndRow = this->rng()%(nA+nB);
+	V.col(0) = Z.row(rndRow).transpose();
+	MXd c(nA+nB, 1);
+	c.setZero();
+	for (int j = 1; j < nZCols; j++){
+		c += (Z*V.col(j-1)).cwiseAbs();
+		int unused, nxtRow;
+		c.minCoeff(&nxtRow, &unused);
+		V.col(j) = Z.row(nxtRow).transpose();
 	}
-	for (int i = 0; i < nRestarts; i++){
-		V.setZero();
-		//initialize unitary V via ``most orthogonal rows'' method
-		int rndRow = this->rng()%(nA+nB);
-		V.col(0) = Z.row(rndRow).transpose();
-		MXd c(nA+nB, 1);
-		c.setZero();
-		for (int j = 1; j < nZCols; j++){
-			c += (Z*V.col(j-1)).cwiseAbs();
-			int unused, nxtRow;
-			c.minCoeff(&nxtRow, &unused);
-			V.col(j) = Z.row(nxtRow).transpose();
-		}
-		this->orthonormalize(V);
+	this->orthonormalize(V);
 
-		//initialize X
-		X.setZero();
+	//initialize X
+	X.setZero();
 
-		//solve the alternating minimization for X
-		double obj, prevobj;
-		obj = prevobj = numeric_limits<double>::infinity();
-		do{
-			prevobj = obj;
+	//solve the alternating minimization for X
+	double obj, prevobj;
+	obj = prevobj = numeric_limits<double>::infinity();
+	do{
+		prevobj = obj;
 
-			this->findClosestConstrained(Z*V, X);
+		this->findClosestConstrained(Z*V, X);
 
-			this->findClosestRelaxed(Z, X, V); 
+		this->findClosestRelaxed(Z, X, V);
 
-			obj = (X-Z*V).squaredNorm();
-		} while( fabs(obj - prevobj)/obj > 1e-6);
-		//compute the normalized cuts objective
-		vector<int> tmplbls = this->getLblsFromIndicatorMat(X);
-		double nCutsObj = this->getNormalizedCutsObj(kUpper, tmplbls);
-		if (nCutsObj < minNCutsObj){
-			minNCutsObj = nCutsObj;
-			minLbls = tmplbls;
-		}
-
-		if (verbose){
-			cout << "libspecdynmeans: Attempt " << i+1 << "/" << nRestarts << ", Obj = " << nCutsObj << " MinObj = " << minNCutsObj << "                                       \r" <<  flush;
-		}
-	}
-
+		obj = (X-Z*V).squaredNorm();
+	} while( fabs(obj - prevobj)/obj > 1e-6);
 }
 
 //template <typename D, typename C, typename P>
