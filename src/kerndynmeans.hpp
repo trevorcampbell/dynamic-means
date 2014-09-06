@@ -65,6 +65,7 @@ class KernDynMeans{
 		std::vector<int> ages;
 		std::vector<double> agecosts;
 		std::vector<double> gammas;
+
 };
 
 
