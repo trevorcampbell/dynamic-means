@@ -6,7 +6,7 @@ KernDynMeans<D,C,P>::KernDynMeans(double lambda, double Q, double tau, bool verb
 		cout << "libkerndynmeans: Lambda: " << lambda << " Q: " << Q << " tau: " << tau << endl;
 	}
 	this->verbose = verbose;
-	this->nextlbl = 0;
+	this->maxLblPrevUsed = -1;
 	this->ages.clear();
 	this->oldprms.clear();
 	this->oldprmlbls.clear();
@@ -35,7 +35,7 @@ KernDynMeans<D,C,P>::~KernDynMeans(){
 
 template<typename D, typename C, typename P>
 void KernDynMeans<D,C,P>::reset(){
-	this->nextlbl = 0;
+	this->maxLblPrevUsed = 0;
 	this->ages.clear();
 	this->oldprms.clear();
 	this->oldprmlbls.clear();
@@ -101,7 +101,11 @@ void KernDynMeans<D,C,P>::updateState(const vector<D>& data, const vector<int>& 
 		}
 	}
 
-	//nextlbl is updated on the fly, no need to update it here like in specdynmeans
+	//update this->maxLblPrevUsed if new clusters were created
+	int maxlbl = *max_element(lbls.begin(), lbls.end());
+	if (maxlbl >= this->maxLblPrevUsed){
+		this->maxLblPrevUsed = maxlbl;
+	}
 
 	//done
 	return;
@@ -291,6 +295,7 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 
 	//minimize the cost associated with each observation individually based on the old labelling
 	std::vector<int> newlbls(lbls.size(), 0);
+	int nextlbl = this->maxLblPrevUsed+1;//for this round, handles labelling of new clusters
 	for (int i = 0; i < lbls.size(); i++){
 		double minCost = this->lambda; //default to creating a new cluster, and then try to beat it 
 		int minLbl = -1;
@@ -340,13 +345,13 @@ std::vector<int> KernDynMeans<D,C,P>::updateLabels(std::vector<T>& data, std::ve
 		}
 		if (minLbl == -1){
 			//create a new cluster
-			newlbls[i] = this->nextlbl;
-			unqlbls.push_back(this->nextlbl);
-			dInClus[this->nextlbl].push_back(data[i]); //no problem with duplicating the datapoint here (it will still exist in dInClus in the old cluster)
+			newlbls[i] = nextlbl;
+			unqlbls.push_back(nextlbl);
+			dInClus[nextlbl].push_back(data[i]); //no problem with duplicating the datapoint here (it will still exist in dInClus in the old cluster)
 													//this is because the distance comparisons to previous cluster centers shouldn't be affected by creating new centers
 													//ergo, leave the old dInClus alone, but create a new entry so that other observations can switch tothis cluster
-			sqClusterSum[this->nextlbl] = data[i].sim(data[i]);
-			this->nextlbl++;
+			sqClusterSum[nextlbl] = data[i].sim(data[i]);
+			nextlbl++;
 		} else {
 			newlbls[i] = minLbl;
 		}
@@ -375,6 +380,7 @@ std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>&
 		nInClus[lbls[i]] += data[i].getN();
 	}
 	//compute the squared cluster sums
+	//no point computing old cluster sums, will just have to compute below once for all clusters anyway
 	std::map<int, double> sqClusterSum;
 	for (int i = 0; i < unqlbls.size(); i++){
 		double sqsum = 0;
@@ -390,44 +396,64 @@ std::vector<int> KernDynMeans<D,C,P>::updateOldNewCorrespondence(std::vector<T>&
 	}
 
 	//get the old/new correspondences from bipartite matching
- 	vector< pair<int, int> > nodePairs; //new clusters in index 0, old clusters + one null cluster in index 1
+ 	vector< pair<int, int> > nodePairs; //new clusters in .first, old clusters + one null cluster in .second
  	vector< double > edgeWeights;
 	for (int i = 0; i < unqlbls.size(); i++){
 		const std::vector<T>& clus = dInClus[unqlbls[i]];
 		const int& lbl = unqlbls[i];
 		for (int j = 0; j < this->oldprmlbls.size(); j++){
-			nodePairs.push_back(std::pair<int, int>(lbl, this->oldprmlbls[j]) );
-			double ewt = this->agecosts[j] 
+			double ewt = this->agecosts[j]
 						+ this->gammas[j]*nInClus[lbl]/(this->gammas[j]+nInClus[lbl])*this->oldprms[j].sim(this->oldprms[j])
-						-this->gammas[j]/(this->gammas[j]+nInClus[lbl])*sqClusterSum[lbl];
+						-1.0/(this->gammas[j]+nInClus[lbl])*sqClusterSum[lbl];
+			double oldClusSum = 0;
+			for (int k = 0; k < clus.size(); k++){
+				oldClusSum += this->oldprms[j].sim(clus[k]);
+			}
+			ewt += -2.0*this->gammas[j]/(this->gammas[j]+nInClus[lbl])*oldClusSum;
+			nodePairs.push_back(std::pair<int, int>(lbl, this->oldprmlbls[j]) );
 			edgeWeights.push_back(ewt);
 		}
 		//-1 is the new cluster option
 		nodePairs.push_back( std::pair<int, int>(lbl, -1) );
-		edgeWeights.push_back(this->lambda);
+		edgeWeights.push_back(this->lambda-1.0/nInClus[lbl]*sqClusterSum[lbl]);
 	}
 	map<int, int> matching = this->getMinWtMatching(nodePairs, edgeWeights);
 
 	//relabel lbls based on the old/new correspondences
+	std::vector<int> newlbls = lbls;
+	int nextlbl = this->maxLblPrevUsed+1;
 	for (auto it = matching.begin(); it != matching.end(); ++it){
 		if (it->second != -1){ //if the current cluster isn't new
 			//replace all labels in lbls to the old cluster label
 			for (int i = 0; i < lbls.size(); i++){
 				if (lbls[i] == it->first){
-					lbls[i] = it->second;
+					newlbls[i] = it->second;
 				}
 			}
+		} else {
+			//replace all labels in lbls to the new cluster label
+			for (int i = 0; i < lbls.size(); i++){
+				if (lbls[i] == it->first){
+					newlbls[i] = nextlbl;
+				}
+			}
+			nextlbl++;
 		}
 	}
-	return lbls;
+	return newlbls;
 }
 
 template <typename D, typename C, typename P>
 map<int, int> KernDynMeans<D,C,P>::getMinWtMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const{
+	//used to get the matching between old/current clusters
+	//for each  current cluster (on the left, A), there must be one edge outgoing from it
+	//for each old cluster (on the right, B), there can be at most one edge outgoing
+	//for the final -1 node (on the right, in B), there can be as many outgoing edges as necessary
+
+
 	//get params
 	int nVars = edgeWeights.size();
 
-	
 	try{
 	GRBModel grbmodel(*grbenv);
 	//add variables/objective
@@ -461,14 +487,17 @@ map<int, int> KernDynMeans<D,C,P>::getMinWtMatching(vector< pair<int, int> > nod
 		grbmodel.addConstr(constrlhs, GRB_EQUAL, 1);
 	}
 	//constraint type 2: sum of incoming edges to B nodes <= 1
+	//if B[i] == -1, no constraint -- can have as many outgoing edges as required
 	for (int i = 0; i < B.size(); i++){
-		GRBLinExpr constrlhs;
-		for (int j = 0; j < nVars; j++){
-			if (nodePairs[j].second == B[i]){
-				constrlhs += 1.0*grbvars[j];
+		if (B[i] != -1){
+			GRBLinExpr constrlhs;
+			for (int j = 0; j < nVars; j++){
+				if (nodePairs[j].second == B[i]){
+					constrlhs += 1.0*grbvars[j];
+				}
 			}
+			grbmodel.addConstr(constrlhs, GRB_LESS_EQUAL, 1);
 		}
-		grbmodel.addConstr(constrlhs, GRB_LESS_EQUAL, 1);
 	}
 	//constraint type 3: all edge variables >= 0
 	//the polytope has an implicit bound of >=0 on all variables, don't need this
@@ -489,7 +518,7 @@ map<int, int> KernDynMeans<D,C,P>::getMinWtMatching(vector< pair<int, int> > nod
 	return retmap;
 	} catch (GRBException e){
 		cout << "libkerndynmeans: ERROR: Gurobi Error code = " << e.getErrorCode() << endl;
-		cout << e.getMessage() << endl;
+		cout << "libkerndynmeans: MESSAGE: " << e.getMessage() << endl;
 	} catch (...){
 		cout << "libkerndynmeans: ERROR: Unhandled Gurobi exception during optimization" << endl;
 	}
@@ -512,7 +541,10 @@ std::vector<int> KernDynMeans<D,C,P>::refine(std::vector< std::pair<int, int> > 
 	std::vector<int> newlbls(lblmax+1, 0);
 	for (int i = 0; i < merges.size(); i++){
 		newlbls[merges[i].first] = lbls[i];
-		newlbls[merges[i].second] = lbls[i];
+		if (merges[i].second != -1){ //the -1 signal says that the node was just moved up a level in the hierarchy, no merge occured
+										//so if there is a -1, just do nothing with merges.second
+			newlbls[merges[i].second] = lbls[i];
+		}
 	}
 	return newlbls;
 }
@@ -528,21 +560,23 @@ std::pair< std::vector<C>, std::vector<std::pair<int, int> > >  KernDynMeans<D,C
 	std::vector<bool> marks(data.size(), false);
 	std::vector< std::pair<int, int> > merges;
 	for (int i = 0; i < idcs.size(); i++){
-		if (!marks[i]){//if the vertex hasn't already been merged to another
+		int idxi = idcs[i];
+		if (!marks[idxi]){//if the vertex hasn't already been merged to another
 			double maxSim = 0;
 			int maxId = -1;
 			for (int j = i+1; j < idcs.size(); j++){//search all vertices after i (since all beforehave been merged)
-				if (!marks[j]){//only check it if it hasn't been marked
-					double sim = data[i].sim(data[j]);
+				int idxj = idcs[j];
+				if (!marks[idxj]){//only check it if it hasn't been marked
+					double sim = data[idxi].sim(data[idxj]);
 					if (sim > maxSim && sim > 1e-16){//1e-16 for keeping sparsity
 						maxSim = sim;
-						maxId = j;
+						maxId = idxj;
 					}
 				}
 			}
 			//if maxId is still -1, then pair(i, -1) states correctly that i is a singleton
-			merges.push_back( std::pair<int, int>(i, maxId));
-			marks[i] = true;
+			merges.push_back(std::pair<int, int>(idxi, maxId));
+			marks[idxi] = true;
 			if (maxId >= 0){
 				marks[maxId] = true;
 			}
@@ -552,7 +586,11 @@ std::pair< std::vector<C>, std::vector<std::pair<int, int> > >  KernDynMeans<D,C
 	//create the coarsified nodes
 	std::vector<C> coarse;
 	for (int i = 0; i < merges.size(); i++){
-		coarse.push_back( C(data[merges[i].first], data[merges[i].second]));
+		if (merges[i].second != -1){ //the only one that can be -1 is the second entry
+			coarse.push_back( C(data[merges[i].first], data[merges[i].second]));
+		} else {
+			coarse.push_back( C(data[merges[i].first]) );
+		}
 	}
 	return std::pair< std::vector<C>, std::vector<std::pair<int, int> > >(coarse, merges);
 }
@@ -607,10 +645,12 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 }
 
 template<typename D, typename C, typename P>
+template<typename T>
 std::vector<int> KernDynMeans<D,C,P>::baseCluster(std::vector<T>& data){
 	//compute the kernel matrix
 	int nA = data.size();
-	MXd K = MXd::Zeros(nA, nA);
+	MXd K = MXd(nA, nA);
+	K.setZero();
 	//solve the eigensystem for eigenvectors
 	Eigen::SelfAdjointEigenSolver<MXd> eigsol;
 	eigsol.compute(K);

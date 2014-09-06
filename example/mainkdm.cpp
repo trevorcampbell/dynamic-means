@@ -41,6 +41,14 @@ class KC{
 	public:
 		int nv;
 		std::vector<V2d> vs;
+		KC(const KD& d1){
+			this->nv = 1;
+			this->vs.push_back(d1.v);
+		}
+		KC(const KC& c1){
+			this->nv = c1.nv;
+			this->vs = c1.vs;
+		}
 		KC(const KD& d1, const KD& d2){
 			this->nv = 2;
 			this->vs.push_back(d1.v);
@@ -59,7 +67,7 @@ class KC{
 				}
 			}
 			std::sort(sims.begin(), sims.end());
-			return std::accumulate(sims.begin(), sims.end(), 0);
+			return std::accumulate(sims.begin(), sims.end(), 0.0);
 		}
 		double getN(){
 			return this->nv;
@@ -88,7 +96,7 @@ class KP{
 				sims.push_back(exp(-(this->v-rhs.vs[i]).squaredNorm()/(2*0.1*0.1)));
 			}
 			std::sort(sims.begin(), sims.end());
-			return std::accumulate(sims.begin(), sims.end(), 0);
+			return std::accumulate(sims.begin(), sims.end(), 0.0);
 		}
 		double sim(const KP& rhs) const{
 			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));

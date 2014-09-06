@@ -17,8 +17,6 @@ using namespace std;
 
 typedef Eigen::MatrixXd MXd;
 typedef Eigen::VectorXd VXd;
-typedef Eigen::SparseMatrix<double> SMXd;
-typedef Eigen::Triplet<double> TD;
 
 template <class D, class C, class P>
 class KernDynMeans{
@@ -50,7 +48,7 @@ class KernDynMeans{
 		////try to merge two clusters
 		//template <typename T> std::vector<int> clusterMerge(std::vector<T>& data, std::vector<int> lbls);
 		void updateState(const vector<D>& data, const vector<int>& lbls);
-		std::vector<int> baseCluster(std::vector<T>& data);
+		template <typename T> std::vector<int> baseCluster(std::vector<T>& data);
 		void orthonormalize(MXd& V) const; 
 
 
@@ -62,7 +60,7 @@ class KernDynMeans{
 		//once each step is complete, these get updated
 		std::vector<P> oldprms;
 		std::vector<int> oldprmlbls;// require a mapping from old parameters to old labels
-		int nextlbl;                //because clusters that die are removed entirely to save computation
+		int maxLblPrevUsed;         //because clusters that die are removed entirely to save computation
 		std::vector<double> weights;
 		std::vector<int> ages;
 		std::vector<double> agecosts;
