@@ -106,8 +106,10 @@ double KernDynMeans<D,C,P>::computedynmeansobj2(std::vector<D>& data, std::vecto
 	for (int i = 0; i < unqlbls.size(); i++){
 			//add cost for new clusters - lambda
 			// or add cost for old clusters - Q
-			if (find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]) != this->oldprmlbls.end()){
-				objective += this->Q*this->ages[i];
+			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]);
+			if (it != this->oldprmlbls.end()){
+				int oldidx = std::distance(this->oldprmlbls.begin(), it);
+				objective += this->Q*this->ages[oldidx];
 			} else {
 				objective += this->lambda;
 			}
@@ -119,7 +121,6 @@ double KernDynMeans<D,C,P>::computedynmeansobj2(std::vector<D>& data, std::vecto
 			tmpvec = tmpvec / nInClus[unqlbls[i]];
 			V2d prm;
 			prm.setZero();
-			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]);
 			if (it != this->oldprmlbls.end()){
 				int oldidx =  std::distance(this->oldprmlbls.begin(), it);
 				prm = (this->oldprms[oldidx].v*this->gammas[oldidx] + tmpvec*nInClus[unqlbls[i]])/(this->gammas[oldidx] + nInClus[unqlbls[i]]);
@@ -318,11 +319,8 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 	timeval tStart;
 	gettimeofday(&tStart, NULL);
 
-	const int nB = this->oldprms.size();
-	const int nA = data.size();
-
 	if (data.size() <= 0){
-		cout << "libkerndynmeans: WARNING: data size <=0 (= " << nA << "); Returning empty labels."<<  endl;
+		cout << "libkerndynmeans: WARNING: data size <=0 (= " << data.size() << "); Returning empty labels."<<  endl;
 		finalLabels = vector<int>();
 		tTaken = 0;
 		finalObj = 0;
@@ -333,49 +331,52 @@ void KernDynMeans<D,C,P>::cluster(std::vector<D>& data, const int nRestarts, con
 		return;
 	}
 	if (verbose){
-		cout << "libkerndynmeans: Clustering " << nA << " datapoints with " << nRestarts << " restarts." << endl;
-		cout << "libkerndynmeans: " << nB << " old clusters from previous timesteps." << endl;
+		cout << "libkerndynmeans: Clustering " << data.size() << " datapoints with " << nRestarts << " restarts." << endl;
+		cout << "libkerndynmeans: " << this->oldprms.size() << " old clusters from previous timesteps." << endl;
 	}
 	std::vector<int> minLbls;
 	double minObj = std::numeric_limits<double>::max();
 	for(int rest = 0; rest < nRestarts; rest++){
 		if (verbose){
-			cout << "libkerndynmeans: Attempt " << rest+1 << "/" << nRestarts << ", Obj = " << minObj << endl;
-			cout << "libkerndynmeans: Coarsifying " << nA << " nodes..." << endl;
+			cout << "libkerndynmeans: Attempt " << rest+1 << "/" << nRestarts << ", Minimum Obj = " << minObj << endl;
 		}
 
-		//first, form the coarsification levels in the graph
-		std::stack<std::vector<C> > coarsestack; //stores coarsified nodes
-		std::stack<std::vector<std::pair<int, int> > > mergestack; //mergestack.top() stores the pairs that were merged to form coarsestack.top()
+		//first, form the coarsification levels in the graph if necessary
+		std::vector<int> lbls;
 		if(data.size() > nCoarsest){
+			if (verbose){
+				cout << "libkerndynmeans: Coarsifying " << data.size() << " nodes at level 0." << endl;
+			}
+			std::stack<std::vector<C> > coarsestack; //stores coarsified nodes
+			std::stack<std::vector<std::pair<int, int> > > mergestack; //mergestack.top() stores the pairs that were merged to form coarsestack.top()
 			auto crs = this->coarsify(data);
 			coarsestack.push(crs.first);
 			mergestack.push(crs.second);
-		}
-		while(coarsestack.top().size() > nCoarsest){
-			if (verbose){
-				cout << "libkerndynmeans: Coarsifying " << coarsestack.top().size() << " nodes at level " << coarsestack.size() << "." << endl;
+			while(coarsestack.top().size() > nCoarsest){
+				if (verbose){
+					cout << "libkerndynmeans: Coarsifying " << coarsestack.top().size() << " nodes at level " << coarsestack.size() << "." << endl;
+				}
+				auto crs = this->coarsify(coarsestack.top());
+				coarsestack.push(crs.first);
+				mergestack.push(crs.second);
 			}
-			auto crs = this->coarsify(coarsestack.top());
-			coarsestack.push(crs.first);
-			mergestack.push(crs.second);
-		}
-		if (verbose){
-			cout << "libkerndynmeans: Done coarsifying, top level " << coarsestack.size() << " has " << coarsestack.top().size() << " nodes." << endl;
-		}
-		//next, step down through the refinements and cluster, initializing from the coarser level
-		std::vector<int> lbls;
-		while(!coarsestack.empty()){
 			if (verbose){
-				cout << "libkerndynmeans: Running clustering at level " << coarsestack.size() << " with " << coarsestack.top().size() << " nodes." << endl;
+				cout << "libkerndynmeans: Done coarsifying, top level " << coarsestack.size() << " has " << coarsestack.top().size() << " nodes." << endl;
 			}
-			//optimize the labels for the current top of coarsestack
-			lbls = this->clusterAtLevel(coarsestack.top(), lbls); //lbls starts out empty, clusterAtLevel knows to use a base clustering
-			coarsestack.pop();
-			//distribute the labels to the next level down
-			lbls = this->refine(mergestack.top(), lbls);
-			mergestack.pop();
+			//next, step down through the refinements and cluster, initializing from the coarser level
+			while(!coarsestack.empty()){
+				if (verbose){
+					cout << "libkerndynmeans: Running clustering at level " << coarsestack.size() << " with " << coarsestack.top().size() << " nodes." << endl;
+				}
+				//optimize the labels for the current top of coarsestack
+				lbls = this->clusterAtLevel(coarsestack.top(), lbls); //lbls starts out empty, clusterAtLevel knows to use a base clustering
+				coarsestack.pop();
+				//distribute the labels to the next level down
+				lbls = this->refine(mergestack.top(), lbls);
+				mergestack.pop();
+			}
 		}
+		
 		if (verbose){
 			cout << "libkerndynmeans: Running final clustering at data level." << endl;
 		}
@@ -429,11 +430,13 @@ template<typename D, typename C, typename P>
 template <typename T> 
 std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::vector<T>& data, std::vector<int> lbls){
 	if (lbls.size() < data.size()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
+		if (verbose){ cout << "Running base spectral clustering..." << endl;}
 		//get the data labels from spectral clustering
 		lbls = this->baseCluster(data);
 		//find the optimal correspondence between old/current clusters
 		lbls = this->updateOldNewCorrespondence(data, lbls);
 		//initlbls is now ready for regular refinement iterations
+		if (verbose){ cout << "Done base spectral clustering with objective: " << this->objective(data, lbls) << endl;}
 	}
 
 	//run the refinement iterations
@@ -845,9 +848,9 @@ double KernDynMeans<D,C,P>::objective(std::vector<T>& data, std::vector<int> lbl
 			cost += this->agecosts[oldidx];//old cluster penalty
 			//ratio association term
 			for (int i = 0; i < clus.size(); i++){
-				cost += (1.0 - 1.0/nInClus[lbl])*clus[i].sim(clus[i]); //diagonal elements
+				cost += (1.0 - 1.0/(this->gammas[oldidx]+nInClus[lbl]))*clus[i].sim(clus[i]); //diagonal elements
 				for (int j = i+1; j < clus.size(); j++){
-					cost += -2.0/nInClus[lbl]*clus[i].sim(clus[j]); //off-diagonal elements
+					cost += -2.0/(this->gammas[oldidx]+nInClus[lbl])*clus[i].sim(clus[j]); //off-diagonal elements
 				}
 			}
 			cost += this->gammas[oldidx]*nInClus[lbl]/(this->gammas[oldidx]+nInClus[lbl])*this->oldprms[oldidx].sim(this->oldprms[oldidx]);//old prm self-similarity

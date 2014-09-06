@@ -132,7 +132,7 @@ int main(int argc, char** argv){
 	double deathProbability = 0.05;
 	double motionStdDev = 0.05;
 	double clusterStdDev = 0.05;
-	int nDataPerClusterPerStep = 100; // datapoints generated for each cluster per timestep
+	int nDataPerClusterPerStep = 10; // datapoints generated for each cluster per timestep
 	int nSteps = 100;//run the experiment for nSteps steps
 	int initialClusters = 4; //the number of clusters to start with
 
@@ -153,13 +153,16 @@ int main(int argc, char** argv){
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
-	double lambda = 10;
-	double T_Q = 5;
-	double K_tau = 1.05;
+	//double lambda = 10;
+	//double T_Q = 5;
+	//double K_tau = 1.05;
+	double lambda = 0.05;
+	double T_Q = 6.8;
+	double K_tau = 1.01;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
-	int nCoarsest = 20;
+	int nCoarsest = 50;
 	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau, true);
 
 	//run the experiment
