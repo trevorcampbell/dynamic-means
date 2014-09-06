@@ -235,12 +235,20 @@ std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::vector<T>& data, std::
 	}
 
 	//run the refinement iterations
-	double obj = this->objective(data, lbls);
-	for (int i = 0; i < 500; i++){
+	double prevobj = this->objective(data, lbls);
+	double diff = 1.0;
+	int itr = 0;
+	while(diff > 1e-6){
+		itr++;
+		cout << "prelbl obj: " << this->objective(data, lbls) << endl;
 		lbls = this->updateLabels(data, lbls);
+		cout << "postlbl, preoldnew obj: " << this->objective(data, lbls) << endl;
 		lbls = this->updateOldNewCorrespondence(data, lbls);
-		obj = this->objective(data, lbls);
-		if (verbose){ cout << "libkerndynmeans: Objective = " << obj << "                           \r" << flush;}
+		cout << "postoldnew obj: " << this->objective(data, lbls) << endl;
+		double obj = this->objective(data, lbls);
+		diff = fabs((obj-prevobj)/obj);
+		prevobj = obj;
+		if (verbose){ cout << "libkerndynmeans: Kernelized clustering iteration " << itr << ", obj = " << obj << endl;}
 	}
 	if (verbose){cout << endl;}
 	return lbls;

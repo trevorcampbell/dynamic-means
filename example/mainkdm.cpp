@@ -29,7 +29,7 @@ class KD{
 		V2d v;
 		//similarity function from data->data is just exp(-|| ||^2 / w^2)
 		double sim(const KD& rhs) const{
-			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+			return this->v.transpose()*rhs.v; //exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 		double getN(){
 			return 1.0;
@@ -63,7 +63,7 @@ class KC{
 			std::vector<double> sims;
 			for (int i = 0; i < this->vs.size(); i++){
 				for (int j = 0; j < rhs.vs.size(); j++){
-					sims.push_back(exp(-(this->vs[i]-rhs.vs[j]).squaredNorm()/(2*0.1*0.1)));
+					sims.push_back(this->vs[i].transpose()*rhs.vs[j]); //exp(-(this->vs[i]-rhs.vs[j]).squaredNorm()/(2*0.1*0.1)));
 				}
 			}
 			std::sort(sims.begin(), sims.end());
@@ -88,18 +88,18 @@ class KP{
 		}
 		//similarity function from parameter->data is just exp(-|| ||^2 / w^2)
 		double sim(const KD& rhs) const{
-			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+			return this->v.transpose()*rhs.v; //exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 		double sim(const KC& rhs) const{
 			std::vector<double> sims;
 			for (int i = 0; i < rhs.vs.size(); i++){
-				sims.push_back(exp(-(this->v-rhs.vs[i]).squaredNorm()/(2*0.1*0.1)));
+				sims.push_back(this->v.transpose()*rhs.vs[i]); //exp(-(this->v-rhs.vs[i]).squaredNorm()/(2*0.1*0.1)));
 			}
 			std::sort(sims.begin(), sims.end());
 			return std::accumulate(sims.begin(), sims.end(), 0.0);
 		}
 		double sim(const KP& rhs) const{
-			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+			return this->v.transpose()*rhs.v; //exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
 		}
 		//This is the typical prior-weighted least squares Dynamic Means paramter update
 		void update(const vector<KD>& rhs, const double gamma){
@@ -108,16 +108,6 @@ class KP{
 				this->v += rhs[i].v;
 			}
 			this->v /= (gamma+rhs.size());
-		}
-
-
-		//bogus functions for specdynmeans to use
-		//TODO: delete these once I implement spectral clustering w/o sdm
-		KP(const vector<KC>& rhs){
-			this->v = V2d::Zero();
-		}
-		void update(const vector<KC>& rhs, const double gamma){
-			this->v = V2d::Zero();
 		}
 };
 
