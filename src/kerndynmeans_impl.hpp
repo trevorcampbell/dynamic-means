@@ -1,4 +1,206 @@
 #ifndef __KERNDYNMEANS_IMPL_HPP
+
+
+//TODO
+//TODO
+//TODO REMOVE BELOW THIS LINE UNTIL THE "TODO REMOVE ABOVE THIS LINE" WHEN DONE TESTING WITH DMEANS OBJ
+//TODO
+//TODO
+
+typedef Eigen::Vector2d V2d;
+template<typename D, typename C, typename P>
+double KernDynMeans<D,C,P>::computedynmeansobj(std::vector<D>& data, std::vector<int> lbls){
+		double obj = 0;
+		vector<int> unqlbls = lbls;
+		sort(unqlbls.begin(), unqlbls.end());
+		unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+
+		for (int i =0 ; i < unqlbls.size(); i++){
+			V2d prm;
+			V2d dmean;
+			int n = 0;
+			dmean.setZero();
+			for (int j = 0; j < lbls.size(); j++){
+				if (lbls[j] == unqlbls[i]){
+					n++;
+					dmean += data[j].v;
+				}
+			}
+			dmean /= (double)n;
+			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]);
+			if (it == this->oldprmlbls.end()){
+				obj += this->lambda;
+				prm = dmean;
+			} else {
+				int oldidx = std::distance(this->oldprmlbls.begin(), it);
+				prm =  (this->oldprms[oldidx].v*this->gammas[oldidx] + n*dmean)/((double)(n+this->gammas[oldidx]));
+				obj += this->agecosts[oldidx];
+				obj += this->gammas[oldidx]*(this->oldprms[oldidx].v-prm).squaredNorm();
+			}
+			for (int j = 0; j < lbls.size(); j++){
+				if (lbls[j] == unqlbls[i]){
+					obj += (prm - data[j].v).squaredNorm();
+				}
+			}
+		}
+		return obj;
+}
+template<typename D, typename C, typename P>
+double KernDynMeans<D,C,P>::computedynmeansobj(std::vector<C>& data, std::vector<int> lbls){
+		double obj = 0;
+		vector<int> unqlbls = lbls;
+		sort(unqlbls.begin(), unqlbls.end());
+		unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+
+		for (int i =0 ; i < unqlbls.size(); i++){
+			V2d prm;
+			V2d dmean;
+			int n = 0;
+			dmean.setZero();
+			for (int j = 0; j < lbls.size(); j++){
+				if (lbls[j] == unqlbls[i]){
+					n+= data[j].nv;
+					for (int k = 0; k < data[j].vs.size(); k++){
+						dmean += data[j].vs[k];
+					}
+				}
+			}
+			dmean /= (double)n;
+			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]);
+			if (it == this->oldprmlbls.end()){
+				obj += this->lambda;
+				prm = dmean;
+			} else {
+				int oldidx = std::distance(this->oldprmlbls.begin(), it);
+				prm =  (this->oldprms[oldidx].v*this->gammas[oldidx] + n*dmean)/((double)(n+this->gammas[oldidx]));
+				obj += this->agecosts[oldidx];
+				obj += this->gammas[oldidx]*(this->oldprms[oldidx].v-prm).squaredNorm();
+			}
+			for (int j = 0; j < lbls.size(); j++){
+				if (lbls[j] == unqlbls[i]){
+					for (int k = 0; k < data[j].vs.size(); k++){
+						obj += (prm - data[j].vs[k]).squaredNorm();
+					}
+				}
+			}
+		}
+		return obj;
+}
+
+template<typename D, typename C, typename P>
+double KernDynMeans<D,C,P>::computedynmeansobj2(std::vector<D>& data, std::vector<int> lbls){
+	vector<int> unqlbls = lbls;
+	sort(unqlbls.begin(), unqlbls.end());
+	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+	map<int, vector<D> > dInClus;
+	map<int, double> nInClus;
+	for (int i = 0; i < data.size(); i++){
+		dInClus[lbls[i]].push_back(data[i]);
+		if(nInClus.count(lbls[i]) == 0){
+			nInClus[lbls[i]] = 0;
+		}
+		nInClus[lbls[i]] += data[i].getN();
+	}
+
+	double objective = 0;
+	for (int i = 0; i < unqlbls.size(); i++){
+			//add cost for new clusters - lambda
+			// or add cost for old clusters - Q
+			if (find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]) != this->oldprmlbls.end()){
+				objective += this->Q*this->ages[i];
+			} else {
+				objective += this->lambda;
+			}
+			V2d tmpvec;
+			tmpvec.setZero();
+			for (int j = 0; j < dInClus[unqlbls[i]].size(); j++){
+				tmpvec = tmpvec + dInClus[unqlbls[i]][j].v;
+			}
+			tmpvec = tmpvec / nInClus[unqlbls[i]];
+			V2d prm;
+			prm.setZero();
+			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]);
+			if (it != this->oldprmlbls.end()){
+				int oldidx =  std::distance(this->oldprmlbls.begin(), it);
+				prm = (this->oldprms[oldidx].v*this->gammas[oldidx] + tmpvec*nInClus[unqlbls[i]])/(this->gammas[oldidx] + nInClus[unqlbls[i]]);
+				//add parameter lag cost
+				double tmpsqdist = (prm - this->oldprms[oldidx].v).squaredNorm();
+				objective += this->gammas[oldidx]*tmpsqdist;
+			} else { //just setting a new param
+				prm = tmpvec;
+				//no lag cost for new params
+			}
+			//get cost for prms[i]
+			for (int j = 0; j < dInClus[unqlbls[i]].size(); j++){
+				objective += (prm - dInClus[unqlbls[i]][j].v).squaredNorm();
+			}
+	}
+	return objective;
+}
+
+template<typename D, typename C, typename P>
+double KernDynMeans<D,C,P>::computedynmeansobj2(std::vector<C>& data, std::vector<int> lbls){
+	vector<int> unqlbls = lbls;
+	sort(unqlbls.begin(), unqlbls.end());
+	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+	map<int, vector<C> > dInClus;
+	map<int, double> nInClus;
+	for (int i = 0; i < data.size(); i++){
+		dInClus[lbls[i]].push_back(data[i]);
+		if(nInClus.count(lbls[i]) == 0){
+			nInClus[lbls[i]] = 0;
+		}
+		nInClus[lbls[i]] += data[i].getN();
+	}
+
+	double objective = 0;
+	for (int i = 0; i < unqlbls.size(); i++){
+			//add cost for new clusters - lambda
+			// or add cost for old clusters - Q
+			if (find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]) != this->oldprmlbls.end()){
+				objective += this->Q*this->ages[i];
+			} else {
+				objective += this->lambda;
+			}
+			V2d tmpvec;
+			tmpvec.setZero();
+			for (int j = 0; j < dInClus[unqlbls[i]].size(); j++){
+				for (int k = 0; k < dInClus[unqlbls[i]][j].vs.size(); k++){
+					tmpvec = tmpvec + dInClus[unqlbls[i]][j].vs[k];
+				}
+			}
+			tmpvec = tmpvec / nInClus[unqlbls[i]];
+			V2d prm;
+			prm.setZero();
+			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]);
+			if (it != this->oldprmlbls.end()){
+				int oldidx =  std::distance(this->oldprmlbls.begin(), it);
+				prm = (this->oldprms[oldidx].v*this->gammas[oldidx] + tmpvec*nInClus[unqlbls[i]])/(this->gammas[oldidx] + nInClus[unqlbls[i]]);
+				//add parameter lag cost
+				double tmpsqdist = (prm - this->oldprms[oldidx].v).squaredNorm();
+				objective += this->gammas[oldidx]*tmpsqdist;
+			} else { //just setting a new param
+				prm = tmpvec;
+				//no lag cost for new params
+			}
+			//get cost for prms[i]
+			for (int j = 0; j < dInClus[unqlbls[i]].size(); j++){
+				for (int k = 0; k < dInClus[unqlbls[i]][j].vs.size(); k++){
+					objective += (prm - dInClus[unqlbls[i]][j].vs[k]).squaredNorm();
+				}
+			}
+	}
+	return objective;
+}
+
+
+
+//TODO
+//TODO
+//TODO REMOVE ABOVE THIS LINE UNTIL THE "TODO REMOVE BELOW THIS LINE" WHEN DONE TESTING WITH DMEANS OBJ
+//TODO
+//TODO
+
 template<typename D, typename C, typename P>
 KernDynMeans<D,C,P>::KernDynMeans(double lambda, double Q, double tau, bool verbose){
 	if (lambda < 0 || Q < 0 || tau < 0){
@@ -241,10 +443,16 @@ std::vector<int> KernDynMeans<D,C,P>::clusterAtLevel(std::vector<T>& data, std::
 	while(diff > 1e-6){
 		itr++;
 		cout << "prelbl obj: " << this->objective(data, lbls) << endl;
+		cout << "prelbl dmobj: " << this->computedynmeansobj(data, lbls) << endl;
+		cout << "prelbl dmobj2: " << this->computedynmeansobj2(data, lbls) << endl;
 		lbls = this->updateLabels(data, lbls);
 		cout << "postlbl, preoldnew obj: " << this->objective(data, lbls) << endl;
+		cout << "postlbl, preoldnew dmobj: " << this->computedynmeansobj(data, lbls) << endl;
+		cout << "postlbl, preoldnew dmobj2: " << this->computedynmeansobj2(data, lbls) << endl;
 		lbls = this->updateOldNewCorrespondence(data, lbls);
 		cout << "postoldnew obj: " << this->objective(data, lbls) << endl;
+		cout << "postoldnew dmobj: " << this->computedynmeansobj(data, lbls) << endl;
+		cout << "postoldnew dmobj2: " << this->computedynmeansobj2(data, lbls) << endl;
 		double obj = this->objective(data, lbls);
 		diff = fabs((obj-prevobj)/obj);
 		prevobj = obj;
