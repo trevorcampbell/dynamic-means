@@ -1042,6 +1042,163 @@ void KernDynMeans<D,C,P>::orthonormalize(MXd& V) const{
 	return; 
 }
 
+
+
+template <class G>
+CoarseGraph<G>::CoarseGraph(const G& aff){
+	this->coarsify(aff);
+	this->oldPrmLbls = aff.getOldPrmLbls();
+}
+
+template <class G>
+CoarseGraph<G>::CoarseGraph(const CoarseGraph& aff){
+	this->coarsify(aff);
+	this->oldPrmLbls = aff.getOldPrmLbls();
+}
+
+
+template <class G>
+template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
+	//coarsify and create the refinementmap
+	//Pick a random order to traverse the data
+	int nData = aff.nData();
+	int nOldPrm = aff.nOldPrm();
+	std::vector<int> idcs(nData);
+	std::iota(idcs.begin(), idcs.end(), 0);
+	std::random_shuffle(idcs.begin(), idcs.end());
+	//set up the vector to save which vertices have been marked
+	std::vector<bool> marks(nData, false);
+	this->refineMap.clear();
+	for (int i = 0; i < idcs.size(); i++){
+		int idxi = idcs[i];
+		if (!marks[idxi]){//if the vertex hasn't already been merged to another
+			double maxSim = 0;
+			int maxId = -1;
+			for (int j = i+1; j < idcs.size(); j++){//search all vertices after i (since all beforehave been merged)
+				int idxj = idcs[j];
+				if (!marks[idxj]){//only check it if it hasn't been marked
+					double sim = aff.simDD(idxi, idxj);
+					if (sim > maxSim && sim > 1e-16){//1e-16 for keeping sparsity
+						maxSim = sim;
+						maxId = idxj;
+					}
+				}
+			}
+			//if maxId is still -1, then pair(i, -1) states correctly that i is a singleton
+			this->refineMap.push_back(std::pair<int, int>(idxi, maxId));
+			marks[idxi] = true;
+			if (maxId >= 0){
+				marks[maxId] = true;
+			}
+		}
+	}
+	int nDataNew = this->refineMap.size();
+	//now all merges have been found
+	//create the coarsified graph -- only store upper triangle
+	this->affdd = SMXd(nDataNew, nDataNew);
+	this->affdp = SMXd(nDataNew, nOldPrm);
+	this->linaffdd = VXd::Zero(nDataNew);
+	this->affpp = VXd::Zero(nOldPrm);
+
+	std::vector<TD> ddtrips, dptrips;
+	for (int i = 0; i < this->refineMap.size(); i++){
+		const int& i1 = this->refineMap[i].first;
+		const int& i2 = this->refineMap[i].second;
+
+		//quadratic self similarity
+		double sim = aff.quadSelfSimDD(i1) + (i2 != -1 ? aff.quadSelfSimDD(i2) : 0) + (i2 != -1 ? 2.0*aff.simDD(i1, i2) : 0);
+		if (sim > 1e-16){ddtrips.push_back(TD(i, i, sim));}
+
+		//linear self similarity
+		this->linaffdd(i) = aff.linSelfSim(i1) + (i2 != -1 ? aff.linSelfSim(i2) : 0);
+
+		//data->data similarities
+		for (int j = i+1; j < this->refineMap.size(); j++){
+			const int& j1 = this->refineMap[j].first;
+			const int& j2 = this->refineMap[j].second;
+			double sim = aff.simDD(i1, j1) + (i2 != -1 ? aff.simDD(i2, j1) : 0) + (j2 != -1 ? aff.simDD(i1, j2) + (i2 != -1 ? aff.simDD(i2, j2) : 0) : 0);
+			if (sim > 1e-16){
+				ddtrips.push_back(TD(i, j, sim));
+			}
+		}
+		//data->param similarities
+		for (int j = 0; j < nOldPrm; j++){
+			double sim = aff.simDP(i1, j) + (i2 != -1 ? aff.simDP(i2, j) : 0);
+			if (sim > 1e-16){dptrips.push_back(TD(i, j, sim));}
+		}
+	}
+	//param->param similarities
+	for (int i = 0; i < nOldPrm; i++){
+		this->affpp(i) = aff.selfSimPP(i, i);
+	}
+	//set the sparse matrices from triplets
+	this->affdd.setFromTriplets(ddtrips.begin(), ddtrips.end());
+	this->affdp.setFromTriplets(dptrips.begin(), dptrips.end());
+	return;
+}
+
+template <class G>
+double CoarseGraph<G>::linSelfSimDD(int i){
+	return this->linaffdd(i);
+}
+template <class G>
+double CoarseGraph<G>::quadSelfSimDD(int i){
+	return this->affdd.coeff(i, i);
+}
+template <class G>
+double CoarseGraph<G>::simDD(int i, int j){
+	if(i == j){
+		cout << "libkerndynmeans: ERROR: Do not use CoarseGraph::sim on indices i==j" << endl;
+		cout << "libkerndynmeans: ERROR: Need to specify whether linear/quadratic self similarity." << endl;
+		return 0.0;
+	}
+	if (i > j){//only upper triangle is stored
+		return this->affdd.coeff(j, i);
+	} else {
+		return this->affdd.coeff(i, j);
+	}
+}
+
+template <class G>
+double CoarseGraph<G>::selfSimPP(int i){
+	return this->affpp(i);
+}
+
+template <class G>
+double CoarseGraph<G>::simDP(int i, int j){
+	return this->affdp.coeff(i, j);
+}
+
+template <class G>
+std::vector<int> CoarseGraph<G>::getRefinedLabels(const std::vector<int>& lbls){
+	//find the max index in merges to see how big the new labels should be
+	int idxmax = -1;
+	for (int i = 0; i < this->refineMap.size(); i++){
+		if (this->refineMap[i].first > idxmax){
+			idxmax = this->refineMap[i].first;
+		}
+		if (this->refineMap[i].second > idxmax){
+			idxmax = this->refineMap[i].second;
+		}
+	}
+	//fill in the extended labels by assigning all subnodes the label of the supernode
+	std::vector<int> newlbls(idxmax+1, 0);
+	for (int i = 0; i < lbls.size(); i++){
+		newlbls[this->refineMap[i].first] = lbls[i];
+		if (this->refineMap[i].second != -1){ //the -1 signal says that the node was just moved up a level in the hierarchy, no merge occured
+										//so if there is a -1, just do nothing with merges.second
+			newlbls[this->refineMap[i].second] = lbls[i];
+		}
+	}
+	return newlbls;
+}
+
+template <class G>
+CoarseGraph<G>::getOldPrmLbls(){
+	return this->oldPrmLbls;
+}
+
+
 //template <typename D, typename C, typename P>
 //template <typename T> std::vector<int> KernDynMeans<D,C,P>::clusterSplit(std::vector<T>& data, std::vector<int> lbls){
 //	//pick a random cluster
