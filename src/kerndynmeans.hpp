@@ -12,9 +12,12 @@
 #include <ctime>
 #include "gurobi_c++.h" //note: the use of this library requires gurobi!
 #include <eigen3/Eigen/Dense>
+#include <eigen3/Eigen/Sparse>
 
 using namespace std;
 
+typedef Eigen::SparseMatrix<double> SMXd;
+typedef Eigen::Triplet<double> TD;
 typedef Eigen::MatrixXd MXd;
 typedef Eigen::VectorXd VXd;
 
@@ -24,7 +27,7 @@ class KernDynMeans{
 		KernDynMeans(double lambda, double Q, double tau, bool verbose = false);
 		~KernDynMeans();
 		//initialize a new step and cluster
-		void cluster(std::vector<D>& data, const int nRestarts, const int nCoarsest, std::vector<int>& finalLabels, double& finalObj, double& tTaken);
+		void cluster(const std::vector<D>& data, const int nRestarts, const int nCoarsest, std::vector<int>& finalLabels, double& finalObj, double& tTaken);
 		//reset DDP chain
 		void reset();
 	private:
@@ -74,6 +77,21 @@ class KernDynMeans{
 		double computedynmeansobj2(std::vector<D>& data, std::vector<int> lbls);
 		double computedynmeansobj2(std::vector<C>& data, std::vector<int> lbls);
 };
+
+template <class G>
+class CoarseGraph{
+	public:
+		CoarseGraph(const G& aff);
+		CoarseGraph(const CoarseGraph& aff);
+		double linSelfSim(int i);
+		double quadSelfSim(int i);
+		double sim(int i, int j);
+	private:
+		std::map<int, std::pair<int, int> > refineMap;
+
+};
+
+int CoarseNode::nextId = 0;
 
 
 #include "kerndynmeans_impl.hpp"
