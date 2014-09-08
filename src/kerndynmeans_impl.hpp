@@ -1,6 +1,6 @@
 #ifndef __KERNDYNMEANS_IMPL_HPP
 
-
+/*
 //TODO
 //TODO
 //TODO REMOVE BELOW THIS LINE UNTIL THE "TODO REMOVE ABOVE THIS LINE" WHEN DONE TESTING WITH DMEANS OBJ
@@ -201,7 +201,7 @@ double KernDynMeans<G>::computedynmeansobj2(std::vector<C>& data, std::vector<in
 //TODO REMOVE ABOVE THIS LINE UNTIL THE "TODO REMOVE BELOW THIS LINE" WHEN DONE TESTING WITH DMEANS OBJ
 //TODO
 //TODO
-
+*/
 template<typename G>
 KernDynMeans<G>::KernDynMeans(double lambda, double Q, double tau, bool verbose){
 	if (lambda < 0 || Q < 0 || tau < 0){
@@ -568,7 +568,7 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 
 template <typename G>
 template <typename T> 
-std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(std::vector<T>& data, std::vector<int> lbls){
+std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(const T& aff, std::vector<int> lbls){
 	//get the unique labels
 	vector<int> unqlbls = lbls;
 	sort(unqlbls.begin(), unqlbls.end());
@@ -576,44 +576,44 @@ std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(std::vector<T>& dat
 
 	//get the observations in each cluster
 	//and the sizes of each cluster
-	map<int, vector<T> > dInClus;
-	map<int, double> nInClus;
-	for (int i = 0; i < data.size(); i++){
-		dInClus[lbls[i]].push_back(data[i]);
+	map<int, int > idcsInClus;
+	map<int, int > nInClus;
+	for (int i = 0; i < lbls.size(); i++){
+		idcsInClus[lbls[i]].push_back(i);
 		if(nInClus.count(lbls[i]) == 0){
 			nInClus[lbls[i]] = 0;
 		}
-		nInClus[lbls[i]] += data[i].getN();
+		nInClus[lbls[i]] += aff.getNodeCt(i);
 	}
+
 	//compute the squared cluster sums
-	//no point computing old cluster sums, will just have to compute below once for all clusters anyway
-	std::map<int, double> sqClusterSum;
+	std::map<int, double> inClusterSum;
 	for (int i = 0; i < unqlbls.size(); i++){
-		double sqsum = 0;
-		const std::vector<T>& clus = dInClus[unqlbls[i]];
+		double sum = 0;
+		const std::vector<T>& clus = idcsInClus[unqlbls[i]];
 		const int& lbl = unqlbls[i];
 		for (int k = 0; k < clus.size(); k++){
-			sqsum += clus[k].sim(clus[k]);
+			sum += aff.diagSelfSimDD(clus[k]) + 2.0*aff.offDiagSelfSimDD(clus[k]);
 			for (int m = k+1; m < clus.size(); m++){
-				sqsum += 2.0*clus[k].sim(clus[m]);
+				sum += 2.0*aff.simDD(clus[k], clus[m]);
 			}
 		}
-		sqClusterSum[lbl] = sqsum;
+		inClusterSum[lbl] = sum;
 	}
 
 	//get the old/new correspondences from bipartite matching
  	vector< pair<int, int> > nodePairs; //new clusters in .first, old clusters + one null cluster in .second
  	vector< double > edgeWeights;
 	for (int i = 0; i < unqlbls.size(); i++){
-		const std::vector<T>& clus = dInClus[unqlbls[i]];
+		const std::vector<T>& clus = idcsInClus[unqlbls[i]];
 		const int& lbl = unqlbls[i];
 		for (int j = 0; j < this->oldprmlbls.size(); j++){
 			double ewt = this->agecosts[j]
-						+ this->gammas[j]*nInClus[lbl]/(this->gammas[j]+nInClus[lbl])*this->oldprms[j].sim(this->oldprms[j])
-						-1.0/(this->gammas[j]+nInClus[lbl])*sqClusterSum[lbl];
+						+ this->gammas[j]*nInClus[lbl]/(this->gammas[j]+nInClus[lbl])*aff.simPP(j)
+						-1.0/(this->gammas[j]+nInClus[lbl])*inClusterSum[lbl];
 			double oldClusSum = 0;
 			for (int k = 0; k < clus.size(); k++){
-				oldClusSum += this->oldprms[j].sim(clus[k]);
+				oldClusSum += aff.simDP(clus[k], j);
 			}
 			ewt += -2.0*this->gammas[j]/(this->gammas[j]+nInClus[lbl])*oldClusSum;
 			nodePairs.push_back(std::pair<int, int>(lbl, this->oldprmlbls[j]) );
@@ -621,7 +621,7 @@ std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(std::vector<T>& dat
 		}
 		//-1 is the new cluster option
 		nodePairs.push_back( std::pair<int, int>(lbl, -1) );
-		edgeWeights.push_back(this->lambda-1.0/nInClus[lbl]*sqClusterSum[lbl]);
+		edgeWeights.push_back(this->lambda-1.0/nInClus[lbl]*inClusterSum[lbl]);
 	}
 	map<int, int> matching = this->getMinWtMatching(nodePairs, edgeWeights);
 
@@ -735,18 +735,19 @@ template<typename G>
 template<typename T> 
 double KernDynMeans<G>::objective(const T& aff, std::vector<int> lbls){
 	double cost = 0;
-	//get a map from label to clusters
-	map<int, vector<T> > dInClus;
-	map<int, double> nInClus;
-	for (int i = 0; i < data.size(); i++){
-		dInClus[lbls[i]].push_back(data[i]);
+	//get the observations in each cluster
+	//and the sizes of each cluster
+	map<int, int > idcsInClus;
+	map<int, int > nInClus;
+	for (int i = 0; i < lbls.size(); i++){
+		idcsInClus[lbls[i]].push_back(i);
 		if(nInClus.count(lbls[i]) == 0){
 			nInClus[lbls[i]] = 0;
 		}
-		nInClus[lbls[i]] += data[i].getN();
+		nInClus[lbls[i]] += aff.getNodeCt(i);
 	}
 	//for every current cluster
-	for (auto it = dInClus.begin(); it != dInClus.end(); ++it){
+	for (auto it = idcsInClus.begin(); it != idcsInClus.end(); ++it){
 		//check if it's an old label
 		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), it->first);
 		const int& lbl = it->first;
@@ -755,9 +756,9 @@ double KernDynMeans<G>::objective(const T& aff, std::vector<int> lbls){
 			cost += this->lambda;//new cluster penalty
 			//ratio association term
 			for (int i = 0; i < clus.size(); i++){
-				cost += (1.0 - 1.0/nInClus[lbl])*clus[i].sim(clus[i]); //diagonal elements
+				cost += (1.0-1.0/nInClus[lbl])*aff.diagSelfSimDD(clus[i]) - 2.0/nInClus[lbl]*aff.offDiagSelfSim(clus[i]);
 				for (int j = i+1; j < clus.size(); j++){
-					cost -= 2.0/nInClus[lbl]*clus[i].sim(clus[j]); //off-diagonal elements
+					cost -= 2.0/nInClus[lbl]*aff.simDD(clus[i], clus[j]);
 				}
 			}
 		} else { //it's an old cluster
@@ -765,15 +766,15 @@ double KernDynMeans<G>::objective(const T& aff, std::vector<int> lbls){
 			cost += this->agecosts[oldidx];//old cluster penalty
 			//ratio association term
 			for (int i = 0; i < clus.size(); i++){
-				cost += (1.0 - 1.0/(this->gammas[oldidx]+nInClus[lbl]))*clus[i].sim(clus[i]); //diagonal elements
+				cost += (1.0 - 1.0/(this->gammas[oldidx]+nInClus[lbl]))*aff.diagSelfSimDD(clus[i]) - 2.0/(this->gammas[oldidx]+nInClus[lbl])*aff.offDiagSelfSim(clus[i]);
 				for (int j = i+1; j < clus.size(); j++){
-					cost += -2.0/(this->gammas[oldidx]+nInClus[lbl])*clus[i].sim(clus[j]); //off-diagonal elements
+					cost += -2.0/(this->gammas[oldidx]+nInClus[lbl])*aff.simDD(clus[i], clus[j]);
 				}
 			}
-			cost += this->gammas[oldidx]*nInClus[lbl]/(this->gammas[oldidx]+nInClus[lbl])*this->oldprms[oldidx].sim(this->oldprms[oldidx]);//old prm self-similarity
+			cost += this->gammas[oldidx]*nInClus[lbl]/(this->gammas[oldidx]+nInClus[lbl])*aff.simPP(oldidx, oldidx);
 			//old prm ratio association term
 			for (int i = 0; i < clus.size(); i++){
-				cost += -2.0*this->gammas[oldidx]/(this->gammas[oldidx]+nInClus[lbl])*this->oldprms[oldidx].sim(clus[i]);
+				cost += -2.0*this->gammas[oldidx]/(this->gammas[oldidx]+nInClus[lbl])*aff.simDP(clus[i], oldidx);
 			}
 		}
 	}

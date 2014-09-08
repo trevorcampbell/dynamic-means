@@ -63,6 +63,7 @@ class KernDynMeans{
 		std::vector<double> agecosts;
 		std::vector<double> gammas;
 
+		/*
 		//TODO 
 		//TODO
 		//TODO REMOVE THE BELOW 4 FUNCTIOSN WHEN DONE TESTING WTIH DMEANS OBJ
@@ -70,6 +71,7 @@ class KernDynMeans{
 		double computedynmeansobj(std::vector<C>& data, std::vector<int> lbls);
 		double computedynmeansobj2(std::vector<D>& data, std::vector<int> lbls);
 		double computedynmeansobj2(std::vector<C>& data, std::vector<int> lbls);
+		*/
 };
 
 template <class G>
