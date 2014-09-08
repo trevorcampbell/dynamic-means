@@ -83,39 +83,44 @@ class CoarseGraph{ //only stores upper triangular information (multiplies by 2 w
 		int getNodeCt(int i);
 		//input labels for this coarsified graph, get the labels for the original refined graph
 		std::vector<int> getRefinedLabels(const std::vector<int>& lbls);
-		//get a mapping from col index in old parameters to actual cluster label
-		std::vector<int> getOldPrmLbls();
 		//get the number of graph nodes
 		int getNNodes();
-		//get the number of old prm nodes
-		int getNOldPrm();
 	private:
 		template <typename T> void coarsify(const T& aff);
 		std::vector< std::pair<int, int> > refineMap;
 		std::vector<int> nodeCts;
 		SMXd affdd, affdp;
 		VXd daffdd, odaffdd, affpp;
-		std::vector<int> oldPrmLbls;
 };
 
 class VectorGraph{
 	public:
-		VectorGraph(std::vector<Eigen::VectorXd> data);
-		double diagSelfSimDD(int i);
-		double offDiagSelfSimDD(int i);
-		double selfSimPP(int i);
-		double simDD(int i, int j);
-		double simDP(int i, int j);
-		int getNodeCt(int i);
-		//input labels for this coarsified graph, get the labels for the original refined graph
-		std::vector<int> getRefinedLabels(const std::vector<int>& lbls);
-		//get a mapping from col index in old parameters to actual cluster label
-		std::vector<int> getOldPrmLbls();
-		//get the number of data nodes
-		int getNData();
-		//get the number of old prm nodes
-		int getNOldPrm();
-
+		std::vector<VXd> data, oldprms;
+		VectorGraph(std::vector<VXd> data, std::vector<VXd> oldprms){
+			this->data = data;
+			this->oldprms = oldprms;
+		}
+		double diagSelfSimDD(int i){
+			return data[i].transpose()*data[i];
+		}
+		double offDiagSelfSimDD(int i){
+			return 0;
+		}
+		double selfSimPP(int i){
+			return oldprms[i].transpose()*oldprms[i];
+		}
+		double simDD(int i, int j){
+			return data[i].transpose()*data[j];
+		}
+		double simDP(int i, int j){
+			return data[i].transpose()*oldprms[j];
+		}
+		int getNodeCt(int i){
+			return 1;
+		}
+		int getNNodes(){
+			return data.size();
+		}
 };
 
 ////try to split a cluster
