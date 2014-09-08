@@ -63,15 +63,9 @@ class KernDynMeans{
 		std::vector<double> agecosts;
 		std::vector<double> gammas;
 
-		/*
-		//TODO 
-		//TODO
-		//TODO REMOVE THE BELOW 4 FUNCTIOSN WHEN DONE TESTING WTIH DMEANS OBJ
-		double computedynmeansobj(std::vector<D>& data, std::vector<int> lbls);
-		double computedynmeansobj(std::vector<C>& data, std::vector<int> lbls);
-		double computedynmeansobj2(std::vector<D>& data, std::vector<int> lbls);
-		double computedynmeansobj2(std::vector<C>& data, std::vector<int> lbls);
-		*/
+		void testLabelUpdate();
+		void testObjective();
+
 };
 
 template <class G>
@@ -91,8 +85,8 @@ class CoarseGraph{ //only stores upper triangular information (multiplies by 2 w
 		std::vector<int> getRefinedLabels(const std::vector<int>& lbls);
 		//get a mapping from col index in old parameters to actual cluster label
 		std::vector<int> getOldPrmLbls();
-		//get the number of data nodes
-		int getNData();
+		//get the number of graph nodes
+		int getNNodes();
 		//get the number of old prm nodes
 		int getNOldPrm();
 	private:
@@ -102,6 +96,26 @@ class CoarseGraph{ //only stores upper triangular information (multiplies by 2 w
 		SMXd affdd, affdp;
 		VXd daffdd, odaffdd, affpp;
 		std::vector<int> oldPrmLbls;
+};
+
+class VectorGraph{
+	public:
+		VectorGraph(std::vector<Eigen::VectorXd> data);
+		double diagSelfSimDD(int i);
+		double offDiagSelfSimDD(int i);
+		double selfSimPP(int i);
+		double simDD(int i, int j);
+		double simDP(int i, int j);
+		int getNodeCt(int i);
+		//input labels for this coarsified graph, get the labels for the original refined graph
+		std::vector<int> getRefinedLabels(const std::vector<int>& lbls);
+		//get a mapping from col index in old parameters to actual cluster label
+		std::vector<int> getOldPrmLbls();
+		//get the number of data nodes
+		int getNData();
+		//get the number of old prm nodes
+		int getNOldPrm();
+
 };
 
 ////try to split a cluster
