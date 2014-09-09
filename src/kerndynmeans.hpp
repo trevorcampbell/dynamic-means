@@ -43,7 +43,7 @@ class KernDynMeans{
 		//get the updated data labels via dyn means iteration
 		template <typename T> std::vector<int> updateLabels(const T& aff, std::vector<int> lbls) const;
 		//update the state after all iterations are done
-		void finalizeStep(const G& aff, const vector<int>& lbls, vector<double>& oldgammas_out, vector<int>& oldprmlbls_out);
+		void finalizeStep(const G& aff, const vector<int>& lbls, vector<double>& prevgammas_out, vector<int>& prmlbls_out);
 		//do a base clustering using spectral methods + minimum weight matching
 		template <typename T> std::vector<int> baseCluster(const T& aff) const;
 		//utility function to orthonormalize a square matrix
@@ -61,10 +61,6 @@ class KernDynMeans{
 		std::vector<int> ages;
 		std::vector<double> agecosts;
 		std::vector<double> gammas;
-
-		void testLabelUpdate() ;
-		void testObjective() ;
-
 	private:
 };
 
@@ -92,39 +88,6 @@ class CoarseGraph{ //only stores upper triangular information (multiplies by 2 w
 		std::vector<int> nodeCts;
 		SMXd affdd, affdp;
 		VXd daffdd, odaffdd, affpp;
-};
-
-class VectorGraph{
-	public:
-		std::vector<VXd> data, oldprms;
-		VectorGraph(std::vector<VXd> data, std::vector<VXd> oldprms){
-			this->data = data;
-			this->oldprms = oldprms;
-		}
-		double diagSelfSimDD(const int i) const{
-			return data[i].transpose()*data[i];
-		}
-		double offDiagSelfSimDD(const int i) const{
-			return 0;
-		}
-		double selfSimPP(const int i) const{
-			return oldprms[i].transpose()*oldprms[i];
-		}
-		double simDD(const int i, const int j) const{
-			return data[i].transpose()*data[j];
-		}
-		double simDP(const int i, const int j) const{
-			return data[i].transpose()*oldprms[j];
-		}
-		int getNodeCt(const int i) const{
-			return 1;
-		}
-		int getNNodes() const {
-			return data.size();
-		}
-		int getNOldPrms() const {
-			return oldprms.size();
-		}
 };
 
 ////try to split a cluster

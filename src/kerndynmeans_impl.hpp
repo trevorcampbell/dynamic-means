@@ -45,7 +45,7 @@ void KernDynMeans<G>::reset(){
 
 //This function updates the weights/ages of all the clusters after each clustering step is complete
 template <typename G>
-void KernDynMeans<G>::finalizeStep(const G& aff, const vector<int>& lbls, vector<double>& oldgammas_out, vector<int>& oldprmlbls_out){
+void KernDynMeans<G>::finalizeStep(const G& aff, const vector<int>& lbls, vector<double>& prevgammas_out, vector<int>& prmlbls_out){
 	//first increment the age of everything
 	//this will be undone below for any current clusters
 	for (int i = 0; i < this->ages.size(); i++){
@@ -78,10 +78,10 @@ void KernDynMeans<G>::finalizeStep(const G& aff, const vector<int>& lbls, vector
 		}
 	}
 	//save the old gammas for output, update this->gammas
-	//oldgammas_out still needs to be cleaned up and modified a bit (occurs in the rest of this function)
-	oldgammas_out = this->gammas;
-	//pad oldgammas with zeros for all new clusters
-	oldgammas_out.insert(oldgammas_out.end(), this->ages.size()-oldgammas_out.size(), 0);
+	//prevgammas_out still needs to be cleaned up and modified a bit (occurs in the rest of this function)
+	prevgammas_out = this->gammas;
+	//pad prevgammas with zeros for all new clusters
+	prevgammas_out.insert(prevgammas_out.end(), this->ages.size()-prevgammas_out.size(), 0);
 	//update the internal gammas
 	this->gammas.clear();
 	this->gammas.reserve(this->ages.size());
@@ -101,13 +101,13 @@ void KernDynMeans<G>::finalizeStep(const G& aff, const vector<int>& lbls, vector
 			this->weights.erase(this->weights.begin()+i);
 			this->ages.erase(this->ages.begin()+i);
 			this->gammas.erase(this->gammas.begin()+i);
-			oldgammas_out.erase(oldgammas_out.begin()+i);
+			prevgammas_out.erase(prevgammas_out.begin()+i);
 			this->agecosts.erase(this->agecosts.begin()+i);
 			this->oldprmlbls.erase(this->oldprmlbls.begin()+i);
 			i--;
 		}
 	}
-	oldprmlbls_out = this->oldprmlbls;//save the old parameter labels output 
+	prmlbls_out = this->prmlbls;//save the parameter labels output 
 
 	//update this->maxLblPrevUsed if new clusters were created
 	int maxlbl = *max_element(lbls.begin(), lbls.end());
@@ -257,107 +257,13 @@ std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> 
 	return lbls;
 }
 
-template<typename G>
-void KernDynMeans<G>::testLabelUpdate(){
-	return;
-}
-
-template<typename G>
-void KernDynMeans<G>::testObjective() {
-	//create data
-	std::vector<VXd> data, oldprms;
-	for (int i = 0; i < 20; i++){
-		data.push_back(VXd::Random(3));
-	}
-	//create old parameters
-	for (int i = 0; i < 3; i++){
-		oldprms.push_back(VXd::Random(3));
-	}
-	this->ages.push_back(1);
-	this->agecosts.push_back(1*Q);
-	this->gammas.push_back(.5);
-	this->weights.push_back(.5);
-	this->oldprmlbls.push_back(2);
-	this->ages.push_back(2);
-	this->agecosts.push_back(2*Q);
-	this->gammas.push_back(1.7);
-	this->weights.push_back(.5);
-	this->oldprmlbls.push_back(0);
-	this->ages.push_back(3);
-	this->agecosts.push_back(3*Q);
-	this->gammas.push_back(.223);
-	this->weights.push_back(.5);
-	this->oldprmlbls.push_back(1);
-	this->maxLblPrevUsed = 2;
 
 
-	//fill in this kerndynmeans object
-	VectorGraph v(data, oldprms);
-	//coarsify a few times
-	cout << "Coarsifying to level 1" << endl;
-	CoarseGraph<VectorGraph> c1(v);
-	cout << "Coarsifying to level 2" << endl;
-	CoarseGraph<VectorGraph> c2(c1);
-	cout << "Coarsifying to level 3" << endl;
-	CoarseGraph<VectorGraph> c3(c2);
-	//randomly assign coarse nodes to old/new clusters
-	std::vector<int> lblsc3(c3.getNNodes());
-	for (int i = 0; i < lblsc3.size(); i++){
-		lblsc3[i] = i%5;
-	}
-	cout << "Refining to level 2" << endl;
-	std::vector<int> lblsc2 = c3.getRefinedLabels(lblsc3);
-	cout << "Refining to level 1" << endl;
-	std::vector<int> lblsc1 = c2.getRefinedLabels(lblsc2);
-	cout << "Refining to level 0" << endl;
-	std::vector<int> lblsd = c1.getRefinedLabels(lblsc1);
 
-	double dynmcost = 0;
-	//get the unique labels
-	vector<int> unqlbls = lblsd;
-	sort(unqlbls.begin(), unqlbls.end());
-	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
-	//compute optimal parameters & cost for each
-	for (int k = 0; k < unqlbls.size(); k++){
-		VXd prm = VXd::Zero(3);
-		int cnt = 0;
-		const int& lbl = unqlbls[k];
-		for (int i = 0; i < lblsd.size(); i++){
-			if (lblsd[i] == lbl){
-				prm += data[i];
-				cnt += 1.0;
-			}
-		}
-		auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
-		if (it != this->oldprmlbls.end()){//old clus
-			int oldidx = std::distance(this->oldprmlbls.begin(), it);
-			prm += this->gammas[oldidx]*oldprms[oldidx];
-			prm /= (double)(this->gammas[oldidx]+cnt);
-			dynmcost += this->agecosts[oldidx] + this->gammas[oldidx]*(oldprms[oldidx]-prm).squaredNorm();
-		} else {
-			prm /= (double)cnt;
-			dynmcost += this->lambda;
-		}
-		for (int i = 0; i < lblsd.size(); i++){
-			if (lblsd[i] == lbl){
-				dynmcost += (data[i]-prm).squaredNorm();
-			}
-		}
-	}
-	cout << "Dyn Means Cost: " << dynmcost << endl;
-	cout << "Level 0 Cost: " << this->objective(v, lblsd) << endl;
-	cout << "Level 1 Cost: " << this->objective(c1, lblsc1) << endl;
-	cout << "Level 2 Cost: " << this->objective(c2, lblsc2) << endl;
-	cout << "Level 3 Cost: " << this->objective(c3, lblsc3) << endl;
-	return;
-}
 
 template <typename G>
 template <typename T>
 std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lbls) const{
-
-	//TODO REMOVE
-	std::vector< std::map<int, double> > costvec;
 
 	//get the unique labels
 	vector<int> unqlbls = lbls;
@@ -368,11 +274,11 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 	//get the observations in each cluster
 	//and the sizes of each cluster
 	map<int, std::vector<int> > idcsInClus;
-	map<int, int > nInClus;
+	map<int, double > nInClus;
 	for (int i = 0; i < lbls.size(); i++){
 		idcsInClus[lbls[i]].push_back(i);
 		if(nInClus.count(lbls[i]) == 0){
-			nInClus[lbls[i]] = 0;
+			nInClus[lbls[i]] = 0.0;
 		}
 		nInClus[lbls[i]] += aff.getNodeCt(i);
 	}
@@ -396,17 +302,8 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 	std::vector<int> newlbls(lbls.size(), 0);
 	int nextlbl = this->maxLblPrevUsed+1;//for this round, handles labelling of new clusters
 	for (int i = 0; i < lbls.size(); i++){
-		//TODO remove
-		costvec.push_back(std::map<int, double>());
-
-
 		int nct = aff.getNodeCt(i);
 		double minCost = this->lambda + (1.0-1.0/nct)*aff.diagSelfSimDD(i) - 2.0/nct*aff.offDiagSelfSimDD(i); //default to creating a new cluster, and then try to beat it 
-
-
-		//TODO remove
-		costvec.back()[-1] = minCost;
-
 		int minLbl = -1;
 		const int& prevlbl = lbls[i];
 		//run through instantiated clusters
@@ -431,9 +328,6 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 				minCost = cost;
 				minLbl = lbl;
 			}
-
-			//TODO remove
-			costvec.back()[unqlbls[k]] = cost;
 		}
 		//run through old uninstantiated clusters
 		for (int k = 0; k < this->oldprmlbls.size(); k++){
@@ -448,8 +342,6 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 					minCost = cost;
 					minLbl = this->oldprmlbls[k];
 				}
-				//TODO remove
-				costvec.back()[this->oldprmlbls[k]] = cost;
 			}
 		}
 		if (minLbl == -1){
@@ -484,11 +376,11 @@ std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(const T& aff, std::
 	//get the observations in each cluster
 	//and the sizes of each cluster
 	map<int, std::vector<int> > idcsInClus;
-	map<int, int > nInClus;
+	map<int, double > nInClus;
 	for (int i = 0; i < lbls.size(); i++){
 		idcsInClus[lbls[i]].push_back(i);
 		if(nInClus.count(lbls[i]) == 0){
-			nInClus[lbls[i]] = 0;
+			nInClus[lbls[i]] = 0.0;
 		}
 		nInClus[lbls[i]] += aff.getNodeCt(i);
 	}
@@ -645,27 +537,27 @@ double KernDynMeans<G>::objective(const T& aff, const std::vector<int>& lbls) co
 	//get the observations in each cluster
 	//and the sizes of each cluster
 	map<int, std::vector<int> > idcsInClus;
-	map<int, int > nInClus;
+	map<int, double > nInClus;
 	for (int i = 0; i < lbls.size(); i++){
 		idcsInClus[lbls[i]].push_back(i);
 		if(nInClus.count(lbls[i]) == 0){
-			nInClus[lbls[i]] = 0;
+			nInClus[lbls[i]] = 0.0;
 		}
 		nInClus[lbls[i]] += aff.getNodeCt(i);
 	}
 	//for every current cluster
 	for (auto it = idcsInClus.begin(); it != idcsInClus.end(); ++it){
-		//check if it's an old label
-		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), it->first);
 		const int& lbl = it->first;
 		const std::vector<int>& clus = it->second;
+		//check if it's an old label
+		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
 		if (it2 == this->oldprmlbls.end()){ //it's a new cluster
 			cost += this->lambda;//new cluster penalty
 			//ratio association term
 			for (int i = 0; i < clus.size(); i++){
 				cost += (1.0-1.0/nInClus[lbl])*aff.diagSelfSimDD(clus[i]) - 2.0/nInClus[lbl]*aff.offDiagSelfSimDD(clus[i]);
 				for (int j = i+1; j < clus.size(); j++){
-					cost -= 2.0/nInClus[lbl]*aff.simDD(clus[i], clus[j]);
+					cost += -2.0/nInClus[lbl]*aff.simDD(clus[i], clus[j]);
 				}
 			}
 		} else { //it's an old cluster
@@ -907,7 +799,7 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 				int idxj = idcs[j];
 				if (!marks[idxj]){//only check it if it hasn't been marked
 					double sim = aff.simDD(idxi, idxj);
-					if (sim > maxSim && sim > 1e-16){//1e-16 for keeping sparsity
+					if (sim > maxSim && fabs(sim) > 1e-16){//1e-16 for keeping sparsity
 						maxSim = sim;
 						maxId = idxj;
 					}
@@ -915,7 +807,6 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 			}
 			//if maxId is still -1, then pair(i, -1) states correctly that i is a singleton
 			this->refineMap.push_back(std::pair<int, int>(idxi, maxId));
-			cout << "Coarsifying nodes (" << idxi << "," << maxId << ") to " << this->refineMap.size()-1 << endl;
 			marks[idxi] = true;
 			if (maxId >= 0){
 				marks[maxId] = true;
@@ -951,14 +842,14 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 			const int& j1 = this->refineMap[j].first;
 			const int& j2 = this->refineMap[j].second;
 			double sim = aff.simDD(i1, j1) + (i2 != -1 ? aff.simDD(i2, j1) : 0) + (j2 != -1 ? aff.simDD(i1, j2) + (i2 != -1 ? aff.simDD(i2, j2) : 0) : 0);
-			if (sim > 1e-16){
+			if (fabs(sim) > 1e-16){
 				ddtrips.push_back(TD(i, j, sim));
 			}
 		}
 		//data->param similarities
 		for (int j = 0; j < this->nOldPrms; j++){
 			double sim = aff.simDP(i1, j) + (i2 != -1 ? aff.simDP(i2, j) : 0);
-			if (sim > 1e-16){dptrips.push_back(TD(i, j, sim));}
+			if (fabs(sim) > 1e-16){dptrips.push_back(TD(i, j, sim));}
 		}
 	}
 	//param->param similarities
@@ -1019,7 +910,6 @@ std::vector<int> CoarseGraph<G>::getRefinedLabels(const std::vector<int>& lbls) 
 	std::vector<int> newlbls(idxmax+1, 0);
 	for (int i = 0; i < lbls.size(); i++){
 		newlbls[this->refineMap[i].first] = lbls[i];
-		cout << "Refining lbl[" << i << "] = " << lbls[i] << " to : " << " lbl[" << this->refineMap[i].first << "] and lbl[" << this->refineMap[i].second << "]." << endl;
 		if (this->refineMap[i].second != -1){ //the -1 signal says that the node was just moved up a level in the hierarchy, no merge occured
 										//so if there is a -1, just do nothing with merges.second
 			newlbls[this->refineMap[i].second] = lbls[i];
@@ -1202,6 +1092,218 @@ int CoarseGraph<G>::getNNodes() const{
 //}
 
 
+//template<typename G>
+//void KernDynMeans<G>::testObjective() {
+//	srand((unsigned int) time(0));
+//	//create data
+//	std::vector<VXd> data, oldprms;
+//	for (int i = 0; i < 20; i++){
+//		data.push_back(VXd::Random(3));
+//	}
+//	//create old parameters
+//	for (int i = 0; i < 3; i++){
+//		oldprms.push_back(VXd::Random(3));
+//	}
+//	this->ages.push_back(1);
+//	this->agecosts.push_back(1*Q);
+//	this->gammas.push_back(.5);
+//	this->weights.push_back(.5);
+//	this->oldprmlbls.push_back(2);
+//	this->ages.push_back(2);
+//	this->agecosts.push_back(2*Q);
+//	this->gammas.push_back(1.7);
+//	this->weights.push_back(.5);
+//	this->oldprmlbls.push_back(0);
+//	this->ages.push_back(3);
+//	this->agecosts.push_back(3*Q);
+//	this->gammas.push_back(.223);
+//	this->weights.push_back(.5);
+//	this->oldprmlbls.push_back(1);
+//	this->maxLblPrevUsed = 2;
+//
+//
+//	//fill in this kerndynmeans object
+//	VectorGraph v(data, oldprms);
+//	//coarsify a few times
+//	cout << "Coarsifying to level 1" << endl;
+//	CoarseGraph<VectorGraph> c1(v);
+//	cout << "Coarsifying to level 2" << endl;
+//	CoarseGraph<VectorGraph> c2(c1);
+//	//randomly assign coarse nodes to old/new clusters
+//	std::vector<int> lblsc2(c2.getNNodes());
+//	for (int i = 0; i < lblsc2.size(); i++){
+//		lblsc2[i] = i%5;
+//	}
+//	cout << "Refining to level 1" << endl;
+//	std::vector<int> lblsc1 = c2.getRefinedLabels(lblsc2);
+//	cout << "Refining to level 0" << endl;
+//	std::vector<int> lblsd = c1.getRefinedLabels(lblsc1);
+//
+//	double dynmcost = 0;
+//	//get the unique labels
+//	vector<int> unqlbls = lblsd;
+//	sort(unqlbls.begin(), unqlbls.end());
+//	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+//	//compute optimal parameters & cost for each
+//	for (int k = 0; k < unqlbls.size(); k++){
+//		VXd prm = VXd::Zero(3);
+//		int cnt = 0;
+//		const int& lbl = unqlbls[k];
+//		for (int i = 0; i < lblsd.size(); i++){
+//			if (lblsd[i] == lbl){
+//				prm += data[i];
+//				cnt += 1.0;
+//			}
+//		}
+//		auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
+//		double tmpcost = 0;
+//		if (it != this->oldprmlbls.end()){//old clus
+//			int oldidx = std::distance(this->oldprmlbls.begin(), it);
+//			prm += this->gammas[oldidx]*oldprms[oldidx];
+//			prm /= (double)(this->gammas[oldidx]+cnt);
+//			tmpcost += this->agecosts[oldidx] + this->gammas[oldidx]*(oldprms[oldidx]-prm).squaredNorm();
+//		} else {
+//			prm /= (double)cnt;
+//			tmpcost += this->lambda;
+//		}
+//		for (int i = 0; i < lblsd.size(); i++){
+//			if (lblsd[i] == lbl){
+//				tmpcost += (data[i]-prm).squaredNorm();
+//			}
+//		}
+//		cout << "DM Cost for cluster " << lbl << ": " << tmpcost << endl;
+//		dynmcost += tmpcost;
+//	}
+//	cout << "Dyn Means Cost: " << dynmcost << endl;
+//	cout << "Level 0 Cost: " << this->objective(v, lblsd) << endl;
+//	cout << "Level 1 Cost: " << this->objective(c1, lblsc1) << endl;
+//	cout << "Level 2 Cost: " << this->objective(c2, lblsc2) << endl;
+//	return;
+//}
+
+//template<typename G>
+//void KernDynMeans<G>::testLabelUpdate(){
+//	srand((unsigned int) time(0));
+//	//create data
+//	std::vector<VXd> data, oldprms;
+//	for (int i = 0; i < 20; i++){
+//		data.push_back(VXd::Random(3));
+//	}
+//	//create old parameters
+//	for (int i = 0; i < 3; i++){
+//		oldprms.push_back(VXd::Random(3));
+//	}
+//	this->ages.push_back(1);
+//	this->agecosts.push_back(1*Q);
+//	this->gammas.push_back(.5);
+//	this->weights.push_back(.5);
+//	this->oldprmlbls.push_back(2);
+//	this->ages.push_back(2);
+//	this->agecosts.push_back(2*Q);
+//	this->gammas.push_back(1.7);
+//	this->weights.push_back(.5);
+//	this->oldprmlbls.push_back(0);
+//	this->ages.push_back(3);
+//	this->agecosts.push_back(3*Q);
+//	this->gammas.push_back(.223);
+//	this->weights.push_back(.5);
+//	this->oldprmlbls.push_back(1);
+//	this->maxLblPrevUsed = 2;
+//
+//
+//	//fill in this kerndynmeans object
+//	VectorGraph v(data, oldprms);
+//	//coarsify a few times
+//	CoarseGraph<VectorGraph> c1(v);
+//	CoarseGraph<VectorGraph> c2(c1);
+//	//randomly assign coarse nodes to old/new clusters
+//	std::vector<int> lblsc2(c2.getNNodes());
+//	for (int i = 0; i < lblsc2.size(); i++){
+//		lblsc2[i] = i%5;
+//	}
+//	std::vector<int> lblsc1 = c2.getRefinedLabels(lblsc2);
+//	std::vector<int> lblsd = c1.getRefinedLabels(lblsc1);
+//
+//	//use updatelabels with the graph version of dyn means
+//	std::vector<int> newgrlblsc2 = this->updateLabels(c2, lblsc2);
+//	std::vector<int> newgrlblsc1 = this->updateLabels(c1, lblsc1);
+//	std::vector<int> newgrlblsd = this->updateLabels(v, lblsd);
+//
+//	//get parameters for each cluster
+//	map<int, VXd> prms;
+//	vector<int> unqlbls = lblsd;
+//	sort(unqlbls.begin(), unqlbls.end());
+//	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
+//	for (int k = 0; k < unqlbls.size(); k++){
+//		VXd prm = VXd::Zero(3);
+//		int cnt = 0;
+//		const int& lbl = unqlbls[k];
+//		for (int i = 0; i < lblsd.size(); i++){
+//			if (lblsd[i] == lbl){
+//				prm += data[i];
+//				cnt += 1.0;
+//			}
+//		}
+//		auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
+//		if (it != this->oldprmlbls.end()){//old clus
+//			int oldidx = std::distance(this->oldprmlbls.begin(), it);
+//			prm += this->gammas[oldidx]*oldprms[oldidx];
+//			prm /= (double)(this->gammas[oldidx]+cnt);
+//		} else {
+//			prm /= (double)cnt;
+//		}
+//		prms[lbl] = prm;
+//	}
+//	//use dynamic means on the base level
+//	int nextlbl = this->maxLblPrevUsed+1;//for this round, handles labelling of new clusters
+//	std::vector<int> newdmlblsd = lblsd;
+//	for (int i = 0; i < lblsd.size(); i++){
+//		//store the old lbl for possibly deleting clusters later
+//		int oldlbl = lblsd[i];
+//
+//		//calculate the distances to all the parameters
+//		int minlbl = -1;
+//		double mindistsq = this->lambda;
+//		for (int j = 0; j < unqlbls.size(); j++){
+//			double tmpdistsq = (prms[unqlbls[j]] - data[i]).squaredNorm();
+//			if (tmpdistsq < mindistsq){
+//				mindistsq = tmpdistsq;
+//				minlbl = unqlbls[j];
+//			}
+//		}
+//		for (int j = 0; j < this->oldprmlbls.size(); j++){
+//			auto it = find(unqlbls.begin(), unqlbls.end(), this->oldprmlbls[j]);
+//			if (it == unqlbls.end()){
+//				double tmpdistsq = this->agecosts[j] + this->gammas[j]/(1.0+this->gammas[j])*(oldprms[j]-data[i]).squaredNorm();
+//				if (tmpdistsq < mindistsq){
+//					mindistsq = tmpdistsq;
+//					minlbl = this->oldprmlbls[j];
+//				}
+//			}
+//		}
+//		if (minlbl == -1){
+//			minlbl = nextlbl;
+//			prms[minlbl] = data[i];
+//			newdmlblsd[i] = minlbl;
+//			unqlbls.push_back(minlbl);
+//			nextlbl++;
+//		} else {
+//			auto it = find(unqlbls.begin(), unqlbls.end(), minlbl);
+//			if (it == unqlbls.end()){
+//				int oi = distance(this->oldprmlbls.begin(), find(this->oldprmlbls.begin(), this->oldprmlbls.end(), minlbl));
+//				prms[minlbl] = (this->gammas[oi]*oldprms[oi]+data[i])/(1.0+this->gammas[oi]);
+//				unqlbls.push_back(minlbl);
+//			}
+//			newdmlblsd[i] = minlbl;
+//		}
+//	}
+//
+//	for (int i = 0; i < newdmlblsd.size(); i++){
+//		cout << "DM/GR[" << i << "] = " << newdmlblsd[i] << "/" << newgrlblsd[i] << endl;
+//	}
+//
+//	return;
+//}
 
 #define __KERNDYNMEANS_IMPL_HPP
 #endif /* __KERNDYNMEANS_IMPL_HPP */

@@ -26,20 +26,79 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 //random number generator
 mt19937 rng;//uses the same seed every time, 5489u
 
-int main(int argc, char** argv){
-	double lambda = 0.05;
-	double T_Q = 6.8;
-	double K_tau = 1.01;
-	double Q = lambda/T_Q;
-	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-	int nRestarts = 10;
-	int nCoarsest = 1;
-	KernDynMeans<VectorGraph> kdm(lambda, Q, tau, true);
-	kdm.testObjective();
-	return 0;
-}
-	/*
 
+class VectorGraph{
+	public:
+		std::vector<V2d> data, oldprms;
+		std::vector<int> oldprmlbls;
+		void updateData(std::vector<V2d> data){
+			this->data = data;
+		}
+		void updateOldPrms(std::vector<V2d> data, std::vector<int> lbls, std::vector<double> gammas, std::vector<int> prmlbls){
+			std::vector<V2d> updatedoldprms;
+			for (int i = 0; i < prmlbls.size(); i++){
+				//if there is no data assigned to this cluster, must be old/uninstantiated
+				if (find(lbls.begin(), lbls.end(), prmlbls[i]) == lbls.end()){
+					int oldidx = distance(oldprmlbls.begin(), find(oldprmlbls.begin(), oldprmlbls.end(), prmlbls[i]));
+					updatedoldprms.push_back(oldprms[oldidx]);
+				//if the label is not in oldprmlbls, must be a new cluster
+				//furthermore, must have at least one label in lbls = prmlbls[i]
+				} else if (find(oldprmlbls.begin(), oldprmlbls.end(), prmlbls[i]) == oldprmlbls.end()) {
+					V2d tmpprm = V2d::Zero();
+					int tmpcnt = 0;
+					for (int j =0 ; j < lbls.size(); j++){
+						if (lbls[j] == prmlbls[i]){
+							tmpprm += data[j];
+							tmpcnt++;
+						}
+					}
+					tmpprm /= tmpcnt;
+					updatedoldprms.push_back(tmpprm);
+				//old instantiated cluster
+				} else {
+					int oldidx = distance(oldprmlbls.begin(), find(oldprmlbls.begin(), oldprmlbls.end(), prmlbls[i]));
+					V2d tmpprm = gammas[i]*oldprms[oldidx];
+					int tmpcnt = 0;
+					for (int j =0 ; j < lbls.size(); j++){
+						if (lbls[j] == prmlbls[i]){
+							tmpprm += data[j];
+							tmpcnt++;
+						}
+					}
+					tmpprm /= (gammas[i]+tmpcnt);
+					updatedoldprms.push_back(tmpprm);
+				}
+			}
+			this->oldprms = updatedoldprms;
+			this->oldprmlbls = prmlbls;
+		}
+		double diagSelfSimDD(const int i) const{
+			return data[i].transpose()*data[i];
+		}
+		double offDiagSelfSimDD(const int i) const{
+			return 0;
+		}
+		double selfSimPP(const int i) const{
+			return oldprms[i].transpose()*oldprms[i];
+		}
+		double simDD(const int i, const int j) const{
+			return data[i].transpose()*data[j];
+		}
+		double simDP(const int i, const int j) const{
+			return data[i].transpose()*oldprms[j];
+		}
+		int getNodeCt(const int i) const{
+			return 1;
+		}
+		int getNNodes() const {
+			return data.size();
+		}
+		int getNOldPrms() const {
+			return oldprms.size();
+		}
+};
+
+int main(int argc, char** argv){
 
 	//generates clusters that jump around on the domain R^2
 	//they move stochastically with a normal distribution w/ std deviation 0.05
@@ -89,7 +148,8 @@ int main(int argc, char** argv){
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
 	int nCoarsest = 50;
-	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau, true);
+	KernDynMeans<VectorGraph> kdm(lambda, Q, tau, true);
+	VectorGraph vgr;
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
@@ -112,20 +172,18 @@ int main(int argc, char** argv){
 		//------------------------------------------
 		//Take the vectors that we just created, and package them in the KD class defined above
 		//------------------------------------------
-		vector<KD> clusterDataKD;
-		for (int i = 0; i < clusterData.size(); i++){
-			KD dd;
-			dd.v = clusterData[i];
-			clusterDataKD.push_back(dd);
-		}
+		vgr.updateData(clusterData);
 
 		//----------------------------
 		//cluster using Dynamic Means
 		//---------------------------
 		vector<int> learnedLabels;
+		vector<double> gammas;
+		vector<int> prmlbls;
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
-		kdm.cluster(clusterDataKD, nRestarts, nCoarsest, learnedLabels, obj, tTaken);
+		kdm.cluster(vgr, nRestarts, nCoarsest, learnedLabels, obj, gammas, prmlbls, tTaken);
+		vgr.updateOldParameters(clusterData, learnedLabels, gammas, prmlbls);
 		//----------------------------------------------------
 		//calculate the accuracy via linear programming
 		//including proper cluster label tracking (see above)
@@ -218,10 +276,4 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 		}
 	}
 }
-
-
-
-
-
-*/
 
