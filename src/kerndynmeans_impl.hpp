@@ -9,7 +9,6 @@ KernDynMeans<G>::KernDynMeans(double lambda, double Q, double tau, bool verbose)
 	this->verbose = verbose;
 	this->maxLblPrevUsed = -1;
 	this->ages.clear();
-	this->oldprms.clear();
 	this->oldprmlbls.clear();
 	this->weights.clear();
 	this->gammas.clear();
@@ -38,7 +37,6 @@ template<typename G>
 void KernDynMeans<G>::reset(){
 	this->maxLblPrevUsed = 0;
 	this->ages.clear();
-	this->oldprms.clear();
 	this->oldprmlbls.clear();
 	this->weights.clear();
 	this->gammas.clear();
@@ -54,7 +52,7 @@ void KernDynMeans<G>::finalizeStep(const G& aff, const vector<int>& lbls, vector
 		this->ages[i]++;
 	}
 	//get the set of current cluster labels
-	vector<int> unqlbls = minLbls;
+	vector<int> unqlbls = lbls;
 	sort(unqlbls.begin(), unqlbls.end());
 	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
 	//for every current cluster
@@ -228,7 +226,7 @@ void KernDynMeans<G>::cluster(const G& aff, const int nRestarts, const int nCoar
 
 template<typename G>
 template <typename T> 
-std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> lbls){
+std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> lbls) const{
 	if (lbls.size() < aff.getNNodes()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
 		if (verbose){ cout << "Running base spectral clustering..." << endl;}
 		//get the data labels from spectral clustering
@@ -265,7 +263,7 @@ void KernDynMeans<G>::testLabelUpdate(){
 }
 
 template<typename G>
-void KernDynMeans<G>::testObjective(){
+void KernDynMeans<G>::testObjective() {
 	//create data
 	std::vector<VXd> data, oldprms;
 	for (int i = 0; i < 20; i++){
@@ -300,9 +298,9 @@ void KernDynMeans<G>::testObjective(){
 	CoarseGraph<VectorGraph> c2(c1);
 	CoarseGraph<VectorGraph> c3(c2);
 	//randomly assign coarse nodes to old/new clusters
-	std::vector<int> lblsc(c3.getNNodes());
-	for (int i = 0; i < lblsc.size(); i++){
-		lblsc[i] = i%5;
+	std::vector<int> lblsc3(c3.getNNodes());
+	for (int i = 0; i < lblsc3.size(); i++){
+		lblsc3[i] = i%5;
 	}
 	std::vector<int> lblsc2 = c3.getRefinedLabels(lblsc3);
 	std::vector<int> lblsc1 = c2.getRefinedLabels(lblsc2);
@@ -336,7 +334,7 @@ void KernDynMeans<G>::testObjective(){
 		}
 		for (int i = 0; i < lblsd.size(); i++){
 			if (lblsd[i] == lbl){
-				dynmcost += (this->data[i]-prm).squaredNorm();
+				dynmcost += (data[i]-prm).squaredNorm();
 			}
 		}
 	}
@@ -350,7 +348,7 @@ void KernDynMeans<G>::testObjective(){
 
 template <typename G>
 template <typename T>
-std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lbls){
+std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lbls) const{
 
 	//TODO REMOVE
 	std::vector< std::map<int, double> > costvec;
@@ -363,7 +361,7 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 
 	//get the observations in each cluster
 	//and the sizes of each cluster
-	map<int, int > idcsInClus;
+	map<int, std::vector<int> > idcsInClus;
 	map<int, int > nInClus;
 	for (int i = 0; i < lbls.size(); i++){
 		idcsInClus[lbls[i]].push_back(i);
@@ -471,7 +469,7 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 
 template <typename G>
 template <typename T> 
-std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(const T& aff, std::vector<int> lbls){
+std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(const T& aff, std::vector<int> lbls) const{
 	//get the unique labels
 	vector<int> unqlbls = lbls;
 	sort(unqlbls.begin(), unqlbls.end());
@@ -479,7 +477,7 @@ std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(const T& aff, std::
 
 	//get the observations in each cluster
 	//and the sizes of each cluster
-	map<int, int > idcsInClus;
+	map<int, std::vector<int> > idcsInClus;
 	map<int, int > nInClus;
 	for (int i = 0; i < lbls.size(); i++){
 		idcsInClus[lbls[i]].push_back(i);
@@ -636,11 +634,11 @@ map<int, int> KernDynMeans<G>::getMinWtMatching(vector< pair<int, int> > nodePai
 
 template<typename G>
 template<typename T> 
-double KernDynMeans<G>::objective(const T& aff, std::vector<int> lbls){
+double KernDynMeans<G>::objective(const T& aff, const std::vector<int>& lbls) const{
 	double cost = 0;
 	//get the observations in each cluster
 	//and the sizes of each cluster
-	map<int, int > idcsInClus;
+	map<int, std::vector<int> > idcsInClus;
 	map<int, int > nInClus;
 	for (int i = 0; i < lbls.size(); i++){
 		idcsInClus[lbls[i]].push_back(i);
@@ -686,7 +684,7 @@ double KernDynMeans<G>::objective(const T& aff, std::vector<int> lbls){
 
 template<typename G>
 template<typename T>
-std::vector<int> KernDynMeans<G>::baseCluster(const T& aff){
+std::vector<int> KernDynMeans<G>::baseCluster(const T& aff) const{
 	//compute the kernel matrix
 	int nA = aff.getNNodes();
 	MXd K = MXd::Zero(nA, nA);
@@ -966,15 +964,15 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 }
 
 template <class G>
-double CoarseGraph<G>::diagSelfSimDD(int i){
+double CoarseGraph<G>::diagSelfSimDD(const int i) const{
 	return this->daffdd(i);
 }
 template <class G>
-double CoarseGraph<G>::offDiagSelfSimDD(int i){
+double CoarseGraph<G>::offDiagSelfSimDD(const int i) const{
 	return this->odaffdd(i);
 }
 template <class G>
-double CoarseGraph<G>::simDD(int i, int j){
+double CoarseGraph<G>::simDD(const int i, const int j) const{
 	if(i == j){
 		cout << "libkerndynmeans: ERROR: Do not use CoarseGraph::sim on indices i==j" << endl;
 		cout << "libkerndynmeans: ERROR: Need to specify whether linear/quadratic self similarity." << endl;
@@ -988,17 +986,17 @@ double CoarseGraph<G>::simDD(int i, int j){
 }
 
 template <class G>
-double CoarseGraph<G>::selfSimPP(int i){
+double CoarseGraph<G>::selfSimPP(const int i) const{
 	return this->affpp(i);
 }
 
 template <class G>
-double CoarseGraph<G>::simDP(int i, int j){
+double CoarseGraph<G>::simDP(const int i, const int j) const{
 	return this->affdp.coeff(i, j);
 }
 
 template <class G>
-std::vector<int> CoarseGraph<G>::getRefinedLabels(const std::vector<int>& lbls){
+std::vector<int> CoarseGraph<G>::getRefinedLabels(const std::vector<int>& lbls) const{
 	//find the max index in merges to see how big the new labels should be
 	int idxmax = -1;
 	for (int i = 0; i < this->refineMap.size(); i++){
@@ -1022,12 +1020,12 @@ std::vector<int> CoarseGraph<G>::getRefinedLabels(const std::vector<int>& lbls){
 }
 
 template <class G>
-int CoarseGraph<G>::getNodeCt(int i){
+int CoarseGraph<G>::getNodeCt(const int i) const{
 	return this->nodeCts[i];
 }
 
 template <class G>
-int CoarseGraph<G>::getNNodes(){
+int CoarseGraph<G>::getNNodes() const{
 	return this->affdd.cols();
 }
 

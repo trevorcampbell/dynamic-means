@@ -34,11 +34,11 @@ int main(int argc, char** argv){
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
 	int nCoarsest = 1;
-	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau, true);
+	KernDynMeans<VectorGraph> kdm(lambda, Q, tau, true);
 	kdm.testObjective();
 	return 0;
-
-	
+}
+	/*
 
 
 	//generates clusters that jump around on the domain R^2
@@ -96,22 +96,22 @@ int main(int argc, char** argv){
 	map<int, int> matchings;//stores the saved matchings from previous timesteps
 							//enables proper label tracking (see note at line 27)
 	for (int i = 0; i < nSteps; i++){
-		//****************************
+		//----------------------------
 		//birth/death/motion processes
-		//****************************
+		//----------------------------
 		cout << "Step " << i << ": Clusters undergoing birth/death/motion..." << endl;
 		birthDeathMotionProcesses(clusterCenters, aliveClusters, birthProbability, deathProbability, motionStdDev);
-		//******************************************
+		//------------------------------------------
 		//generate the data for the current timestep
-		//******************************************
+		//------------------------------------------
 		cout << "Step " << i << ": Generating data from the clusters..." << endl;
 		vector<V2d> clusterData;
 		vector<int> trueLabels;
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, clusterData, trueLabels);
 
-		//**************************************************************************************
+		//------------------------------------------
 		//Take the vectors that we just created, and package them in the KD class defined above
-		//**************************************************************************************
+		//------------------------------------------
 		vector<KD> clusterDataKD;
 		for (int i = 0; i < clusterData.size(); i++){
 			KD dd;
@@ -119,17 +119,17 @@ int main(int argc, char** argv){
 			clusterDataKD.push_back(dd);
 		}
 
-		//***************************
+		//----------------------------
 		//cluster using Dynamic Means
-		//***************************
+		//---------------------------
 		vector<int> learnedLabels;
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
 		kdm.cluster(clusterDataKD, nRestarts, nCoarsest, learnedLabels, obj, tTaken);
-		//***************************************************
+		//----------------------------------------------------
 		//calculate the accuracy via linear programming
 		//including proper cluster label tracking (see above)
-		//***************************************************
+		//----------------------------------------------------
 		matchings = getMaxMatchingConsistentWithOldMatching(learnedLabels, trueLabels, matchings);
 		double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
 		cout << "Step " << i << ": Accuracy = " << acc <<  "\%" << endl;
@@ -223,5 +223,5 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 
 
 
-
+*/
 

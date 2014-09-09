@@ -32,20 +32,20 @@ class KernDynMeans{
 		//reset DDP chain
 		void reset();
 		//clusters a refinement level with kernelized dyn means batch updates
-		//tempalte so it works with C/D
-		template <typename T> std::vector<int> clusterAtLevel(const T& aff, std::vector<int> initlbls);
+		//template so it works with C/D
+		template <typename T> std::vector<int> clusterAtLevel(const T& aff, std::vector<int> lbls) const;
 		//compute the dynamic means objective given the current labels
-		template<typename T> double objective(const T& aff, std::vector<int> lbls);
+		template<typename T> double objective(const T& aff, const std::vector<int>& lbls) const;
 		//compute a minimum weight bipartite matching
 		std::map<int, int> getMinWtMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const;
 		//get the minimum weight old/new cluster correspondence
-		template <typename T> std::vector<int> updateOldNewCorrespondence(const T& aff, std::vector<int> lbls);
+		template <typename T> std::vector<int> updateOldNewCorrespondence(const T& aff, std::vector<int> lbls) const;
 		//get the updated data labels via dyn means iteration
-		template <typename T> std::vector<int> updateLabels(const T& aff, std::vector<int> lbls);
+		template <typename T> std::vector<int> updateLabels(const T& aff, std::vector<int> lbls) const;
 		//update the state after all iterations are done
-		std::vector<double> finalizeStep(const G& aff, const vector<int>& lbls, vector<double>& oldgammas_out, vector<int>& oldprmlbls_out);
+		void finalizeStep(const G& aff, const vector<int>& lbls, vector<double>& oldgammas_out, vector<int>& oldprmlbls_out);
 		//do a base clustering using spectral methods + minimum weight matching
-		template <typename T> std::vector<int> baseCluster(const T& aff);
+		template <typename T> std::vector<int> baseCluster(const T& aff) const;
 		//utility function to orthonormalize a square matrix
 		void orthonormalize(MXd& V) const;
 
@@ -62,8 +62,8 @@ class KernDynMeans{
 		std::vector<double> agecosts;
 		std::vector<double> gammas;
 
-		void testLabelUpdate();
-		void testObjective();
+		void testLabelUpdate() ;
+		void testObjective() ;
 
 	private:
 };
@@ -75,16 +75,16 @@ class CoarseGraph{ //only stores upper triangular information (multiplies by 2 w
 		CoarseGraph(const G& aff);
 		CoarseGraph(const CoarseGraph<G>& aff);
 		//similarity functions
-		double diagSelfSimDD(int i);
-		double offDiagSelfSimDD(int i);
-		double selfSimPP(int i);
-		double simDD(int i, int j);
-		double simDP(int i, int j);
-		int getNodeCt(int i);
+		double diagSelfSimDD(const int i) const;
+		double offDiagSelfSimDD(const int i) const;
+		double selfSimPP(const int i) const;
+		double simDD(const int i, const int j) const;
+		double simDP(const int i, const int j) const;
+		int getNodeCt(const int i) const;
 		//input labels for this coarsified graph, get the labels for the original refined graph
-		std::vector<int> getRefinedLabels(const std::vector<int>& lbls);
+		std::vector<int> getRefinedLabels(const std::vector<int>& lbls) const;
 		//get the number of graph nodes
-		int getNNodes();
+		int getNNodes() const;
 	private:
 		template <typename T> void coarsify(const T& aff);
 		std::vector< std::pair<int, int> > refineMap;
@@ -100,25 +100,25 @@ class VectorGraph{
 			this->data = data;
 			this->oldprms = oldprms;
 		}
-		double diagSelfSimDD(int i){
+		double diagSelfSimDD(const int i) const{
 			return data[i].transpose()*data[i];
 		}
-		double offDiagSelfSimDD(int i){
+		double offDiagSelfSimDD(const int i) const{
 			return 0;
 		}
-		double selfSimPP(int i){
+		double selfSimPP(const int i) const{
 			return oldprms[i].transpose()*oldprms[i];
 		}
-		double simDD(int i, int j){
+		double simDD(const int i, const int j) const{
 			return data[i].transpose()*data[j];
 		}
-		double simDP(int i, int j){
+		double simDP(const int i, const int j) const{
 			return data[i].transpose()*oldprms[j];
 		}
-		int getNodeCt(int i){
+		int getNodeCt(const int i) const{
 			return 1;
 		}
-		int getNNodes(){
+		int getNNodes() const {
 			return data.size();
 		}
 };
