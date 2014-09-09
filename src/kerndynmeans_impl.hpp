@@ -156,11 +156,13 @@ void KernDynMeans<G>::cluster(const G& aff, const int nRestarts, const int nCoar
 				cout << "libkerndynmeans: Coarsifying " << nNodes << " nodes at level 0." << endl;
 			}
 			std::stack<CoarseGraph<G> > coarsestack; //stores coarsified graphs
+			cout << "Coarsifying 0" << endl;
 			coarsestack.push(CoarseGraph<G>(aff));
 			while(coarsestack.top().getNNodes() > nCoarsest){
 				if (verbose){
 					cout << "libkerndynmeans: Coarsifying " << coarsestack.top().getNNodes() << " nodes at level " << coarsestack.size() << "." << endl;
 				}
+				cout << "Coarsifying " << coarsestack.size() << endl;
 				coarsestack.push(CoarseGraph<G>(coarsestack.top()));
 			}
 			if (verbose){
@@ -320,17 +322,11 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 			if (it == this->oldprmlbls.end()){//if it's a new cluster in this timestep, no gamma stuff is needed
 				cost = aff.diagSelfSimDD(i)+(double)nct/(nInClus[lbl]*nInClus[lbl])*inClusterSum[lbl];
 				if (prevlbl == lbl){
-					//need to be careful about similarities when the observation was previously in this cluster
 					cost += -2.0/nInClus[lbl]*(aff.diagSelfSimDD(i)+2.0*aff.offDiagSelfSimDD(i));
-					for (int j = 0; j < clus.size(); j++){
-						if (clus[j] != i){
-							cost += -2.0/nInClus[lbl]*aff.simDD(i, clus[j]);
-						}
-					}
-				} else {
-					//don't need to be careful, just sum up the similarities
-					for (int j = 0; j < clus.size(); j++){
-							cost += -2.0/nInClus[lbl]*aff.simDD(i, clus[j]);
+				}
+				for (int j = 0; j < clus.size(); j++){
+					if (clus[j] != i){
+						cost += -2.0/nInClus[lbl]*aff.simDD(i, clus[j]);
 					}
 				}
 			} else {//it's an instantiated old cluster, need to do gamma stuff
@@ -343,17 +339,11 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 				if (prevlbl == lbl){
 					//need to be careful about similarities when the observation was previously in this cluster
 					cost += -2.0*factor*(aff.diagSelfSimDD(i)+2.0*aff.offDiagSelfSimDD(i));
-					for (int j = 0; j < clus.size(); j++){
-						cost += 2.0*factor*factor*nct*this->gammas[oldidx]*aff.simDP(clus[j], oldidx);
-						if (clus[j] != i){
-							cost += -2.0*factor*aff.simDD(i, clus[j]);
-						}
-					}
-				} else {
-					//don't need to be careful, just sum up the similarities
-					for (int j = 0; j < clus.size(); j++){
-							cost += 2.0*factor*factor*nct*this->gammas[oldidx]*aff.simDP(clus[j], oldidx);
-							cost += -2.0*factor*aff.simDD(i, clus[j]);
+				}
+				for (int j = 0; j < clus.size(); j++){
+					cost += 2.0*factor*factor*nct*this->gammas[oldidx]*aff.simDP(clus[j], oldidx);
+					if (clus[j] != i){
+						cost += -2.0*factor*aff.simDD(i, clus[j]);
 					}
 				}
 			}
@@ -893,6 +883,18 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 	this->affdd.setFromTriplets(ddtrips.begin(), ddtrips.end());
 	if (this->nOldPrms > 0){
 		this->affdp.setFromTriplets(dptrips.begin(), dptrips.end());
+	}
+	cout << "AFFDD: " << endl;
+	cout << MXd(this-affdd) << endl;
+	cout << "DAFFDD: " << endl;
+	cout << this->daffdd.transpose() << endl;
+	cout << "ODAFFDD: " << endl;
+	cout << this->odaffdd.transpose() << endl;
+	if (this->nOldPrms > 0){
+		cout << "AFFDP: " << endl;
+		cout << MXd(this-affdp) << endl;
+		cout << "AFFPP: " << endl;
+		cout << this->affpp.transpose() << endl;
 	}
 	return;
 }

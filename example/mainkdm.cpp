@@ -122,7 +122,7 @@ int main(int argc, char** argv){
 	double deathProbability = 0.05;
 	double motionStdDev = 0.05;
 	double clusterStdDev = 0.05;
-	int nDataPerClusterPerStep = 15; // datapoints generated for each cluster per timestep
+	int nDataPerClusterPerStep = 10; // datapoints generated for each cluster per timestep
 	int nSteps = 100;//run the experiment for nSteps steps
 	int initialClusters = 4; //the number of clusters to start with
 
@@ -149,7 +149,7 @@ int main(int argc, char** argv){
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
-	int nCoarsest = 50;
+	int nCoarsest = 10;
 	KernDynMeans<VectorGraph> kdm(lambda, Q, tau, false); //true);
 	VectorGraph vgr;
 
