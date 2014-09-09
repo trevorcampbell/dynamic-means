@@ -107,7 +107,7 @@ void KernDynMeans<G>::finalizeStep(const G& aff, const vector<int>& lbls, vector
 			i--;
 		}
 	}
-	prmlbls_out = this->prmlbls;//save the parameter labels output 
+	prmlbls_out = this->oldprmlbls;//save the parameter labels output 
 
 	//update this->maxLblPrevUsed if new clusters were created
 	int maxlbl = *max_element(lbls.begin(), lbls.end());
