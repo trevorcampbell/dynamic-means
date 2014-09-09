@@ -405,7 +405,7 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 		const int& prevlbl = lbls[i];
 		//run through instantiated clusters
 		for (int k = 0; k < unqlbls.size(); k++){
-			const std::vector<T>& clus = idcsInClus[unqlbls[k]];
+			const std::vector<int>& clus = idcsInClus[unqlbls[k]];
 			const int& lbl = unqlbls[k];
 			double cost = 0;
 			if (prevlbl != lbl){//if this node wasn't previously in the cluster
@@ -491,7 +491,7 @@ std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(const T& aff, std::
 	std::map<int, double> inClusterSum;
 	for (int i = 0; i < unqlbls.size(); i++){
 		double sum = 0;
-		const std::vector<T>& clus = idcsInClus[unqlbls[i]];
+		const std::vector<int>& clus = idcsInClus[unqlbls[i]];
 		const int& lbl = unqlbls[i];
 		for (int k = 0; k < clus.size(); k++){
 			sum += aff.diagSelfSimDD(clus[k]) + 2.0*aff.offDiagSelfSimDD(clus[k]);
@@ -506,11 +506,11 @@ std::vector<int> KernDynMeans<G>::updateOldNewCorrespondence(const T& aff, std::
  	vector< pair<int, int> > nodePairs; //new clusters in .first, old clusters + one null cluster in .second
  	vector< double > edgeWeights;
 	for (int i = 0; i < unqlbls.size(); i++){
-		const std::vector<T>& clus = idcsInClus[unqlbls[i]];
+		const std::vector<int>& clus = idcsInClus[unqlbls[i]];
 		const int& lbl = unqlbls[i];
 		for (int j = 0; j < this->oldprmlbls.size(); j++){
 			double ewt = this->agecosts[j]
-						+ this->gammas[j]*nInClus[lbl]/(this->gammas[j]+nInClus[lbl])*aff.simPP(j)
+						+ this->gammas[j]*nInClus[lbl]/(this->gammas[j]+nInClus[lbl])*aff.selfSimPP(j)
 						-1.0/(this->gammas[j]+nInClus[lbl])*inClusterSum[lbl];
 			double oldClusSum = 0;
 			for (int k = 0; k < clus.size(); k++){
@@ -652,12 +652,12 @@ double KernDynMeans<G>::objective(const T& aff, const std::vector<int>& lbls) co
 		//check if it's an old label
 		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), it->first);
 		const int& lbl = it->first;
-		const std::vector<T>& clus = it->second;
+		const std::vector<int>& clus = it->second;
 		if (it2 == this->oldprmlbls.end()){ //it's a new cluster
 			cost += this->lambda;//new cluster penalty
 			//ratio association term
 			for (int i = 0; i < clus.size(); i++){
-				cost += (1.0-1.0/nInClus[lbl])*aff.diagSelfSimDD(clus[i]) - 2.0/nInClus[lbl]*aff.offDiagSelfSim(clus[i]);
+				cost += (1.0-1.0/nInClus[lbl])*aff.diagSelfSimDD(clus[i]) - 2.0/nInClus[lbl]*aff.offDiagSelfSimDD(clus[i]);
 				for (int j = i+1; j < clus.size(); j++){
 					cost -= 2.0/nInClus[lbl]*aff.simDD(clus[i], clus[j]);
 				}
@@ -667,12 +667,12 @@ double KernDynMeans<G>::objective(const T& aff, const std::vector<int>& lbls) co
 			cost += this->agecosts[oldidx];//old cluster penalty
 			//ratio association term
 			for (int i = 0; i < clus.size(); i++){
-				cost += (1.0 - 1.0/(this->gammas[oldidx]+nInClus[lbl]))*aff.diagSelfSimDD(clus[i]) - 2.0/(this->gammas[oldidx]+nInClus[lbl])*aff.offDiagSelfSim(clus[i]);
+				cost += (1.0 - 1.0/(this->gammas[oldidx]+nInClus[lbl]))*aff.diagSelfSimDD(clus[i]) - 2.0/(this->gammas[oldidx]+nInClus[lbl])*aff.offDiagSelfSimDD(clus[i]);
 				for (int j = i+1; j < clus.size(); j++){
 					cost += -2.0/(this->gammas[oldidx]+nInClus[lbl])*aff.simDD(clus[i], clus[j]);
 				}
 			}
-			cost += this->gammas[oldidx]*nInClus[lbl]/(this->gammas[oldidx]+nInClus[lbl])*aff.simPP(oldidx, oldidx);
+			cost += this->gammas[oldidx]*nInClus[lbl]/(this->gammas[oldidx]+nInClus[lbl])*aff.selfSimPP(oldidx);
 			//old prm ratio association term
 			for (int i = 0; i < clus.size(); i++){
 				cost += -2.0*this->gammas[oldidx]/(this->gammas[oldidx]+nInClus[lbl])*aff.simDP(clus[i], oldidx);
@@ -871,11 +871,13 @@ void KernDynMeans<G>::orthonormalize(MXd& V) const{
 
 template <class G>
 CoarseGraph<G>::CoarseGraph(const G& aff){
+	this->nOldPrms = aff.getNOldPrms();
 	this->coarsify(aff);
 }
 
 template <class G>
 CoarseGraph<G>::CoarseGraph(const CoarseGraph<G>& aff){
+	this->nOldPrms = aff.nOldPrms;
 	this->coarsify(aff);
 }
 
@@ -884,7 +886,6 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 	//coarsify and create the refinementmap
 	//Pick a random order to traverse the data
 	int nNodes = aff.getNNodes();
-	int nOldPrm = this->oldprmlbls.size();
 	std::vector<int> idcs(nNodes);
 	std::iota(idcs.begin(), idcs.end(), 0);
 	std::random_shuffle(idcs.begin(), idcs.end());
@@ -918,10 +919,10 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 	//now all merges have been found
 	//create the coarsified graph -- only store upper triangle
 	this->affdd = SMXd(nNodesNew, nNodesNew);
-	this->affdp = SMXd(nNodesNew, nOldPrm);
+	this->affdp = SMXd(nNodesNew, this->nOldPrms);
 	this->daffdd = VXd::Zero(nNodesNew);
 	this->odaffdd = VXd::Zero(nNodesNew);
-	this->affpp = VXd::Zero(nOldPrm);
+	this->affpp = VXd::Zero(this->nOldPrms);
 	this->nodeCts = std::vector<int>(nNodesNew, 0);
 
 	std::vector<TD> ddtrips, dptrips;
@@ -936,7 +937,7 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 		this->odaffdd(i) = aff.offDiagSelfSimDD(i1) + (i2 != -1 ? aff.offDiagSelfSimDD(i2) + aff.simDD(i1, i2) : 0);
 
 		//diagonal self similarity
-		this->daffdd(i) = aff.diagSelfSim(i1) + (i2 != -1 ? aff.diagSelfSim(i2) : 0);
+		this->daffdd(i) = aff.diagSelfSimDD(i1) + (i2 != -1 ? aff.diagSelfSimDD(i2) : 0);
 
 		//data->data similarities
 		for (int j = i+1; j < this->refineMap.size(); j++){
@@ -948,14 +949,14 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 			}
 		}
 		//data->param similarities
-		for (int j = 0; j < nOldPrm; j++){
+		for (int j = 0; j < this->nOldPrms; j++){
 			double sim = aff.simDP(i1, j) + (i2 != -1 ? aff.simDP(i2, j) : 0);
 			if (sim > 1e-16){dptrips.push_back(TD(i, j, sim));}
 		}
 	}
 	//param->param similarities
-	for (int i = 0; i < nOldPrm; i++){
-		this->affpp(i) = aff.selfSimPP(i, i);
+	for (int i = 0; i < this->nOldPrms; i++){
+		this->affpp(i) = aff.selfSimPP(i);
 	}
 	//set the sparse matrices from triplets
 	this->affdd.setFromTriplets(ddtrips.begin(), ddtrips.end());

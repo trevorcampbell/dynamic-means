@@ -86,6 +86,7 @@ class CoarseGraph{ //only stores upper triangular information (multiplies by 2 w
 		//get the number of graph nodes
 		int getNNodes() const;
 	private:
+		int nOldPrms;
 		template <typename T> void coarsify(const T& aff);
 		std::vector< std::pair<int, int> > refineMap;
 		std::vector<int> nodeCts;
@@ -120,6 +121,9 @@ class VectorGraph{
 		}
 		int getNNodes() const {
 			return data.size();
+		}
+		int getNOldPrms() const {
+			return oldprms.size();
 		}
 };
 
