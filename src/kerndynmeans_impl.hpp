@@ -249,7 +249,7 @@ std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> 
 		lbls = this->updateOldNewCorrespondence(aff, lbls);
 		double tmpobj3 = this->objective(aff, lbls);
 		if (tmpobj2 > tmpobj1 || tmpobj3 > tmpobj2){
-			cout << "libkerndynmeans: ERROR: Monotonicity violated" << endl;
+			cout << "libkerndynmeans: ERROR: Monotonicity violated at itr " << itr << endl;
 			cout << "libkerndynmeans: obj1: " << tmpobj1 << " obj2: " << tmpobj2 << " obj3: " << tmpobj3 << endl;
 		}
 
@@ -561,7 +561,6 @@ map<int, int> KernDynMeans<G>::getMinWtMatching(vector< pair<int, int> > nodePai
 		cout << "libkerndynmeans: ERROR: Unhandled Gurobi exception during optimization" << endl;
 	}
 }
-
 
 template<typename G>
 template<typename T> 
@@ -889,9 +888,12 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 	for (int i = 0; i < this->nOldPrms; i++){
 		this->affpp(i) = aff.selfSimPP(i);
 	}
+
 	//set the sparse matrices from triplets
 	this->affdd.setFromTriplets(ddtrips.begin(), ddtrips.end());
-	this->affdp.setFromTriplets(dptrips.begin(), dptrips.end());
+	if (this->nOldPrms > 0){
+		this->affdp.setFromTriplets(dptrips.begin(), dptrips.end());
+	}
 	return;
 }
 

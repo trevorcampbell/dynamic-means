@@ -31,6 +31,11 @@ class VectorGraph{
 	public:
 		std::vector<V2d> data, oldprms;
 		std::vector<int> oldprmlbls;
+		VectorGraph(){
+			data.clear();
+			oldprms.clear();
+			oldprmlbls.clear();
+		}
 		void updateData(std::vector<V2d> data){
 			this->data = data;
 		}
