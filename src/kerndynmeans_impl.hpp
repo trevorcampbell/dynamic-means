@@ -294,16 +294,22 @@ void KernDynMeans<G>::testObjective() {
 	//fill in this kerndynmeans object
 	VectorGraph v(data, oldprms);
 	//coarsify a few times
+	cout << "Coarsifying to level 1" << endl;
 	CoarseGraph<VectorGraph> c1(v);
+	cout << "Coarsifying to level 2" << endl;
 	CoarseGraph<VectorGraph> c2(c1);
+	cout << "Coarsifying to level 3" << endl;
 	CoarseGraph<VectorGraph> c3(c2);
 	//randomly assign coarse nodes to old/new clusters
 	std::vector<int> lblsc3(c3.getNNodes());
 	for (int i = 0; i < lblsc3.size(); i++){
 		lblsc3[i] = i%5;
 	}
+	cout << "Refining to level 2" << endl;
 	std::vector<int> lblsc2 = c3.getRefinedLabels(lblsc3);
+	cout << "Refining to level 1" << endl;
 	std::vector<int> lblsc1 = c2.getRefinedLabels(lblsc2);
+	cout << "Refining to level 0" << endl;
 	std::vector<int> lblsd = c1.getRefinedLabels(lblsc1);
 
 	double dynmcost = 0;
@@ -909,6 +915,7 @@ template <typename T> void CoarseGraph<G>::coarsify(const T& aff){
 			}
 			//if maxId is still -1, then pair(i, -1) states correctly that i is a singleton
 			this->refineMap.push_back(std::pair<int, int>(idxi, maxId));
+			cout << "Coarsifying nodes (" << idxi << "," << maxId << ") to " << this->refineMap.size()-1 << endl;
 			marks[idxi] = true;
 			if (maxId >= 0){
 				marks[maxId] = true;
@@ -1012,6 +1019,7 @@ std::vector<int> CoarseGraph<G>::getRefinedLabels(const std::vector<int>& lbls) 
 	std::vector<int> newlbls(idxmax+1, 0);
 	for (int i = 0; i < lbls.size(); i++){
 		newlbls[this->refineMap[i].first] = lbls[i];
+		cout << "Refining lbl[" << i << "] = " << lbls[i] << " to : " << " lbl[" << this->refineMap[i].first << "] and lbl[" << this->refineMap[i].second << "]." << endl;
 		if (this->refineMap[i].second != -1){ //the -1 signal says that the node was just moved up a level in the hierarchy, no merge occured
 										//so if there is a -1, just do nothing with merges.second
 			newlbls[this->refineMap[i].second] = lbls[i];
