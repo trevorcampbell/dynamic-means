@@ -587,7 +587,7 @@ std::vector<int> KernDynMeans<G>::baseCluster(const T& aff) const{
 	int nA = aff.getNNodes();
 	MXd K = MXd::Zero(nA, nA);
 	for (int i = 0; i < nA; i++){
-		K(i, i) = aff.quadSelfSimDD(i);
+		K(i, i) = aff.diagSelfSimDD(i) + 2.0*aff.offDiagSelfSimDD(i);
 		for (int j = i+1; j < nA; j++){
 			K(i, j) = aff.simDD(i, j);
 			K(j, i) = K(i, j);

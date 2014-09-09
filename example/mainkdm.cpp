@@ -34,7 +34,7 @@ class VectorGraph{
 		void updateData(std::vector<V2d> data){
 			this->data = data;
 		}
-		void updateOldPrms(std::vector<V2d> data, std::vector<int> lbls, std::vector<double> gammas, std::vector<int> prmlbls){
+		void updateOldParameters(std::vector<V2d> data, std::vector<int> lbls, std::vector<double> gammas, std::vector<int> prmlbls){
 			std::vector<V2d> updatedoldprms;
 			for (int i = 0; i < prmlbls.size(); i++){
 				//if there is no data assigned to this cluster, must be old/uninstantiated
