@@ -243,11 +243,16 @@ std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> 
 	int itr = 0;
 	while(diff > 1e-6){
 		itr++;
-		cout << "prelbl obj: " << this->objective(aff, lbls) << endl;
+		double tmpobj1 = this->objective(aff, lbls);
 		lbls = this->updateLabels(aff, lbls);
-		cout << "postlbl, preoldnew obj: " << this->objective(aff, lbls) << endl;
+		double tmpobj2 = this->objective(aff, lbls);
 		lbls = this->updateOldNewCorrespondence(aff, lbls);
-		cout << "postoldnew obj: " << this->objective(aff, lbls) << endl;
+		double tmpobj3 = this->objective(aff, lbls);
+		if (tmpobj2 > tmpobj1 || tmpobj3 > tmpobj2){
+			cout << "libkerndynmeans: ERROR: Monotonicity violated" << endl;
+			cout << "libkerndynmeans: obj1: " << tmpobj1 << " obj2: " << tmpobj2 << " obj3: " << tmpobj3 << endl;
+		}
+
 		double obj = this->objective(aff, lbls);
 		diff = fabs((obj-prevobj)/obj);
 		prevobj = obj;
@@ -295,7 +300,7 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 				sum += 2.0*aff.simDD(clus[k], clus[m]);
 			}
 		}
-		inClusterSum[lbl] = 1.0/(nInClus[lbl]*nInClus[lbl])*sum;
+		inClusterSum[lbl] = sum;
 	}
 
 	//minimize the cost associated with each observation individually based on the old labelling
@@ -311,16 +316,44 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 			const std::vector<int>& clus = idcsInClus[unqlbls[k]];
 			const int& lbl = unqlbls[k];
 			double cost = 0;
-			if (prevlbl != lbl){//if this node wasn't previously in the cluster
-				cost = aff.diagSelfSimDD(i) + nct*inClusterSum[lbl];
-				for (int j = 0; j < clus.size(); j++){
-					cost += -2.0/nInClus[lbl]*aff.simDD(i, clus[j]);
+			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
+			if (it == this->oldprmlbls.end()){//if it's a new cluster in this timestep, no gamma stuff is needed
+				cost = aff.diagSelfSimDD(i)+(double)nct/(nInClus[lbl]*nInClus[lbl])*inClusterSum[lbl];
+				if (prevlbl == lbl){
+					//need to be careful about similarities when the observation was previously in this cluster
+					cost += -2.0/nInClus[lbl]*(aff.diagSelfSimDD(i)+2.0*aff.offDiagSelfSimDD(i));
+					for (int j = 0; j < clus.size(); j++){
+						if (clus[j] != i){
+							cost += -2.0/nInClus[lbl]*aff.simDD(i, clus[j]);
+						}
+					}
+				} else {
+					//don't need to be careful, just sum up the similarities
+					for (int j = 0; j < clus.size(); j++){
+							cost += -2.0/nInClus[lbl]*aff.simDD(i, clus[j]);
+					}
 				}
-			} else {//it was previously in the cluster
-				cost = (1.0-2.0/nInClus[lbl])*aff.diagSelfSimDD(i) - 4.0/nInClus[lbl]*aff.offDiagSelfSimDD(i) + nct*inClusterSum[lbl];
-				for (int j = 0; j < clus.size(); j++){
-					if (clus[j] != i){
-						cost += -2.0/nInClus[lbl]*aff.simDD(i, clus[j]);
+			} else {//it's an instantiated old cluster, need to do gamma stuff
+				double oldidx = distance(this->oldprmlbls.begin(), it);
+				double factor = 1.0/(nInClus[lbl]+this->gammas[oldidx]);
+				cost = aff.diagSelfSimDD(i) 
+					-2.0*this->gammas[oldidx]*factor*aff.simDP(i, oldidx) 
+					+ (double)nct*this->gammas[oldidx]*this->gammas[oldidx]*factor*factor*aff.selfSimPP(oldidx)
+					+(double)nct*factor*factor*inClusterSum[lbl];
+				if (prevlbl == lbl){
+					//need to be careful about similarities when the observation was previously in this cluster
+					cost += -2.0*factor*(aff.diagSelfSimDD(i)+2.0*aff.offDiagSelfSimDD(i));
+					for (int j = 0; j < clus.size(); j++){
+						cost += 2.0*factor*factor*nct*this->gammas[oldidx]*aff.simDP(clus[j], oldidx);
+						if (clus[j] != i){
+							cost += -2.0*factor*aff.simDD(i, clus[j]);
+						}
+					}
+				} else {
+					//don't need to be careful, just sum up the similarities
+					for (int j = 0; j < clus.size(); j++){
+							cost += 2.0*factor*factor*nct*this->gammas[oldidx]*aff.simDP(clus[j], oldidx);
+							cost += -2.0*factor*aff.simDD(i, clus[j]);
 					}
 				}
 			}
