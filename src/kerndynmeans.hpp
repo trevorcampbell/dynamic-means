@@ -31,7 +31,6 @@ class KernDynMeans{
 		std::vector<int>& finalPrmLbls, double& tTaken);
 		//reset DDP chain
 		void reset();
-	private:
 		//clusters a refinement level with kernelized dyn means batch updates
 		//tempalte so it works with C/D
 		template <typename T> std::vector<int> clusterAtLevel(const T& aff, std::vector<int> initlbls);
@@ -66,6 +65,7 @@ class KernDynMeans{
 		void testLabelUpdate();
 		void testObjective();
 
+	private:
 };
 
 template <class G>

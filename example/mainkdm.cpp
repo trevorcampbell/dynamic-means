@@ -23,98 +23,24 @@ double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> m
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
 void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<V2d>& clusterData, vector<int>& trueLabels);
 
-//kernel data class
-class KD{
-	public:
-		V2d v;
-		//similarity function from data->data is just exp(-|| ||^2 / w^2)
-		double sim(const KD& rhs) const{
-			return this->v.transpose()*rhs.v; //exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
-		}
-		double getN(){
-			return 1.0;
-		}
-};
-
-//kernel coarse node class
-class KC{
-	public:
-		int nv;
-		std::vector<V2d> vs;
-		KC(const KD& d1){
-			this->nv = 1;
-			this->vs.push_back(d1.v);
-		}
-		KC(const KC& c1){
-			this->nv = c1.nv;
-			this->vs = c1.vs;
-		}
-		KC(const KD& d1, const KD& d2){
-			this->nv = 2;
-			this->vs.push_back(d1.v);
-			this->vs.push_back(d2.v);
-		}
-		KC(const KC& c1, const KC& c2){
-			this->nv = c1.nv + c2.nv;
-			this->vs.insert(this->vs.end(), c1.vs.begin(), c1.vs.end());
-			this->vs.insert(this->vs.end(), c2.vs.begin(), c2.vs.end());
-		}
-		double sim(const KC& rhs) const{
-			std::vector<double> sims;
-			for (int i = 0; i < this->vs.size(); i++){
-				for (int j = 0; j < rhs.vs.size(); j++){
-					sims.push_back(this->vs[i].transpose()*rhs.vs[j]); //exp(-(this->vs[i]-rhs.vs[j]).squaredNorm()/(2*0.1*0.1)));
-				}
-			}
-			std::sort(sims.begin(), sims.end());
-			return std::accumulate(sims.begin(), sims.end(), 0.0);
-		}
-		double getN(){
-			return this->nv;
-		}
-};
-
-//kernel parameter class
-class KP{
-	public:
-		V2d v;
-		//constructs a new parameter at the mean of a set of vectors
-		KP(const vector<KD>& rhs){
-			this->v = V2d::Zero();
-			for (int i = 0; i < rhs.size(); i++){
-				this->v += rhs[i].v;
-			}
-			this->v /= rhs.size();
-		}
-		//similarity function from parameter->data is just exp(-|| ||^2 / w^2)
-		double sim(const KD& rhs) const{
-			return this->v.transpose()*rhs.v; //exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
-		}
-		double sim(const KC& rhs) const{
-			std::vector<double> sims;
-			for (int i = 0; i < rhs.vs.size(); i++){
-				sims.push_back(this->v.transpose()*rhs.vs[i]); //exp(-(this->v-rhs.vs[i]).squaredNorm()/(2*0.1*0.1)));
-			}
-			std::sort(sims.begin(), sims.end());
-			return std::accumulate(sims.begin(), sims.end(), 0.0);
-		}
-		double sim(const KP& rhs) const{
-			return this->v.transpose()*rhs.v; //exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
-		}
-		//This is the typical prior-weighted least squares Dynamic Means paramter update
-		void update(const vector<KD>& rhs, const double gamma){
-			this->v *= gamma;
-			for (int i = 0; i < rhs.size(); i++){
-				this->v += rhs[i].v;
-			}
-			this->v /= (gamma+rhs.size());
-		}
-};
-
 //random number generator
 mt19937 rng;//uses the same seed every time, 5489u
 
 int main(int argc, char** argv){
+	double lambda = 0.05;
+	double T_Q = 6.8;
+	double K_tau = 1.01;
+	double Q = lambda/T_Q;
+	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
+	int nRestarts = 10;
+	int nCoarsest = 1;
+	KernDynMeans<KD, KC, KP> kdm(lambda, Q, tau, true);
+	kdm.testObjective();
+	return 0;
+
+	
+
+
 	//generates clusters that jump around on the domain R^2
 	//they move stochastically with a normal distribution w/ std deviation 0.05
 	//they die stochastically with probability 0.05 at each step
