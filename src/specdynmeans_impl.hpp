@@ -1,8 +1,8 @@
 #ifndef __SPECDYNMEANS_IMPL_HPP
 
 
-template <typename D, typename P>
-SpecDynMeans<D,P>::SpecDynMeans(double lamb, double Q, double tau, bool verbose /* = false*/, int seed /*= -1*/) {
+template <typename G>
+SpecDynMeans<G>::SpecDynMeans(double lamb, double Q, double tau, bool verbose /* = false*/, int seed /*= -1*/) {
 	this->verbose = verbose;
 	if (lamb < 0 || Q < 0 || tau < 0){
 		cout << "libspecdynmeans: ERROR: Parameters of Spectral Dynamic Means cannot be < 0." << endl;
@@ -15,7 +15,6 @@ SpecDynMeans<D,P>::SpecDynMeans(double lamb, double Q, double tau, bool verbose 
 	this->weights.clear();
 	this->gammas.clear();
 	this->agecosts.clear();
-	this->oldprms.clear();
 	this->oldprmlbls.clear();
 	this->nextlbl = 0;
 	//seed the random number generator with time now (seed < 0) or seed (seed > 0)
@@ -33,57 +32,64 @@ SpecDynMeans<D,P>::SpecDynMeans(double lamb, double Q, double tau, bool verbose 
 
 //Just the destructor for the class
 
-template <typename D, typename P>
-SpecDynMeans<D,P>::~SpecDynMeans(){
+template <typename G>
+SpecDynMeans<G>::~SpecDynMeans(){
 	delete grbenv;//make sure the gurobi environment is destroyed
 }
 
 //Reset returns the class object to its initial state, ready to start a new DDP chain
 
-template <typename D, typename P>
-void SpecDynMeans<D,P>::reset(){
+template <typename G>
+void SpecDynMeans<G>::reset(){
 	this->ages.clear();
 	this->weights.clear();
 	this->gammas.clear();
 	this->agecosts.clear();
-	this->oldprms.clear();
 	this->oldprmlbls.clear();
 	this->nextlbl = 0;
 }
 
 //This function updates the weights/ages of all the clusters after each clustering step is complete
-//
-template <typename D, typename P>
-void SpecDynMeans<D,P>::updateState(const vector<D>& data, const vector<int>& lbls){
+//This function updates the weights/ages of all the clusters after each clustering step is complete
+template <typename G>
+void SpecDynMeans<G>::finalizeStep(const G& aff, const vector<int>& lbls, vector<double>& prevgammas_out, vector<int>& prmlbls_out){
 	//first increment the age of everything
 	//this will be undone below for any current clusters
 	for (int i = 0; i < this->ages.size(); i++){
 		this->ages[i]++;
 	}
-	//get a map from label -> vector of data
-	map<int, vector<D> > m;
-	for (int i = 0; i < data.size(); i++){
-		m[lbls[i]].push_back(data[i]);
-	}
+	//get the set of current cluster labels
+	vector<int> unqlbls = lbls;
+	sort(unqlbls.begin(), unqlbls.end());
+	unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
 	//for every current cluster
-	for (auto it = m.begin(); it != m.end(); ++it){
+	for (int i = 0; i < unqlbls.size(); i++){
+		const int& lbl = unqlbls[i];
+		//get the number of nodes assigned to the cluster
+		int nclus = 0;
+		for (int j = 0; j < lbls.size(); j++){
+			nclus += (lbls[j] == lbl ? aff.getNodeCt(j) : 0);
+		}
 		//check if it's an old label
-		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), it->first);
+		auto it2 = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
 		if (it2 == this->oldprmlbls.end()){
 			//it's a new cluster, so create stuff for it
 			this->ages.push_back(1);
-			this->weights.push_back(it->second.size());
-			this->oldprmlbls.push_back(it->first);
-			this->oldprms.push_back(P(it->second));
+			this->weights.push_back(nclus);
+			this->oldprmlbls.push_back(lbl);
 		} else {
 			//it's an old cluster, so update old stuff
 			int oldidx = distance(this->oldprmlbls.begin(), it2);
 			this->ages[oldidx] = 1;
-			this->weights[oldidx] = this->gammas[oldidx] + it->second.size();
-			this->oldprms[oldidx].update(it->second, this->gammas[oldidx]);
+			this->weights[oldidx] = this->gammas[oldidx] + nclus;
 		}
 	}
-	//update the Gammas
+	//save the old gammas for output, update this->gammas
+	//prevgammas_out still needs to be cleaned up and modified a bit (occurs in the rest of this function)
+	prevgammas_out = this->gammas;
+	//pad prevgammas with zeros for all new clusters
+	prevgammas_out.insert(prevgammas_out.end(), this->ages.size()-prevgammas_out.size(), 0);
+	//update the internal gammas
 	this->gammas.clear();
 	this->gammas.reserve(this->ages.size());
 	for (int i = 0; i < this->ages.size(); i++){
@@ -98,37 +104,38 @@ void SpecDynMeans<D,P>::updateState(const vector<D>& data, const vector<int>& lb
 
 	//delete any old cluster whose age cost exceeds lambda
 	for (int i = 0; i < this->ages.size(); i++){
-		if (this->agecosts[i] > this->lamb){
+		if (this->agecosts[i] > this->lambda){
 			this->weights.erase(this->weights.begin()+i);
 			this->ages.erase(this->ages.begin()+i);
 			this->gammas.erase(this->gammas.begin()+i);
+			prevgammas_out.erase(prevgammas_out.begin()+i);
 			this->agecosts.erase(this->agecosts.begin()+i);
-			this->oldprms.erase(this->oldprms.begin()+i);
 			this->oldprmlbls.erase(this->oldprmlbls.begin()+i);
 			i--;
 		}
 	}
+	prmlbls_out = this->oldprmlbls;//save the parameter labels output 
 
-	//update this->nextlbl if new clusters were created
+	//update this->maxLblPrevUsed if new clusters were created
 	int maxlbl = *max_element(lbls.begin(), lbls.end());
-	if (maxlbl >= this->nextlbl){
-		this->nextlbl = maxlbl+1;
+	if (maxlbl >= this->maxLblPrevUsed){
+		this->maxLblPrevUsed = maxlbl;
 	}
 
-	//done
 	return;
 }
 
-template <typename D, typename P>
-void SpecDynMeans<D,P>::cluster(const vector<D>& data, const int nRestarts, const int nClusMax, EigenSolverType type, 
-									vector<int>& finalLabels, double& finalObj, double& timeTaken){
+template <typename G>
+void SpecDynMeans<G>::cluster(const G& aff, const int nRestarts, const int nClusMax, EigenSolverType type, vector<int>& finalLabels, double& finalObj, 
+				std::vector<double>& finalGammas, std::vector<int>& finalPrmLbls, double& tTaken){
+
 	timeval tStart;
 	gettimeofday(&tStart, NULL);
 
-	const int nB = this->oldprms.size();
-	const int nA = data.size();
+	const int nB = this->oldprmlbls.size();
+	const int nA = aff.getNNodes();
 
-	if (data.size() <= 0){
+	if (nA <= 0){
 		cout << "libspecdynmeans: WARNING: data size <=0 (= " << nA << "); Returning empty labels."<<  endl;
 		finalLabels = vector<int>();
 		timeTaken = 0;
@@ -146,7 +153,7 @@ void SpecDynMeans<D,P>::cluster(const vector<D>& data, const int nRestarts, cons
 
 	//compute the kernel matrix
 	SMXd kUpper;
-	this->getKernelMat(data, kUpper);
+	this->getKernelMat(aff, kUpper);
 	//solve the eigensystem
 	MXd Z;
 	VXd eigvals;
@@ -255,7 +262,7 @@ void SpecDynMeans<D,P>::cluster(const vector<D>& data, const int nRestarts, cons
 	}
 
 	//update the state of the ddp chain
-	this->updateState(data, minLbls);
+	this->finalizeStep(aff, minLbls, finalGammas, finalPrmLbls);
 
 	//output results
 	finalObj =  minNCutsObj;
@@ -267,10 +274,10 @@ void SpecDynMeans<D,P>::cluster(const vector<D>& data, const int nRestarts, cons
 	return;
 }
 
-template <typename D, typename P>
-void SpecDynMeans<D,P>::getKernelMat(const vector<D>& data, SMXd& kUpper){
-	const int nA = data.size();
-	const int nB = this->oldprms.size();
+template <typename G>
+void SpecDynMeans<G>::getKernelMat(const G& aff, SMXd& kUpper){
+	const int nA = aff.getNNodes();
+	const int nB = this->oldprmlbls.size();
 	kUpper.resize(nA+nB, nA+nB);
 
 	vector<TD> kUpperTrips;
@@ -278,7 +285,7 @@ void SpecDynMeans<D,P>::getKernelMat(const vector<D>& data, SMXd& kUpper){
 	//insert ATA matrix
 	for (int i = 0; i < nA; i++){
 		for (int j = i; j < nA; j++){
-			double sim = data[i].sim(data[j]);
+			double sim = aff.simDD(i, j);
 			if (sim > 1e-16){
 				kUpperTrips.push_back(TD(i, j, sim));
 			}
@@ -287,7 +294,7 @@ void SpecDynMeans<D,P>::getKernelMat(const vector<D>& data, SMXd& kUpper){
 	//insert ATB
 	for (int i = 0; i < nA; i++){
 		for (int j = 0; j < nB; j++){
-			double sim = this->oldprms[j].sim(data[i]);
+			double sim = aff.simDP(i, j);
 			if (sim > 1e-16){
 				kUpperTrips.push_back(TD(i, j+nA, sqrt(this->gammas[j])*sim));
 			}
@@ -303,8 +310,8 @@ void SpecDynMeans<D,P>::getKernelMat(const vector<D>& data, SMXd& kUpper){
 }
 
 
-template <typename D, typename P>
-void SpecDynMeans<D,P>::solveEigensystem(SMXd& kUpper, const int nEigs, EigenSolverType type, MXd& eigvecs){
+template <typename G>
+void SpecDynMeans<G>::solveEigensystem(SMXd& kUpper, const int nEigs, EigenSolverType type, MXd& eigvecs){
 	const int nB = this->ages.size();
 	const int nA = kUpper.rows()-nB;
 
@@ -343,8 +350,8 @@ void SpecDynMeans<D,P>::solveEigensystem(SMXd& kUpper, const int nEigs, EigenSol
 //I made a number of modifications to make it more efficient (sparse matrix computation, faster gram schmidt, faster gaussian sampling)
 //To learn about it, please see "Finding structure with randomness: Stochastic algorithms for constructing approximate matrix
 //decompositions", N. Halko, P.G. Martinsson, J. Tropp, arXiv 0909.4061
-template <typename D, typename P>
-tuple<MXd, VXd> SpecDynMeans<D,P>::redsvdEigenSolver(SMXd& AUp, int r){
+template <typename G>
+tuple<MXd, VXd> SpecDynMeans<G>::redsvdEigenSolver(SMXd& AUp, int r){
 	r = (r < AUp.cols()) ? r : AUp.cols();
 	//compute gaussian matrix
 	normal_distribution<> nrm(0, 1);
@@ -378,8 +385,8 @@ tuple<MXd, VXd> SpecDynMeans<D,P>::redsvdEigenSolver(SMXd& AUp, int r){
 }
 
 
-template <typename D, typename P>
-void SpecDynMeans<D,P>::findClosestConstrained(const MXd& ZV, MXd& X) const{
+template <typename G>
+void SpecDynMeans<G>::findClosestConstrained(const MXd& ZV, MXd& X) const{
 	const int nRows = ZV.rows();
 	const int nCols = ZV.cols();
 	const int nB = this->ages.size();
@@ -423,8 +430,8 @@ void SpecDynMeans<D,P>::findClosestConstrained(const MXd& ZV, MXd& X) const{
 }
 
 
-template <typename D, typename P>
-map<int, int> SpecDynMeans<D,P>::getOldNewMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const{
+template <typename G>
+map<int, int> SpecDynMeans<G>::getOldNewMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const{
 	//get params
 	int nVars = edgeWeights.size();
 
@@ -497,8 +504,8 @@ map<int, int> SpecDynMeans<D,P>::getOldNewMatching(vector< pair<int, int> > node
 }
 
 
-template <typename D, typename P>
-void SpecDynMeans<D,P>::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{ 
+template <typename G>
+void SpecDynMeans<G>::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{ 
 	V = X.transpose()*Z;
 	this->orthonormalize(V);
 
@@ -506,8 +513,8 @@ void SpecDynMeans<D,P>::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) c
 }
 
 
-template <typename D, typename P>
-void SpecDynMeans<D,P>::orthonormalize(MXd& V) const{ 
+template <typename G>
+void SpecDynMeans<G>::orthonormalize(MXd& V) const{ 
 	//do a safe svd, with guaranteed orthonormal columns even in the event of numerically small singular values
 	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::HouseholderQRPreconditioner> svd(V, Eigen::ComputeFullU | Eigen::ComputeFullV); //slowest/safest preconditioning
 	MXd U = svd.matrixU();
@@ -599,8 +606,8 @@ void SpecDynMeans<D,P>::orthonormalize(MXd& V) const{
 }
 
 
-template <typename D, typename P>
-vector<int> SpecDynMeans<D,P>::getLblsFromIndicatorMat(const MXd& X) const {
+template <typename G>
+vector<int> SpecDynMeans<G>::getLblsFromIndicatorMat(const MXd& X) const {
 	const int nB = this->ages.size();
 	const int nA = X.rows()-nB;
 	const int nR = X.rows();
@@ -649,8 +656,8 @@ vector<int> SpecDynMeans<D,P>::getLblsFromIndicatorMat(const MXd& X) const {
 }
 
 
-template <typename D, typename P>
-double SpecDynMeans<D,P>::getNormalizedCutsObj(const SMXd& spmatUpper, const vector<int>& lbls) const{
+template <typename G>
+double SpecDynMeans<G>::getNormalizedCutsObj(const SMXd& spmatUpper, const vector<int>& lbls) const{
 	const int nA = lbls.size();
 	const int nB = this->ages.size();
 	map<int, double> nums, denoms;
@@ -687,8 +694,8 @@ double SpecDynMeans<D,P>::getNormalizedCutsObj(const SMXd& spmatUpper, const vec
 	return obj;
 }
 
-template<typename D, typename P>
-void SpecDynMeans<D, P>::gramschmidt(MXd& m){
+template<typename G>
+void SpecDynMeans<G>::gramschmidt(MXd& m){
 	for (int i = 0; i < m.cols(); i++){
 		if (m.col(i).norm() < 1e-8){
 			//remove it if it's super small (pretty much dependent with previous vectors)

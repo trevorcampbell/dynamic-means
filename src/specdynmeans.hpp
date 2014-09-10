@@ -31,7 +31,7 @@ typedef Eigen::Triplet<double> TD;
 //3) Run SpecDynMeans::cluster on each time window in sequence
 
 
-template <typename D, typename P>
+template <typename G>
 class SpecDynMeans{
 	public:
 		enum EigenSolverType{
@@ -40,7 +40,8 @@ class SpecDynMeans{
 		};
 		SpecDynMeans(double lamb, double Q, double tau, bool verbose = false, int seed = -1);
 		~SpecDynMeans();
-		void cluster(const vector<D>& data, const int nRestarts, const int nClusMax, EigenSolverType type, vector<int>& finalLabels, double& finalObj, double& timeTaken);
+		void cluster(const G& aff, const int nRestarts, const int nClusMax, EigenSolverType type, vector<int>& finalLabels, double& finalObj, 
+				std::vector<double>& finalGammas, std::vector<int>& finalPrmLbls, double& tTaken);
 
 		//reset DDP chain
 		void reset();
@@ -56,13 +57,12 @@ class SpecDynMeans{
 		vector<double> weights;
 		vector<int> ages;
 		vector<double> gammas, agecosts;
-		vector<P> oldprms;
 		vector<int> oldprmlbls; // require a mapping from old parameters to old labels
 								//because clusters that die are removed entirely to save computation
 		int nextlbl; //stores the next (unique) label to use for a new cluster
 
 		//spectral functions
-		void getKernelMat(const vector<D>& data, SMXd& kUpper);
+		void getKernelMat(const G& aff, SMXd& kUpper);
 		void solveEigensystem(SMXd& kUpper, const int nEigs, EigenSolverType type, MXd& eigenvectors);
 		void findClosestConstrained(const MXd& ZV, MXd& X) const;
 		map<int, int> getOldNewMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights ) const;
@@ -72,7 +72,7 @@ class SpecDynMeans{
 		//helper functions
 		vector<int> getLblsFromIndicatorMat(const MXd& X) const;
 		//Update the state for the new batch of data (timestep the ddp)
-		void updateState(const vector<D>& data, const vector<int>& lbls);
+		void finalizeStep(const G& aff, const vector<int>& lbls, vector<double>& prevgammas_out, vector<int>& prmlbls_out);
 		std::tuple<MXd, VXd> redsvdEigenSolver(SMXd& AUp, int r);
 		void gramschmidt(MXd& m);
 };

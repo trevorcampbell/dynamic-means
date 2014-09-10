@@ -23,40 +23,70 @@ double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> m
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
 void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<V2d>& clusterData, vector<int>& trueLabels);
 
-
-//spectral data class 
-class SD{
+class VectorGraph{
 	public:
-		V2d v;
-		//similarity function from data->data is just exp(-|| ||^2 / w^2)
-		double sim(const SD& rhs) const{
-			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+		std::vector<V2d> data, oldprms;
+		std::vector<int> oldprmlbls;
+		VectorGraph(){
+			data.clear();
+			oldprms.clear();
+			oldprmlbls.clear();
 		}
-};
-
-//spectral parameter class 
-class SP{
-	public:
-		V2d v;
-		//constructs a new parameter at the mean of a set of vectors
-		SP(const vector<SD>& rhs){
-			this->v = V2d::Zero();
-			for (int i = 0; i < rhs.size(); i++){
-				this->v += rhs[i].v;
+		void updateData(std::vector<V2d> data){
+			this->data = data;
+		}
+		void updateOldParameters(std::vector<V2d> data, std::vector<int> lbls, std::vector<double> gammas, std::vector<int> prmlbls){
+			std::vector<V2d> updatedoldprms;
+			for (int i = 0; i < prmlbls.size(); i++){
+				//if there is no data assigned to this cluster, must be old/uninstantiated
+				if (find(lbls.begin(), lbls.end(), prmlbls[i]) == lbls.end()){
+					int oldidx = distance(oldprmlbls.begin(), find(oldprmlbls.begin(), oldprmlbls.end(), prmlbls[i]));
+					updatedoldprms.push_back(oldprms[oldidx]);
+				//if the label is not in oldprmlbls, must be a new cluster
+				//furthermore, must have at least one label in lbls = prmlbls[i]
+				} else if (find(oldprmlbls.begin(), oldprmlbls.end(), prmlbls[i]) == oldprmlbls.end()) {
+					V2d tmpprm = V2d::Zero();
+					int tmpcnt = 0;
+					for (int j =0 ; j < lbls.size(); j++){
+						if (lbls[j] == prmlbls[i]){
+							tmpprm += data[j];
+							tmpcnt++;
+						}
+					}
+					tmpprm /= tmpcnt;
+					updatedoldprms.push_back(tmpprm);
+				//old instantiated cluster
+				} else {
+					int oldidx = distance(oldprmlbls.begin(), find(oldprmlbls.begin(), oldprmlbls.end(), prmlbls[i]));
+					V2d tmpprm = gammas[i]*oldprms[oldidx];
+					int tmpcnt = 0;
+					for (int j =0 ; j < lbls.size(); j++){
+						if (lbls[j] == prmlbls[i]){
+							tmpprm += data[j];
+							tmpcnt++;
+						}
+					}
+					tmpprm /= (gammas[i]+tmpcnt);
+					updatedoldprms.push_back(tmpprm);
+				}
 			}
-			this->v /= rhs.size();
+			this->oldprms = updatedoldprms;
+			this->oldprmlbls = prmlbls;
 		}
-		//similarity function from parameter->data is just exp(-|| ||^2 / w^2)
-		double sim(const SD& rhs) const{
-			return exp(-(this->v-rhs.v).squaredNorm()/(2*0.1*0.1));
+		double simDD(const int i, const int j) const{
+			return exp(-(data[i]-data[j]).squaredNorm()/(2*0.1*0.1));
 		}
-		//This is the typical prior-weighted least squares Dynamic Means paramter update
-		void update(const vector<SD>& rhs, const double gamma){
-			this->v *= gamma;
-			for (int i = 0; i < rhs.size(); i++){
-				this->v += rhs[i].v;
-			}
-			this->v /= (gamma+rhs.size());
+		double simDP(const int i, const int j) const{
+			return exp(-(data[i]-prm[j]).squaredNorm()/(2*0.1*0.1));
+		}
+		int getNodeCt(const int i) const{
+			return 1;
+		}
+		int getNNodes() const {
+			return data.size();
+		}
+		int getNOldPrms() const {
+			return oldprms.size();
 		}
 };
 
@@ -111,7 +141,8 @@ int main(int argc, char** argv){
 	int nClusMax = 20; // maximum 20 new clusters per timestep
 					  //this forms the rank approximation for the eigendecomp
 					  //rank approx = nClusMax + (# old clusters)
-	SpecDynMeans<SD, SP> sdm(lambda, Q, tau);
+	SpecDynMeans<VectorGraph> sdm(lambda, Q, tau);
+	VectorGraph vgr;
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
@@ -134,20 +165,18 @@ int main(int argc, char** argv){
 		//**************************************************************************************
 		//Take the vectors that we just created, and package them in the SD class defined above
 		//**************************************************************************************
-		vector<SD> clusterDataSD;
-		for (int i = 0; i < clusterData.size(); i++){
-			SD s;
-			s.v = clusterData[i];
-			clusterDataSD.push_back(s);
-		}
+		vgr.updateData(clusterData);
 
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
 		vector<int> learnedLabels;
+		vector<double> gammas;
+		vector<int> prmlbls;
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
-		sdm.cluster(clusterDataSD, nRestarts, nClusMax, SpecDynMeans<SD,SP>::EigenSolverType::REDSVD, learnedLabels, obj, tTaken);
+		sdm.cluster(clusterDataSD, nRestarts, nClusMax, SpecDynMeans<SD,SP>::EigenSolverType::REDSVD, learnedLabels, obj, gammas, prmlbls, tTaken);
+		vgr.updateOldParameters(clusterData, learnedLabels, gammas, prmlbls);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
