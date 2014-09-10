@@ -51,17 +51,14 @@ Efficient C++ implementations of all algorithms are provided in this repository.
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau - 1.0)+1.0)/(T_Q-1.0);
 	DynMeans&lt;Eigen::Vector2d> dynm(lambda, Q, tau);
-	SpecDynMeans&lt;DatType, PrmType> sdynm(lambda, Q, tau);
-	KernDynMeans&lt;AffType> kdynm(lambda, Q, tau);
+	SpecDynMeans&lt;YourAffType> sdynm(lambda, Q, tau);
+	KernDynMeans&lt;YourAffType> kdynm(lambda, Q, tau);
 	</pre>
 	where Eigen::Vector2d is the vector data type that Dynamic Means is going to cluster.
 	Note that other types can be used in place of Eigen::Vector2d, but they must
-	implement vector addition, and scalar multiplcation/division. For Spectral Dynamic Means,
-	DatType and PrmType are the data and parameter types, respectively. To see which functions
-	DatType and PrmType must implement, see the example in examples/mainsdm.cpp.
-	Kernel Dynamic Means uses a AffType wrapper to abstract the computation of node affinities. To 
-	see which functions AffType must implement see the example in examples/mainkdm.cpp. 
-	Current work on this project is changing the Spectral code to use the same wrapper.
+	implement vector addition, and scalar multiplcation/division. For Spectral/Kernel Dynamic Means,
+	YourAffType is a wrapper you must write to abstract the computation of node->node and node->cluster affinities. To 
+	find out which functions YourAffType must implement, see the example in examples/mainkdm.cpp. 
 	See [the Dynamic Means paper](http://arxiv.org/abs/1305.6659) for a description
 	of the values `lambda, T_Q, K_tau, Q, tau`.
 
@@ -79,42 +76,36 @@ Efficient C++ implementations of all algorithms are provided in this repository.
 	`learnedLabels1` is the data labels output, and `learnedParams1` is the cluster parameters output.
 	`nRestarts` is the number of random label assignment orders Dynamic Means will try.
 	
-	To cluster the first window of data with Spectral Dynamic Means, just call the `SpecDynMeans::cluster` function
+	To cluster the first window of data with Spectral/Kernel Dynamic Means, just call the `SpecDynMeans::cluster`/`KernDynMeans::cluster` function
 	<pre>
 	vector&lt;Eigen::Vector2d> dataWindow1;
-	...
-	int nRestarts = 10;
-	vector&lt;Eigen::Vector2d> learnedParams1;
-	vector&lt;int> learnedLabels1;
-	double obj1, tTaken1;
-	sdynm.cluster(dataWindow1, nRestarts, nClusMax, SpecDynMeans<DatType,PrmType>::EigenSolverType::REDSVD, learnedLabels1, obj1, tTaken1);
-	</pre>
-	where `obj1` is the clustering cost output, `tTaken1` is the clustering time output, 
-	`learnedLabels1` is the data labels output, and `learnedParams1` is the cluster parameters output.
-	`nRestarts` is the number of random orthogonal matrix initializations Spectral Dynamic Means will try,
-	and `nClusMax` is (intuitively) the maximum number of new clusters expected in each timestep (mathematically,
-	it is the rank approximation to use when doing eigendecompositions). `EigenSolverType::REDSVD` tells
-	the algorithm to use an approximate eigendecomposition (adapted from [redsvd](https://code.google.com/p/redsvd/)).
-
-	To cluster the first window of data with Kernel Dynamic Means, just call the `KernDynMeans::cluster` function
-	with the affinity computation wrapper as an input, and make sure to update the parameters afterwards
-	<pre>
-	AffType affinities;
 	int nRestarts = 10;
 	int nCoarsest = 20;
+	int nClusMax = 5;
+	...
+	YourAffinityWrapper aff;
+	aff.yourDataUpdateFunction(dataWindow1);
 	vector&lt;int> learnedLabels1, prmlbls1;
 	vector&lt;double> gammas;
 	double obj1, tTaken1;
+	//for spectral dynamic means, call sdynm.cluster
+	sdynm.cluster(affinities, nRestarts, nClusMax, SpecDynMeans<YourAffinityWrapper>::EigenSolverType::REDSVD learnedLabels1, obj1, gammas1, prmlbls1, tTaken1);
+	//for kernel dynamic means, call kdynm.cluster
 	kdynm.cluster(affinities, nRestarts, nCoarsest, learnedLabels1, obj1, gammas1, prmlbls1, tTaken1);
-	affinities.[YourUpdateFunctionHere](learnedLabels, gammas, prmlbls);
+	//when done, make sure to update the affinities wrapper with the new clustering
+	affinities.yourUpdateFunction(learnedLabels, gammas, prmlbls);
 	</pre>
 	where `obj1` is the clustering cost output, `tTaken1` is the clustering time output, 
 	`learnedLabels1` is the data labels output, `gammas1` is the old cluster weights output, and `prmlbls1` 
 	is the old parameter labels output. 
-	`nRestarts` is the number of random labelling orders Kernel Dynamic Means will try. To reduce sensitivity to initialization, 
-	Kernel Dynamic Means iterative coarsifies the graph until it has `nCoarsest` nodes, applies a spectral clustering to that coarse graph,
+	`nRestarts` is the number of random orthogonal matrix initializations Spectral Dynamic Means will try,
+	and `nClusMax` is (intuitively) the maximum number of new clusters expected in each timestep (mathematically,
+	it is the rank approximation to use when doing eigendecompositions). `EigenSolverType::REDSVD` tells
+	the algorithm to use an approximate eigendecomposition (adapted from [redsvd](https://code.google.com/p/redsvd/)).
+	To reduce sensitivity to initialization, 
+	Kernel Dynamic Means iteratively coarsifies the graph until it has `nCoarsest` nodes, applies a spectral clustering to that coarse graph,
 	and then iteratively refines the graph and applies k-means-like labelling updates. Pick `nCoarsest` to be a number that is small enough
-	such that spectral graph clustering is possible.
+	such that computing the eigenvectors of an `nCoarsest` by `nCoarsest` matrix is fast enough for your application.
 
 6. To cluster another window of data, just call `DynMeans::cluster`/`SpecDynMeans::cluster`/`KernDynMeans::Cluster` again
 	<pre>
@@ -125,8 +116,10 @@ Efficient C++ implementations of all algorithms are provided in this repository.
 	double obj2, tTaken2;
 	dynm.cluster(dataWindow2, nRestarts, learnedLabels2, learnedParams2, obj2, tTaken2);
 	</pre>
+	and make sure to use `YourAffinityWrapper::yourUpdateFunction` afterwards to compute the new set of "old parameter nodes"
+	to prepare Spectral/Kernel Dynamic Means for the next clustering step
 
-7. Repeat step 6 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and call `DynMeans::cluster`/`SpecDynMeans::cluster`/`KernDynMeans::cluster` on each)
+7. Repeat step 6 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and cluster each sequentially) 
 
 ####Example Code
 To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
