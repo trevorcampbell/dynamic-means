@@ -67,9 +67,8 @@ class KernDynMeans{
 template <class G>
 class CoarseGraph{ //only stores upper triangular information (multiplies by 2 when necessary)
 	public:
-		//constructors
-		CoarseGraph(const G& aff);
-		CoarseGraph(const CoarseGraph<G>& aff);
+		//function that constructs the coarse graph
+		template <typename T> void coarsify(const T& aff);
 		//similarity functions
 		double diagSelfSimDD(const int i) const;
 		double offDiagSelfSimDD(const int i) const;
@@ -81,13 +80,13 @@ class CoarseGraph{ //only stores upper triangular information (multiplies by 2 w
 		std::vector<int> getRefinedLabels(const std::vector<int>& lbls) const;
 		//get the number of graph nodes
 		int getNNodes() const;
-	private:
+		int getNOldPrms() const;
 		int nOldPrms;
-		template <typename T> void coarsify(const T& aff);
 		std::vector< std::pair<int, int> > refineMap;
 		std::vector<int> nodeCts;
 		SMXd affdd, affdp;
 		VXd daffdd, odaffdd, affpp;
+	private:
 };
 
 ////try to split a cluster

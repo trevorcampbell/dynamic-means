@@ -11,9 +11,6 @@
 #include <cmath>
 #include <random>
 
-#include <dynmeans/kerndynmeans.hpp>
-#include "maxmatching.hpp"
-
 using namespace std;
 
 typedef Eigen::Vector2d V2d;
@@ -103,6 +100,11 @@ class VectorGraph{
 		}
 };
 
+#include <dynmeans/kerndynmeans.hpp>
+#include "maxmatching.hpp"
+
+
+
 int main(int argc, char** argv){
 
 	//generates clusters that jump around on the domain R^2
@@ -150,7 +152,7 @@ int main(int argc, char** argv){
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
 	int nCoarsest = 10;
-	KernDynMeans<VectorGraph> kdm(lambda, Q, tau, false); //true);
+	KernDynMeans<VectorGraph> kdm(lambda, Q, tau, true);
 	VectorGraph vgr;
 
 	//run the experiment
