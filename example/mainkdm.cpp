@@ -26,6 +26,18 @@ mt19937 rng;//uses the same seed every time, 5489u
 
 class VectorGraph{
 	public:
+		//None of data, oldprms, oldprmlbls, updateData(), and updateOldParameters are mandatory 
+		//I implemented them for my own application
+		//data holds the current timestep's vectors, oldprms/oldprmlbls keeps track of old parameters and their labels
+		//updateData() does what it advertises
+		//updateOldParameters makes sure that the KernDynMeans and VectorGraph objects have the same ordering of oldprmlbls,
+		//and also updates oldprms (weighted by gammas) to reflect the clustering that was just completed
+		//
+		//basically, the pattern for clustering batch-sequential data is:
+		//1) VectorGraph::updateData( [the data for this timestep] );
+		//2) KernDynMeans::cluster( [the vector graph] );
+		//3) VectorGraph::updateOldPrms( [output of KernDynMeans::cluster] );
+		//Go back to 1 for the next time step
 		std::vector<V2d> data, oldprms;
 		std::vector<int> oldprmlbls;
 		VectorGraph(){
@@ -74,6 +86,10 @@ class VectorGraph{
 			this->oldprms = updatedoldprms;
 			this->oldprmlbls = prmlbls;
 		}
+
+		//---ALL FUNCTIONS BELOW ARE MANDATORY---
+		//Any affinity class must implement all of the below functions, as KernDynMeans calls them explicitly
+
 		double diagSelfSimDD(const int i) const{
 			return data[i].transpose()*data[i];
 		}
