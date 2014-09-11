@@ -35,7 +35,7 @@ KernDynMeans<G>::~KernDynMeans(){
 
 template<typename G>
 void KernDynMeans<G>::reset(){
-	this->maxLblPrevUsed = 0;
+	this->maxLblPrevUsed = -1;
 	this->ages.clear();
 	this->oldprmlbls.clear();
 	this->weights.clear();

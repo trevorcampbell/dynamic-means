@@ -94,7 +94,7 @@ class VectorGraph{
 			return exp(-(data[i]-data[j]).squaredNorm()/(2*0.1*0.1));
 		}
 		double simDP(const int i, const int j) const{
-			return exp(-(data[i]-prm[j]).squaredNorm()/(2*0.1*0.1));
+			return exp(-(data[i]-oldprms[j]).squaredNorm()/(2*0.1*0.1));
 		}
 		int getNodeCt(const int i) const{
 			return 1;
@@ -192,7 +192,7 @@ int main(int argc, char** argv){
 		vector<int> prmlbls;
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
-		sdm.cluster(clusterDataSD, nRestarts, nClusMax, SpecDynMeans<SD,SP>::EigenSolverType::REDSVD, learnedLabels, obj, gammas, prmlbls, tTaken);
+		sdm.cluster(vgr, nRestarts, nClusMax, SpecDynMeans<VectorGraph>::EigenSolverType::REDSVD, learnedLabels, obj, gammas, prmlbls, tTaken);
 		vgr.updateOldParameters(clusterData, learnedLabels, gammas, prmlbls);
 
 		//***************************************************

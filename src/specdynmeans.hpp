@@ -59,7 +59,7 @@ class SpecDynMeans{
 		vector<double> gammas, agecosts;
 		vector<int> oldprmlbls; // require a mapping from old parameters to old labels
 								//because clusters that die are removed entirely to save computation
-		int nextlbl; //stores the next (unique) label to use for a new cluster
+		int maxLblPrevUsed; //stores the next (unique) label to use for a new cluster
 
 		//spectral functions
 		void getKernelMat(const G& aff, SMXd& kUpper);

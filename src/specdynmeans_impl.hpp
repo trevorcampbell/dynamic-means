@@ -16,7 +16,7 @@ SpecDynMeans<G>::SpecDynMeans(double lamb, double Q, double tau, bool verbose /*
 	this->gammas.clear();
 	this->agecosts.clear();
 	this->oldprmlbls.clear();
-	this->nextlbl = 0;
+	this->maxLblPrevUsed = -1;
 	//seed the random number generator with time now (seed < 0) or seed (seed > 0)
 	if(seed < 0){
 		this->rng.seed(unsigned( time(0) ) );
@@ -46,7 +46,7 @@ void SpecDynMeans<G>::reset(){
 	this->gammas.clear();
 	this->agecosts.clear();
 	this->oldprmlbls.clear();
-	this->nextlbl = 0;
+	this->maxLblPrevUsed = -1;
 }
 
 //This function updates the weights/ages of all the clusters after each clustering step is complete
@@ -104,7 +104,7 @@ void SpecDynMeans<G>::finalizeStep(const G& aff, const vector<int>& lbls, vector
 
 	//delete any old cluster whose age cost exceeds lambda
 	for (int i = 0; i < this->ages.size(); i++){
-		if (this->agecosts[i] > this->lambda){
+		if (this->agecosts[i] > this->lamb){
 			this->weights.erase(this->weights.begin()+i);
 			this->ages.erase(this->ages.begin()+i);
 			this->gammas.erase(this->gammas.begin()+i);
@@ -138,7 +138,7 @@ void SpecDynMeans<G>::cluster(const G& aff, const int nRestarts, const int nClus
 	if (nA <= 0){
 		cout << "libspecdynmeans: WARNING: data size <=0 (= " << nA << "); Returning empty labels."<<  endl;
 		finalLabels = vector<int>();
-		timeTaken = 0;
+		tTaken = 0;
 		finalObj = 0;
 		return;
 	}
@@ -270,7 +270,7 @@ void SpecDynMeans<G>::cluster(const G& aff, const int nRestarts, const int nClus
 	//get final time taken
 	timeval tCur;
 	gettimeofday(&tCur, NULL);
-	timeTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
+	tTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
 	return;
 }
 
@@ -355,14 +355,14 @@ tuple<MXd, VXd> SpecDynMeans<G>::redsvdEigenSolver(SMXd& AUp, int r){
 	r = (r < AUp.cols()) ? r : AUp.cols();
 	//compute gaussian matrix
 	normal_distribution<> nrm(0, 1);
-	MXd G(AUp.rows(), r);
+	MXd M(AUp.rows(), r);
 	for (int i = 0; i < AUp.rows(); i++){
 		for (int j =0 ; j < r; j++){
-			G(i, j) = nrm(this->rng);
+			M(i, j) = nrm(this->rng);
 		}
 	}
 	//compute Y 
-	MXd Y = (AUp.selfadjointView<Eigen::Upper>())*G;
+	MXd Y = (AUp.selfadjointView<Eigen::Upper>())*M;
 	//orthonormalize Y -- Gram Schmidt
 	this->gramschmidt(Y);
 	//run it again if necessary (numerical precision increase)
@@ -613,7 +613,7 @@ vector<int> SpecDynMeans<G>::getLblsFromIndicatorMat(const MXd& X) const {
 	const int nR = X.rows();
 	const int nC = X.cols();
 	vector<int> lbls;
-	int nextNewLbl = this->nextlbl;
+	int nextNewLbl = this->maxLblPrevUsed+1;
 	//first find the correspondance between columns and labels
 	map<int, int> colToLbl;
 	for (int i = 0; i < nC; i++){
