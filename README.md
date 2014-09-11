@@ -39,7 +39,7 @@ Efficient C++ implementations of all algorithms are provided in this repository.
     depending on whether you want to use regular Dynamic Means,
     Spectral Dynamic Means, or 
     Kernelized Dynamic Means. Make sure [Gurobi](www.gurobi.com) is installed (free for academic use) if 
-   you want to use Spectral Dynamic Means. If you can't get access to Gurobi, feel free to modify
+   you want to use Spectral/Kernel Dynamic Means. If you can't get access to Gurobi, feel free to modify
    the `SpecDynMeans::getOldNewMatching` function in `src/specdynmeans_impl.hpp` and
    the `KernDynMeans::getMinWtMatching` function in `src/kerndynmeans_impl.hpp` to use a different
    LP solver.
