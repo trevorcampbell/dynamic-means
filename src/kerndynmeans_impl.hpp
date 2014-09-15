@@ -260,7 +260,7 @@ std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> 
 		std::vector<int> tmplbls = this->updateLabels(aff, lbls);
 		double tmpobj = this->objective(aff, tmplbls);
 		//if the update increased the objective, update the sigma lower bound by searching backwards from sigmaub
-		if (tmpobj > prevobj){
+		if (tmpobj > prevobj && fabs(tmpobj-prevobj)>1e-6){ //1e-6 to help get rid of numerical noise
 			if (verbose){
 				cout << "libkerndynmeans: Monotonicity violated!" << endl;
 				cout << "libkerndynmeans: Finding new sigmaLB..." << endl;
