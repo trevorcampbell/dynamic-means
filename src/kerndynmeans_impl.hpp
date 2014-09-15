@@ -16,6 +16,7 @@ KernDynMeans<G>::KernDynMeans(double lambda, double Q, double tau, bool verbose)
 	this->lambda = lambda;
 	this->Q = Q;
 	this->tau = tau;
+	this->sigma = this->sigmaUB = this->sigmaLB = 0;
 	try{
 		this->grbenv = new GRBEnv();
 		//start up GRB
@@ -41,6 +42,7 @@ void KernDynMeans<G>::reset(){
 	this->weights.clear();
 	this->gammas.clear();
 	this->agecosts.clear();
+	this->sigma = this->sigmaUB = this->sigmaLB = 0;
 }
 
 //This function updates the weights/ages of all the clusters after each clustering step is complete
@@ -138,10 +140,17 @@ void KernDynMeans<G>::cluster(const G& aff, const int nRestarts, const int nCoar
 		cout << "libkerndynmeans: ERROR: nRestarts <=0 (= " << nRestarts << ")"<<  endl;
 		return;
 	}
+	//compute sigma upper bound via diagonal dominance and initialize sigma to 0
 	if (verbose){
+		cout << "libkerndynmeans: Computing sigma bounds." << endl;
+	}
+	this->initializeSigma(aff);
+	if (verbose){
+		cout << "libkerndynmeans: Sigma bounds: [" << this->sigmaLB << ", " << this->sigmaUB << "]." << endl;
 		cout << "libkerndynmeans: Clustering " << nNodes << " datapoints with " << nRestarts << " restarts." << endl;
 		cout << "libkerndynmeans: " << nOldPrms << " old clusters possibly alive from previous timesteps." << endl;
 	}
+
 	std::vector<int> minLbls;
 	double minObj = std::numeric_limits<double>::max();
 	for(int rest = 0; rest < nRestarts; rest++){
@@ -246,17 +255,28 @@ std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> 
 	double diff = 1.0;
 	int itr = 0;
 	while(diff > 1e-6){
+		this->sigma = this->sigmaLB; //start sigma at its lower bound
 		itr++;
-		double tmpobj1 = this->objective(aff, lbls);
-		lbls = this->updateLabels(aff, lbls);
-		double tmpobj2 = this->objective(aff, lbls);
-		lbls = this->updateOldNewCorrespondence(aff, lbls);
-		double tmpobj3 = this->objective(aff, lbls);
-		if (tmpobj2 > tmpobj1 || tmpobj3 > tmpobj2){
-			cout << "libkerndynmeans: ERROR: Monotonicity violated at itr " << itr << endl;
-			cout << "libkerndynmeans: obj1: " << tmpobj1 << " obj2: " << tmpobj2 << " obj3: " << tmpobj3 << endl;
+		std::vector<int> tmplbls = this->updateLabels(aff, lbls);
+		double tmpobj = this->objective(aff, tmplbls);
+		//if the update increased the objective, update the sigma lower bound by searching backwards from sigmaub
+		if (tmpobj > prevobj){
+			if (verbose){
+				cout << "libkerndynmeans: Monotonicity violated!" << endl;
+				cout << "libkerndynmeans: Finding new sigmaLB..." << endl;
+			}
+			this->sigma = this->sigmaUB; //start at the upper bound
+			do{
+				this->sigma = (this->sigma + this->sigmaLB)/2.0; //progressively backwards search towards LB
+				tmplbls = this->updateLabels(aff, lbls);
+				tmpobj = this->objective(aff, tmplbls);
+			} while (tmpobj < prevobj); //if we find the sigma that violates monotonicity
+			this->sigmaLB += 2.0*(this->sigma-this->sigmaLB); //set sigmaLB to the last one that worked -- this is a conservative lower bound so won't cause cycling
+			if (verbose){
+				cout << "libkerndynmeans: New sigma bounds are [" << this->sigmaLB << ", " << this->sigmaUB << "]." << endl;
+			}
 		}
-
+		lbls = this->updateOldNewCorrespondence(aff, tmplbls); //guaranteed not to increase objective, no check needed
 		double obj = this->objective(aff, lbls);
 		diff = fabs((obj-prevobj)/obj);
 		prevobj = obj;
@@ -296,7 +316,8 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 		const std::vector<int>& clus = idcsInClus[unqlbls[i]];
 		const int& lbl = unqlbls[i];
 		for (int k = 0; k < clus.size(); k++){
-			sum += aff.diagSelfSimDD(clus[k]) + 2.0*aff.offDiagSelfSimDD(clus[k]);
+			int nct = aff.getNodeCt(clus[k]);
+			sum += aff.diagSelfSimDD(clus[k])+nct*this->sigma + 2.0*aff.offDiagSelfSimDD(clus[k]);
 			for (int m = k+1; m < clus.size(); m++){
 				sum += 2.0*aff.simDD(clus[k], clus[m]);
 			}
@@ -310,7 +331,8 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 	//need max_element and maxlblprevused above to avoid assigning new clustered data to old uninstantiated clusters or current new clusters from the previous iteration of labellign
 	for (int i = 0; i < lbls.size(); i++){
 		int nct = aff.getNodeCt(i);
-		double minCost = this->lambda + (1.0-1.0/nct)*aff.diagSelfSimDD(i) - 2.0/nct*aff.offDiagSelfSimDD(i); //default to creating a new cluster, and then try to beat it 
+		double minCost = this->lambda + this->sigma + (1.0-1.0/nct)*(aff.diagSelfSimDD(i) + nct*this->sigma) 
+							- 2.0/nct*aff.offDiagSelfSimDD(i); //default to creating a new cluster, and then try to beat it 
 		int minLbl = -1;
 		const int& prevlbl = lbls[i];
 
@@ -329,9 +351,9 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 			double cost = 0;
 			auto it = find(this->oldprmlbls.begin(), this->oldprmlbls.end(), lbl);
 			if (it == this->oldprmlbls.end()){//if it's a new cluster in this timestep, no gamma stuff is needed
-				cost = aff.diagSelfSimDD(i)+(double)nct/(nInClus[lbl]*nInClus[lbl])*inClusterSum[lbl];
+				cost = aff.diagSelfSimDD(i)+nct*this->sigma+(double)nct/(nInClus[lbl]*nInClus[lbl])*inClusterSum[lbl];
 				if (prevlbl == lbl){
-					cost += -2.0/nInClus[lbl]*(aff.diagSelfSimDD(i)+2.0*aff.offDiagSelfSimDD(i));
+					cost += -2.0/nInClus[lbl]*(aff.diagSelfSimDD(i)+nct*this->sigma+2.0*aff.offDiagSelfSimDD(i));
 				}
 				for (int j = 0; j < clus.size(); j++){
 					if (clus[j] != i){
@@ -341,13 +363,13 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 			} else {//it's an instantiated old cluster, need to do gamma stuff
 				double oldidx = distance(this->oldprmlbls.begin(), it);
 				double factor = 1.0/(nInClus[lbl]+this->gammas[oldidx]);
-				cost = aff.diagSelfSimDD(i) 
+				cost = aff.diagSelfSimDD(i) +nct*this->sigma
 					-2.0*this->gammas[oldidx]*factor*aff.simDP(i, oldidx) 
-					+ (double)nct*this->gammas[oldidx]*this->gammas[oldidx]*factor*factor*aff.selfSimPP(oldidx)
+					+ (double)nct*this->gammas[oldidx]*this->gammas[oldidx]*factor*factor*(aff.selfSimPP(oldidx) + this->sigma/this->gammas[oldidx])
 					+(double)nct*factor*factor*inClusterSum[lbl];
 				if (prevlbl == lbl){
 					//need to be careful about similarities when the observation was previously in this cluster
-					cost += -2.0*factor*(aff.diagSelfSimDD(i)+2.0*aff.offDiagSelfSimDD(i));
+					cost += -2.0*factor*(aff.diagSelfSimDD(i)+nct*this->sigma+2.0*aff.offDiagSelfSimDD(i));
 				}
 				for (int j = 0; j < clus.size(); j++){
 					cost += 2.0*factor*factor*nct*this->gammas[oldidx]*aff.simDP(clus[j], oldidx);
@@ -366,8 +388,8 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 			auto it = find(unqlbls.begin(), unqlbls.end(), this->oldprmlbls[k]);
 			if (it == unqlbls.end()){
 				double cost = this->agecosts[k]
-						+(1.0-1.0/(this->gammas[k]+nct))*aff.diagSelfSimDD(i)
-						+this->gammas[k]*nct/(this->gammas[k]+nct)*aff.selfSimPP(k)
+						+(1.0-1.0/(this->gammas[k]+nct))*(aff.diagSelfSimDD(i)+nct*this->sigma)
+						+this->gammas[k]*nct/(this->gammas[k]+nct)*(aff.selfSimPP(k) + this->sigma/this->gammas[k])
 						-2.0/(this->gammas[k]+nct)*aff.offDiagSelfSimDD(i)
 						-2.0*this->gammas[k]/(this->gammas[k]+nct)*aff.simDP(i, k);
 				if (cost < minCost){
@@ -389,7 +411,7 @@ std::vector<int> KernDynMeans<G>::updateLabels(const T& aff, std::vector<int> lb
 			idcsInClus[minLbl].push_back(i);   //no problem with duplicating the datapoint here (it will still exist in idcsInClus in the old cluster)
 												//this is because the distance comparisons to previous cluster centers shouldn't be affected by creating new centers
 												//ergo, leave the old dInClus alone, but create a new entry so that other observations can switch tothis cluster
-			inClusterSum[minLbl] = aff.diagSelfSimDD(i)+2.0*aff.offDiagSelfSimDD(i);
+			inClusterSum[minLbl] = aff.diagSelfSimDD(i)+nct*this->sigma+2.0*aff.offDiagSelfSimDD(i);
 			nInClus[minLbl] = nct;
 		}
 	}
@@ -797,6 +819,43 @@ void KernDynMeans<G>::orthonormalize(MXd& V) const{
 	return; 
 }
 
+template <typename G>
+double KernDynMeans<G>::initializeSigma(const G& aff){
+	int nNodes = aff.getNNodes();
+	this->sigmaLB = 0.0;
+	this->sigma = 0.0;
+	int nOldPrms = aff.getNOldPrms();
+	double sigUB = 0.0;
+	//check data rows
+	for (int i = 0; i < nNodes; i++){
+		double d = fabs(aff.diagSelfSimDD(i));
+		double odsum = 0.0;
+		for (int j = 0; j < i; j++){
+			odsum += fabs(aff.simDD(i, j));
+		}
+		for (int j = i+1; j < nNodes; j++){
+			odsum += fabs(aff.simDD(i, j));
+		}
+		for (int j = 0; j < nOldPrms; j++){
+			odsum += fabs(aff.simDP(i, j));
+		}
+		if (odsum - d > sigUB){
+			sigUB = odsum-d;
+		}
+	}
+	//check old parameter rows
+	for (int i = 0; i < nOldPrms; i++){
+		double d = fabs(aff.selfSimPP(i));
+		double odsum = 0.0;
+		for (int j = 0; j < nNodes; j++){
+			odsum += fabs(aff.simDP(j, i));
+		}
+		if ( this->gammas[i]*(odsum - d) > sigUB){
+			sigUB = this->gammas[i]*(odsum - d);
+		}
+	}
+	return sigUB;
+}
 
 template <class G>
 template <typename T> void CoarseGraph<G>::coarsify(const T& aff){

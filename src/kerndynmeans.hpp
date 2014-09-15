@@ -31,6 +31,7 @@ class KernDynMeans{
 		std::vector<int>& finalPrmLbls, double& tTaken);
 		//reset DDP chain
 		void reset();
+	private:
 		//clusters a refinement level with kernelized dyn means batch updates
 		//template so it works with C/D
 		template <typename T> std::vector<int> clusterAtLevel(const T& aff, std::vector<int> lbls) const;
@@ -48,10 +49,12 @@ class KernDynMeans{
 		template <typename T> std::vector<int> baseCluster(const T& aff) const;
 		//utility function to orthonormalize a square matrix
 		void orthonormalize(MXd& V) const;
+		void initializeSigma(const G& aff);
 
 		GRBEnv* grbenv;
 		double lambda, Q, tau;
 		bool verbose;
+		double sigma, sigmaUB, sigmaLB;//correction used to enforce positive definiteness
 
 		//during each step, constants which are information about the past steps
 		//once each step is complete, these get updated
@@ -61,7 +64,6 @@ class KernDynMeans{
 		std::vector<int> ages;
 		std::vector<double> agecosts;
 		std::vector<double> gammas;
-	private:
 };
 
 template <class G>
@@ -81,12 +83,12 @@ class CoarseGraph{ //only stores upper triangular information (multiplies by 2 w
 		//get the number of graph nodes
 		int getNNodes() const;
 		int getNOldPrms() const;
+	private:
 		int nOldPrms;
 		std::vector< std::pair<int, int> > refineMap;
 		std::vector<int> nodeCts;
 		SMXd affdd, affdp;
 		VXd daffdd, odaffdd, affpp;
-	private:
 };
 
 ////try to split a cluster
