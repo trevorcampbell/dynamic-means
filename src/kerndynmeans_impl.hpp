@@ -239,7 +239,7 @@ void KernDynMeans<G>::cluster(const G& aff, const int nRestarts, const int nCoar
 
 template<typename G>
 template <typename T> 
-std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> lbls) const{
+std::vector<int> KernDynMeans<G>::clusterAtLevel(const T& aff, std::vector<int> lbls){ 
 	if (lbls.size() < aff.getNNodes()){ // Base Clustering -- Use spectral clustering on data, maximum bipartite matching to link old clusters
 		if (verbose){ cout << "Running base spectral clustering..." << endl;}
 		//get the data labels from spectral clustering
@@ -820,12 +820,12 @@ void KernDynMeans<G>::orthonormalize(MXd& V) const{
 }
 
 template <typename G>
-double KernDynMeans<G>::initializeSigma(const G& aff){
+void KernDynMeans<G>::initializeSigma(const G& aff){
 	int nNodes = aff.getNNodes();
 	this->sigmaLB = 0.0;
 	this->sigma = 0.0;
+	this->sigmaUB = 0.0;
 	int nOldPrms = aff.getNOldPrms();
-	double sigUB = 0.0;
 	//check data rows
 	for (int i = 0; i < nNodes; i++){
 		double d = fabs(aff.diagSelfSimDD(i));
@@ -839,8 +839,8 @@ double KernDynMeans<G>::initializeSigma(const G& aff){
 		for (int j = 0; j < nOldPrms; j++){
 			odsum += fabs(aff.simDP(i, j));
 		}
-		if (odsum - d > sigUB){
-			sigUB = odsum-d;
+		if (odsum - d > this->sigmaUB){
+			this->sigmaUB = odsum-d;
 		}
 	}
 	//check old parameter rows
@@ -850,11 +850,11 @@ double KernDynMeans<G>::initializeSigma(const G& aff){
 		for (int j = 0; j < nNodes; j++){
 			odsum += fabs(aff.simDP(j, i));
 		}
-		if ( this->gammas[i]*(odsum - d) > sigUB){
-			sigUB = this->gammas[i]*(odsum - d);
+		if ( this->gammas[i]*(odsum - d) > this->sigmaUB){
+			this->sigmaUB = this->gammas[i]*(odsum - d);
 		}
 	}
-	return sigUB;
+	return;
 }
 
 template <class G>

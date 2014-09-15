@@ -34,7 +34,7 @@ class KernDynMeans{
 	private:
 		//clusters a refinement level with kernelized dyn means batch updates
 		//template so it works with C/D
-		template <typename T> std::vector<int> clusterAtLevel(const T& aff, std::vector<int> lbls) const;
+		template <typename T> std::vector<int> clusterAtLevel(const T& aff, std::vector<int> lbls);
 		//compute the dynamic means objective given the current labels
 		template<typename T> double objective(const T& aff, const std::vector<int>& lbls) const;
 		//compute a minimum weight bipartite matching
