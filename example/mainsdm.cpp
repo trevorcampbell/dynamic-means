@@ -11,13 +11,14 @@
 #include <cmath>
 #include <random>
 
+using namespace std;
+typedef Eigen::Vector2d V2d;
+
 #include <dynmeans/specdynmeans.hpp>
 #include "maxmatching.hpp"
 #include "expgraph.hpp"
 
-using namespace std;
 
-typedef Eigen::Vector2d V2d;
 
 //function declarations
 double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> matchings);
