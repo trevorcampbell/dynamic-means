@@ -125,6 +125,9 @@ Efficient C++ implementations of all algorithms are provided in this repository.
 To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
     
     sudo apt-get install liblpsolve55-dev
+
+make sure liblpsolve55.so (not liblpsolve55.a) is located in your /usr/lib/ folder when the installation is complete, and if it is not, move it to that location. If you compile against the static library (.a), you will
+get linker errors about undefined references to dlclose, dlopen, colamd_*, etc.
    
 
 Navigate to the `examples` folder to compile and run the example for Dynamic Means:
