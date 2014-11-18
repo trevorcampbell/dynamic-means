@@ -34,7 +34,7 @@ class DynMeans{
 		std::vector<Vec> getObsInCluster(int idx, std::vector<int> lbls); 
 		void assignObservations(std::vector<int> assgnOrdering, std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms);
 		double setParameters(std::vector<int>& lbls, std::vector<int>& cnts, std::vector<Vec>& prms);
-		void updateState(std::vector<int> lbls, std::vector<int> cnts, std::vector<Vec> prms);
+		std::vector<int> updateState(std::vector<int> lbls, std::vector<int> cnts, std::vector<Vec> prms);
 };
 #include "dynmeans_impl.hpp"
 #define __DYNMEANS_HPP
