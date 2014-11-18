@@ -28,6 +28,7 @@ class DynMeans{
 
 		//during each step, constants which are information about the past steps
 		//once each step is complete, these get updated
+		int nextLbl;
 		std::vector<Vec> oldprms;
 		std::vector<int> oldprmlbls;
 		std::vector<double> weights;
