@@ -7,9 +7,10 @@ DynMeans<Vec>::DynMeans(double lambda, double Q, double tau, bool verbose){
 	this->tau = tau;
 	this->ages.clear();
 	this->oldprms.clear();
-	this->labels.clear();
+	this->oldprmlbls.clear();
 	this->observations.clear();
 	this->weights.clear();
+	this->nextLbl = 0;
 }
 
 template<class Vec>
@@ -20,9 +21,10 @@ template<class Vec>
 void DynMeans<Vec>::reset(){
 	this->ages.clear();
 	this->oldprms.clear();
-	this->labels.clear();
+	this->oldprmlbls.clear();
 	this->observations.clear();
 	this->weights.clear();
+	this->nextLbl = 0;
 }
 
 //This function is used when sampling parameters - it returns a vector of the observations in the next cluster,
@@ -43,9 +45,9 @@ std::vector<Vec> DynMeans<Vec>::getObsInCluster(int idx, std::vector<int> lbls){
 }
 
 template<class Vec>
-void DynMeans<Vec>::updateState(std::vector<int> lbls, std::vector<int> cnts, std::vector<Vec> prms){
+std::vector<int> DynMeans<Vec>::updateState(std::vector<int> lbls, std::vector<int> cnts, std::vector<Vec> prms){
 	this->oldprms = prms;
-	this->labels = lbls;
+	std::vector<int> outLbls; //stores the label output using oldprmlbls
 	//update the weights/ages
 	for (int i = 0; i < prms.size(); i++){
 		if (i < this->weights.size() && cnts[i] > 0){
@@ -57,10 +59,25 @@ void DynMeans<Vec>::updateState(std::vector<int> lbls, std::vector<int> cnts, st
 			//push back a 0 for the age, and set the weight to the number of observations
 			this->ages.push_back(0);
 			this->weights.push_back(cnts[i]);
+			this->oldprmlbls.push_back(this->nextLbl++);
 		}
 		//increment the age for all clusters (including old clusters with i < weights.size() && cnts = 0)
 		this->ages[i]++;
 	}
+	for(int i = 0; i < lbls.size(); i++){
+		outLbls.push_back(this->oldprmlbls[lbls[i]]);
+	}
+	//now that all is updated, check to see which clusters are permanently dead
+	for(int i = 0; i < this->oldprms.size(); i++){
+		if (this->ages[i]*this->Q > this->lambda){
+			this->oldprms.erase(this->oldprms.begin()+i);
+			this->oldprmlbls.erase(this->oldprmlbls.begin()+i);
+			this->weights.erase(this->weights.begin()+i);
+			this->ages.erase(this->ages.begin()+i);
+			i--;
+		}
+	}
+	return outLbls;
 }
 
 template<class Vec>
@@ -166,7 +183,7 @@ void DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts,
 		std::cout << "libdynmeans: Done clustering. Min Objective: " << finalObj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  std::endl;
 	}
 	//update the stored results to the one with minimum cost
-	this->updateState(finalLabels, finalCnts, finalParams);
+	finalLabels = this->updateState(finalLabels, finalCnts, finalParams);
 	timeval tCur;
 	gettimeofday(&tCur, NULL);
 	tTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
