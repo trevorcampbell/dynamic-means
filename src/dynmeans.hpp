@@ -22,10 +22,6 @@ class DynMeans{
 		double lambda, Q, tau;
 		bool verbose;
 
-		//working variables for the current step
-		std::vector<Vec> observations;
-		std::vector<int> labels;
-
 		//during each step, constants which are information about the past steps
 		//once each step is complete, these get updated
 		int nextLbl;
