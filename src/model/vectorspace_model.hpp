@@ -10,7 +10,7 @@ class VectorData{
 };
 
 typedef std::map<int, Data<VectorData> >::iterator vector_dmap_iterator;
-class VectorCluster{
+class VectorParameter{
 	public:
 		Eigen::VectorXd v, vOld;
 		void update(vector_dmap_iterator be, vector_dmap_iterator en, double gamma){

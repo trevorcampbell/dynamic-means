@@ -1,5 +1,5 @@
-mkdir -p /usr/local/include/dynmeans
-cp src/dynmeans.hpp src/dynmeans_impl.hpp src/specdynmeans.hpp src/specdynmeans_impl.hpp src/kerndynmeans.hpp src/kerndynmeans_impl.hpp /usr/local/include/dynmeans/
+mkdir -p /usr/local/include/dmeans
+cp -r src/* /usr/local/include/dmeans
 
 
 
