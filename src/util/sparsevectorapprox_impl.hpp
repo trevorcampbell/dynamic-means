@@ -1,4 +1,5 @@
-#include "sparsevectorapprox.hpp"
+#ifndef __SPARSEVECTORAPPROX_IMPL_HPP
+
 #include <iostream>
 #include <numeric>
 
@@ -120,4 +121,5 @@ void SparseVectorApproximation::getApprox(std::vector<int>& vecs, std::vector<do
 
 
 
-
+#define __SPARSEVECTORAPPROX_IMPL_HPP
+#endif /* __SPARSEAPPROX_IMPL_HPP */

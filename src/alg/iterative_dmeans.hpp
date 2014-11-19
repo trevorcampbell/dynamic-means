@@ -2,10 +2,10 @@
 #include<vector>
 #include<iostream>
 #include<random>
-#include "timer.hpp"
-#include "data.hpp"
-#include "cluster.hpp"
-#include "results.hpp"
+#include "../util/timer.hpp"
+#include "../util/results.hpp"
+#include "../model/data.hpp"
+#include "../model/cluster.hpp"
 
 template<class D, class P>
 class IterativeDMeans{
