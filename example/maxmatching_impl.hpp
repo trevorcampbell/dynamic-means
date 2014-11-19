@@ -1,60 +1,7 @@
 #ifndef __MAXMATCHING_IMPL_HPP
 
-/*
- *
- * This is testing code for the getMaxMatching function below
- * getMaxMatching has been verified to work.
-int main(int argc, char** argv){
-	vector<int> l1, l2;
-
-	//l1 labels
-	for (int i = 0; i < 3; i++){
-		l1.push_back(0);
-	}
-	for (int i = 0; i < 7; i++){
-		l1.push_back(5);
-	}
-	for (int i = 0; i < 4; i++){
-		l1.push_back(3);
-	}
-	for (int i = 0; i < 5; i++){
-		l1.push_back(2);
-	}
-
-
-	//l2 labels
-	for (int i = 0; i < 3; i++){
-		l2.push_back(8);
-	}
-	for (int i = 0; i < 7; i++){
-		l2.push_back(4);
-	}
-	for (int i = 0; i < 4; i++){
-		l2.push_back(0);
-	}
-	for (int i = 0; i < 5; i++){
-		l2.push_back(1);
-	}
-
-	map<int, int> matching = getMaxMatching(l1, l2);
-	cout << "Matchings:" << endl;
-	for (map<int, int>::iterator it = matching.begin(); it != matching.end(); it++){
-		cout << it->first << ":" << it->second << endl;
-	}
-}*/
-
-//this function finds the best correspondance between labels1 and labels2
-//not *all* labels in either labels1 or labels2 is guaranteed to be used
-//the map will not contain a key for any unused label in labels1
-//the map will not map any key to an unused label in labels2
-
-//further, if any label in labels1 or labels2 is < 0, those elements
-//are removed from the proceedings at the start (it is assumed that negative labels
-//stand for *unknown* / *unlabelled* data that is "wrong" by default)
-
-
 MaxMatching::MaxMatching() : Simplex("MaxMatching"){
-void add_variable(Variable* variable);
+			void add_variable(Variable* variable);
             void add_constraint(Constraint const & constraint);
             void set_objective_function(ObjectiveFunction const & objective_function);
             
@@ -72,30 +19,9 @@ void add_variable(Variable* variable);
 }
 
 map<int, int> 
-MaxMatching::getConsistentMaxMatching(vector<int> labels1, vector<int> labels2){
-
-			void add_variable(Variable* variable);
-            void add_constraint(Constraint const & constraint);
-            void set_objective_function(ObjectiveFunction const & objective_function);
-            
-            // Solving procedures
-            void solve();          
-
-            // Print
-            void print_solution() const;
-            void log() const; 
-            
-            bool is_unlimited() const;
-            bool has_solutions() const;
-            bool must_be_fixed() const;
-
-
-
+MaxMatching::getLabelMatching(vector<int> labels1, vector<int> labels2){
 	if (labels1.size() != labels2.size() || labels1.size() == 0){
-		cout << "Error: labels have invalid size for getMaxMatching." << endl;
-		cout << "Labels1 size: " << labels1.size() << " Labels2 size: " << labels2.size() << endl;
-		int ddd;
-		cin >> ddd;
+		throw InvalidLabelsSizeException(labels1.size(), labels2.size());
 	}
 	//prune data with negative labels
 	for (int i = 0; i < labels1.size(); i++){
@@ -287,12 +213,9 @@ MaxMatching::getConsistentMaxMatching(vector<int> labels1, vector<int> labels2){
 }
 
 
-map<int, int> getMaxMatchingConsistentWithOldMatching(vector<int> labels1, vector<int> labels2, map<int, int> oldmatchings){
+map<int, int> getConsistentLabelMatching(vector<int> labels1, vector<int> labels2){
 	if (labels1.size() != labels2.size() || labels1.size() == 0){
-		cout << "Error: labels have invalid size for getMaxMatching." << endl;
-		cout << "Labels1 size: " << labels1.size() << " Labels2 size: " << labels2.size() << endl;
-		int ddd;
-		cin >> ddd;
+		throw InvalidLabelsSizeException(labels1.size(), labels2.size());
 	}
 	//prune data with negative labels
 	for (int i = 0; i < labels1.size(); i++){
@@ -501,12 +424,9 @@ map<int, int> getMaxMatchingConsistentWithOldMatching(vector<int> labels1, vecto
 }
 
 map<int, int> 
-getWeightedMaxMatching(vector<int> labels1, vector<int> labels2, vector<double> weights){
+MaxMatching::getWeightedMaxMatching(vector<int> labels1, vector<int> labels2, vector<double> weights){
 	if (labels1.size() != labels2.size() || labels1.size() == 0 || weights.size() != labels2.size()){
-		cout << "Error: labels/weights have invalid size for getMaxMatching." << endl;
-		cout << "Labels1 size: " << labels1.size() << " Labels2 size: " << labels2.size() << " Weights size: " << weights.size() << endl;
-		int ddd;
-		cin >> ddd;
+		throw InvalidLabelsSizeException(labels1.size(), labels2.size(), weights.size());
 	}
 	//prune data with negative labels
 	for (int i = 0; i < labels1.size(); i++){

@@ -13,12 +13,13 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -std=c++0x -Wall -fopenmp")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++0x -Wall -fopenmp")
 
 file(GLOB SPLX_SRC 
-	"simplex/src/*.cc" 
+	"simplex/src/*.cc")
+file(GLOB SPLX_HDR
 	"simplex/include/*.h")
 file(GLOB PILAL_SRC 
-	"pilal/src/*.cc" 
+	"pilal/src/*.cc")
+file(GLOB PILAL_HDR
 	"pilal/include/*.h")
-
 
 include_directories(
   ./pilal/include
@@ -44,3 +45,5 @@ add_library(cpplex-pilal SHARED
 install(TARGETS cpplex-simplex cpplex-pilal
   LIBRARY DESTINATION lib
   )
+install(FILES ${PILAL_HDR} ${SPLX_HDR}
+	DESTINATION include/cpplex)
