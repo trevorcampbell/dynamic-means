@@ -1,5 +1,6 @@
-project(DMeans)
 cmake_minimum_required(VERSION 2.6)
+
+project(dmeans)
 
 #first compile cpplex for the examples
 add_subdirectory(cpplex)
