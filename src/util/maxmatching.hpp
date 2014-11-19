@@ -13,18 +13,19 @@ using namespace std;
 class MaxMatching{
 	public:
 		MaxMatching();
-		map<int, int> getLabelMatching(vector<int> labels1, vector<int> labels2);
-		map<int, int> getWeightedMaxMatching(vector<int> labels1, vector<int> labels2);
-		map<int, int> getConsistentLabelMatching(vector<int> labels1, vector<int> labels2);
+		void resetOldMatchings();
+		map<int, int> getLabelMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
+		map<int, int> getConsistentLabelMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
 	private:
 		map<int, int> oldmatchings;
+		void pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights);
+		void pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights);
+		set<int> getUniqueLabels(const vector<int>& labels);
+		void getMaps(const vector<int>& labels1, const set<int>& l1set, const vector<int>& labels2, const set<int>& l2set, const vector<double>& weights,
+							map< pair<int, int>, int>& varMap, map<int, pair<int, int> >& invvarMap, map<int, double>& weightMap);
 
 		class InvalidLabelsSizeException{
 			public:
-				InvalidLabelsSizeException(int s1, int s2){
-					std::cout << "The two label vectors have an invalid size for max matching!" << std::endl;
-					std::cout << "size of labels1: " << s1 << " size of labels2: " << s2 << std::endl;
-				}
 				InvalidLabelsSizeException(int s1, int s2, int w){
 					std::cout << "The two label vectors/weight vector have an invalid size for max matching!" << std::endl;
 					std::cout << "size of labels1: " << s1 << " size of labels2: " << s2 << " size of weights: " w <<  std::endl;
