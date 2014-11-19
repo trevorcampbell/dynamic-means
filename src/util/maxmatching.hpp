@@ -14,8 +14,8 @@ class MaxMatching{
 	public:
 		MaxMatching();
 		void resetOldMatchings();
-		map<int, int> getLabelMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
-		map<int, int> getConsistentLabelMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
+		map<int, int> getMaxMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
+		map<int, int> getMaxConsistentMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
 	private:
 		map<int, int> oldmatchings;
 		void pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights);
