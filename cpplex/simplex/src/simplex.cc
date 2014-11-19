@@ -724,6 +724,10 @@ namespace optimization {
         
         return;
     }
+
+	Matrix Simplex::get_solution() const {
+		return solution;
+	}
     
     void Simplex::solve() {
 

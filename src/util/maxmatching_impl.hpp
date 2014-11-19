@@ -1,23 +1,5 @@
 #ifndef __MAXMATCHING_IMPL_HPP
 
-MaxMatching::MaxMatching() : Simplex("MaxMatching"){
-			void add_variable(Variable* variable);
-            void add_constraint(Constraint const & constraint);
-            void set_objective_function(ObjectiveFunction const & objective_function);
-            
-            // Solving procedures
-            void solve();          
-
-            // Print
-            void print_solution() const;
-            void log() const; 
-            
-            bool is_unlimited() const;
-            bool has_solutions() const;
-            bool must_be_fixed() const;
-
-}
-
 map<int, int> 
 MaxMatching::getLabelMatching(vector<int> labels1, vector<int> labels2){
 	if (labels1.size() != labels2.size() || labels1.size() == 0){
@@ -68,7 +50,7 @@ MaxMatching::getLabelMatching(vector<int> labels1, vector<int> labels2){
 	map<pair<int, int>, int> varMap;
 	map<int, pair<int, int> > invvarMap;
 	map<int, double> weightMap;
-	int k = 1;
+	int k = 0;
 	for (set<int>::iterator it1 = l1set.begin(); it1 != l1set.end(); it1++){
 	for (set<int>::iterator it2 = l2set.begin(); it2 != l2set.end(); it2++){
 			//variable maps
@@ -91,78 +73,42 @@ MaxMatching::getLabelMatching(vector<int> labels1, vector<int> labels2){
 	}
 
 	//construct the linear program
-	lprec *lp;
-	lp = make_lp(0, varMap.size()); //there are l1Map.size()*l2Map.size() variables to optimize over
-	if (lp == NULL){
-		cout << "Error: Couldn't create linear program." << endl;
-		int ddd;
-		cin >> ddd;
+	optimization::Simplex splx("MaxMatching");
+	//add variables
+	for(int i = 0; i < varMap.size(); i++){
+		splx.add_variable(new optimization::Variable(&splx, std::to_string(i).c_str()));
 	}
-		
+
 	//add constraints
-	set_add_rowmode(lp, true);
-	int* varnos = new int[varMap.size()];
-	double* varweights = new double[varMap.size()];
+	pilal::Matrix coeffs(1, varMap.size(), 0);
 	//constrant type 1: the sum of outgoing edges from each of the A vertices = 1
 	for (set<int>::iterator it1 = l1set.begin(); it1 != l1set.end(); it1++){
-		int j = 0;
 		for (set<int>::iterator it2 = l2set.begin(); it2 != l2set.end(); it2++){
-			varweights[j] = 1;
-			varnos[j] = varMap[pair<int,int>(*it1, *it2)];
-			j++;
+			coeffs(0, varMap[pair<int,int>(*it1, *it2)]) = 1;
 		}
-
-		if(!add_constraintex(lp, j, varweights, varnos, LE, 1)){
-			cout << "Error adding constraint in LP" << endl;
-			cout << "During sum over edges connecting to L1 label no. " << *it1 << endl;
-			int ddd;
-			cin >> ddd;
-		}
+		splx.add_constraint(optimization::Constraint(coeffs, optimization::ConstraintType::CT_LESS_EQUAL, 1));
 	}
 	//constraint type 2: the sum of incoming edges to each fo the B vertices = 1
+	coeffs.empty();
 	for (set<int>::iterator it2 = l2set.begin(); it2 != l2set.end(); it2++){
-		int j = 0;
 		for (set<int>::iterator it1 = l1set.begin(); it1 != l1set.end(); it1++){
-			varweights[j] = 1;
-			varnos[j] = varMap[pair<int,int>(*it1, *it2)];
-			j++;
+			coeffs(0, varMap[pair<int,int>(*it1, *it2)]) = 1;
 		}
-
-		if(!add_constraintex(lp, j, varweights, varnos, LE, 1)){
-			cout << "Error adding constraint in LP" << endl;
-			cout << "During sum over edges connecting to L2 label no. " << *it2 << endl;
-			int ddd;
-			cin >> ddd;
-		}
+		splx.add_constraint(optimization::Constraint(coeffs, optimization::ConstraintType::CT_LESS_EQUAL, 1));
 	}
 	//add objective and set to maximization mode
-	set_add_rowmode(lp, false);
-	int j = 0;
+	coeffs.empty();
 	for (map<pair<int, int>, int>::iterator it = varMap.begin(); it != varMap.end(); it++){
-		varnos[j] = it->second;
-		varweights[j] = weightMap[it->second];
-		j++;
+		coeffs(0, it->second) = weightMap[it->second];
 	}
-	if(!set_obj_fnex(lp, j, varweights, varnos)){
-			cout << "Error setting objective in LP" << endl;
-			int ddd;
-			cin >> ddd;
-	}
-	set_maxim(lp);
+    splx.set_objective_function(optimization::ObjectiveFunction(optimization::ObjectiveFunctionType::OFT_MAXIMIZE, coeffs));
 
-	//write_LP(lp, stdout);//print the LP to stdout
-
-	set_verbose(lp, 3);//only display important messages (warnings and errors)
 	//solve
-	if (solve(lp) != OPTIMAL){
-		cout << "Error solving maximization problem." << endl;
-		cout << "Could not find maximum." << endl;
-		int ddd;
-		cin >> ddd;
-	}
-
-	//double objective = get_objective(lp);//unused
-	get_variables(lp, varweights);
+	splx.solve();
+	if (splx.must_be_fixed() || !splx.has_solutions() || (splx.has_solution() && splx.is_unlimited())){
+		throw LinearProgrammingException(splx.must_be_fixed(), splx.has_solutions(), splx.is_unlimited());
+    }
+	coeffs = splx.get_solution();
 
 	/*cout << "raw output: " << endl;
 	for (int i = 0; i <invvarMap.size(); i++){
@@ -171,20 +117,14 @@ MaxMatching::getLabelMatching(vector<int> labels1, vector<int> labels2){
 	//create the output
 	map<int, int> retMap;
 	set<int> usedL1Labels, usedL2Labels;
-	for (int i = 1; i < invvarMap.size()+1; i++){ //we have to use weird indexing here due to lp_solve using 1-indexing like an idiot
-		if (fabs(varweights[i-1]-1.0) < 1e-6){
+	for (int i = 0; i < invvarMap.size(); i++){
+		if (fabs(coeffs(i)-1.0) < 1e-6){
 			//ensure no duplicate L1 labels
 			if(usedL1Labels.find(invvarMap[i].first) != usedL1Labels.end()){
-				cout << "Error: Tried to map a label in L1 to multiple labels in L2." << endl;
-				cout << "L1 label: " << invvarMap[i].first 
-						  << " L2 label1: " << retMap[invvarMap[i].first] 
-						  << " replacing with L2 label2: " << invvarMap[i].second << endl;
-				int ddd;
-				cin >> ddd;
+				throw InvalidMatchingException(invvarMap[i].first, retMap[invvarMap[i].first], invvarMap[i].second, true);
 			}
 			//ensure no duplicate L2 labels
 			if(usedL2Labels.find(invvarMap[i].second) != usedL2Labels.end()){
-				cout << "Error: Tried to map a label in L2 to multiple labels in L1." << endl;
 				int l1label1 = -1;
 				for (map<int, int>::iterator it = retMap.begin(); it != retMap.end(); it++){
 					if (it->second == invvarMap[i].second){
@@ -192,23 +132,14 @@ MaxMatching::getLabelMatching(vector<int> labels1, vector<int> labels2){
 						break;
 					}
 				}
-				cout << "L2 label: " << invvarMap[i].second
-						  << " L1 label1: " << l1label1
-						  << " replacing with L1 label2: " << invvarMap[i].first << endl;
-				int ddd;
-				cin >> ddd;
+				throw InvalidMatchingException(invvarMap[i].second, l1label1, invvarMap[i].first, false);
 			}
 			retMap[invvarMap[i].first] = invvarMap[i].second;
 			usedL1Labels.insert(invvarMap[i].first);
 			usedL2Labels.insert(invvarMap[i].second);
 		}
 	}
-
-	//clean up 
-	delete_lp(lp);
-	delete[] varnos;
-	delete[] varweights;
-
+	//output
 	return retMap;
 }
 

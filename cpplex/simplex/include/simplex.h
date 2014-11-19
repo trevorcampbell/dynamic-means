@@ -71,6 +71,7 @@ namespace optimization {
 
             // Print
             void print_solution() const;
+			Matrix get_solution() const;
             void log() const; 
             
             bool is_unlimited() const;

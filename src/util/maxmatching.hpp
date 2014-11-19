@@ -5,6 +5,9 @@
 #include <utility>
 #include <set>
 #include <iostream>
+#include <string>
+#include <cpplex/simplex.h>
+#include <cpplex/pilal.h>
 
 using namespace std;
 class MaxMatching{
@@ -15,7 +18,7 @@ class MaxMatching{
 		map<int, int> getConsistentLabelMatching(vector<int> labels1, vector<int> labels2);
 	private:
 		map<int, int> oldmatchings;
-		Simplex s;
+
 		class InvalidLabelsSizeException{
 			public:
 				InvalidLabelsSizeException(int s1, int s2){
@@ -25,6 +28,22 @@ class MaxMatching{
 				InvalidLabelsSizeException(int s1, int s2, int w){
 					std::cout << "The two label vectors/weight vector have an invalid size for max matching!" << std::endl;
 					std::cout << "size of labels1: " << s1 << " size of labels2: " << s2 << " size of weights: " w <<  std::endl;
+				}
+		};
+		class LinearProgrammingException{
+			public:
+				LinearProgrammingException(bool isValid, bool hasSoln, bool isUnlimited){
+					std::cout << "CPPLEX had a problem solving the linear program:" << std::endl;
+					std::cout << "The LP is invalid: " << !isValid << std::endl;
+					std::cout << "The LP is infeasible: " << !hasSoln << std::endl;
+					std::cout << "The LP is unbounded: " << isUnlimited << std::endl;
+				}
+		};
+		class InvalidMatchingException{
+			public:
+				InvalidMatchingException(int L1, int L21, int L22, bool L1DoubleMatch){
+					std::cout << "Invalid matching returned by CPPLEX" << std::endl;
+					std::cout << "Tried to match " << L1 << " in labels" << (L1DoubleMatch ? "1" : "2") << " to both " << L21 << " and " << L22 << " in labels" << (L1DoubleMatch ? "2" : "1") << std::endl;
 				}
 		};
 };
