@@ -8,13 +8,16 @@
 #include <iostream>
 
 using namespace std;
-
-map<int, int> getMaxMatching(vector<int> labels1, vector<int> labels2);
-map<int, int> getWeightedMaxMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
-map<int, int> getMaxMatchingConsistentWithOldMatching(vector<int> labels1, vector<int> labels2, map<int, int> oldmatchings);
-
-
-//map<int, int> getMinWeightLeftSidePerfectMatching(vector< pair<int, int> > nodePairs, vector<double> edgeWeights);
+class MaxMatching{
+	public:
+		MaxMatching();
+		map<int, int> getMaxMatching(vector<int> labels1, vector<int> labels2);
+		map<int, int> getWeightedMaxMatching(vector<int> labels1, vector<int> labels2);
+		map<int, int> getConsistentMaxMatching(vector<int> labels1, vector<int> labels2);
+	private:
+		map<int, int> oldmatchings;
+		Simplex s;
+};
 
 #include "maxmatching_impl.hpp"
 #define __MAXMATCHING_HPP

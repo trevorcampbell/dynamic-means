@@ -43,16 +43,54 @@ int main(int argc, char** argv){
 	}
 }*/
 
-//THIS FUNCTION FINDS THE BEST CORRESPONDANCE BETWEEN LABELS1 AND LABELS2
-//NOT *ALL* LABELS IN EITHER LABELS1 OR LABELS2 IS GUARANTEED TO BE USED
-//THE MAP WILL NOT CONTAIN A KEY FOR ANY UNUSED LABEL IN LABELS1
-//THE MAP WILL NOT MAP ANY KEY TO AN UNUSED LABEL IN LABELS2
+//this function finds the best correspondance between labels1 and labels2
+//not *all* labels in either labels1 or labels2 is guaranteed to be used
+//the map will not contain a key for any unused label in labels1
+//the map will not map any key to an unused label in labels2
 
-//FURTHER, IF ANY LABEL IN LABELS1 OR LABELS2 IS < 0, THOSE ELEMENTS
-//ARE REMOVED FROM THE PROCEEDINGS AT THE START (IT IS ASSUMED THAT NEGATIVE LABELS
-//STAND FOR *UNKNOWN* / *UNLABELLED* DATA THAT IS "WRONG" BY DEFAULT)
+//further, if any label in labels1 or labels2 is < 0, those elements
+//are removed from the proceedings at the start (it is assumed that negative labels
+//stand for *unknown* / *unlabelled* data that is "wrong" by default)
+
+
+MaxMatching::MaxMatching() : Simplex("MaxMatching"){
+void add_variable(Variable* variable);
+            void add_constraint(Constraint const & constraint);
+            void set_objective_function(ObjectiveFunction const & objective_function);
+            
+            // Solving procedures
+            void solve();          
+
+            // Print
+            void print_solution() const;
+            void log() const; 
+            
+            bool is_unlimited() const;
+            bool has_solutions() const;
+            bool must_be_fixed() const;
+
+}
+
 map<int, int> 
-getMaxMatching(vector<int> labels1, vector<int> labels2){
+MaxMatching::getConsistentMaxMatching(vector<int> labels1, vector<int> labels2){
+
+			void add_variable(Variable* variable);
+            void add_constraint(Constraint const & constraint);
+            void set_objective_function(ObjectiveFunction const & objective_function);
+            
+            // Solving procedures
+            void solve();          
+
+            // Print
+            void print_solution() const;
+            void log() const; 
+            
+            bool is_unlimited() const;
+            bool has_solutions() const;
+            bool must_be_fixed() const;
+
+
+
 	if (labels1.size() != labels2.size() || labels1.size() == 0){
 		cout << "Error: labels have invalid size for getMaxMatching." << endl;
 		cout << "Labels1 size: " << labels1.size() << " Labels2 size: " << labels2.size() << endl;
