@@ -22,5 +22,7 @@ class SparseVectorApproximation{
 		void removeElem(VXd& v, int k);
 };
 
+#include "sparsevectorapprox_impl.hpp"
+
 #define __SPARSEVECTORAPPROX_HPP
 #endif /* __SPARSEAPPROX_HPP */
