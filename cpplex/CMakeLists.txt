@@ -1,16 +1,8 @@
 project(DMeans)
 cmake_minimum_required(VERSION 2.6)
 
-set(CMAKE_COLOR_MAKEFILE ON)
-#set(CMAKE_BUILD_TYPE Debug) 
-set(CMAKE_BUILD_TYPE Release)
-
 message("Running cmake for cpplex subdirectory")
 message("cpplex: Copyright (c) 2010-2013 Tommaso Urli")
-
-# add flags depending on build type
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -std=c++0x -Wall -fopenmp")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++0x -Wall -fopenmp")
 
 file(GLOB SPLX_SRC 
 	"simplex/src/*.cc")
