@@ -1,6 +1,9 @@
 project(DMeans)
 cmake_minimum_required(VERSION 2.6)
 
+#first compile cpplex for the examples
+add_subdirectory(cpplex)
+
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_BUILD_TYPE Debug) # Release; debug; ...
 #set(CMAKE_BUILD_TYPE Release) # Release; debug; ...
@@ -23,6 +26,7 @@ include_directories(
   /usr/include
   /usr/local/include/
   /usr/local/include/eigen3
+  example/cpplex/include
   )
 link_directories(
   /usr/lib
@@ -30,7 +34,7 @@ link_directories(
   )
 
 
-add_executable(DMeans example/maindm.cpp)
+add_executable(DMeansExample example/maindm.cpp)
 
 target_link_libraries(testVb 
   ampsBnps 
@@ -59,48 +63,3 @@ install(DIRECTORY include/ DESTINATION include/
   FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY cuda/ DESTINATION include/
   FILES_MATCHING PATTERN "*.h")
-
-
-#solution "Examples"
-#	configurations{"debug", "release"}
-#	project "DynMeansExample"
-#		kind "ConsoleApp"
-#		language "C++"
-#		location "build"
-#		files {"maindm.cpp"}
-#		links {"lpsolve55"}
-#		includedirs{"/usr/local/include/eigen3", "/usr/local/include/dynmeans"}
-#		configuration "debug"
-#			flags{"Symbols", "ExtraWarnings"}
-#			buildoptions{"-std=c++0x"}
-#		configuration "release"
-#			flags{"Optimize"}
-#			buildoptions{"-std=c++0x"}
-#	project "SpecDynMeansExample"
-#		kind "ConsoleApp"
-#		language "C++"
-#		location "build"
-#		files {"mainsdm.cpp"}
-#		links {"lpsolve55", "gurobi_c++", "gurobi56"}
-#		includedirs{"/usr/local/include/eigen3", "/opt/gurobi563/linux64/include", "/usr/local/include/dynmeans"}
-#		libdirs{"/opt/gurobi563/linux64/lib"}
-#		configuration "debug"
-#			flags{"Symbols", "ExtraWarnings"}
-#			buildoptions{"-std=c++0x"}
-#		configuration "release"
-#			flags{"Optimize"}
-#			buildoptions{"-std=c++0x"}
-#	project "KernDynMeansExample"
-#		kind "ConsoleApp"
-#		language "C++"
-#		location "build"
-#		files {"mainkdm.cpp"}
-#		links {"lpsolve55", "gurobi_c++", "gurobi56"}
-#		includedirs{"/usr/local/include/eigen3", "/opt/gurobi563/linux64/include", "/usr/local/include/dynmeans"}
-#		libdirs{"/opt/gurobi563/linux64/lib"}
-#		configuration "debug"
-#			flags{"Symbols", "ExtraWarnings"}
-#			buildoptions{"-std=c++0x"}
-#		configuration "release"
-#			flags{"Optimize"}
-#			buildoptions{"-std=c++0x"}

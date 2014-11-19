@@ -1,7 +1,0 @@
-mkdir -p /usr/local/include/dmeans
-cp -r src/* /usr/local/include/dmeans
-
-
-
-
-
