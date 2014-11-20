@@ -21,8 +21,8 @@ template <class D, class P>
 Results IterativeDMeans<D, P>::cluster(std::vector< Data<D> >& obs, uint64_t nRestarts, bool checkCosts){
 	this->timer.start();
 	Results bestResults;
-	bestResults.objective = std::numeric_limits<double>::infinity();
-	for (uint64_t restart = 0; restart < nRestarts; restarts++){
+	bestResults.obj = std::numeric_limits<double>::infinity();
+	for (uint64_t restart = 0; restart < nRestarts; restart++){
 		//initial round of labelling data without deassigning it
 		this->initialLabelling(obs);
 		//label/parameter update iteration
@@ -35,7 +35,7 @@ Results IterativeDMeans<D, P>::cluster(std::vector< Data<D> >& obs, uint64_t nRe
 		} else {
 			double obj = this->computeCost();
 			while(labellingChanged){
-				prevobj = obj;
+				double prevobj = obj;
 				this->parameterUpdate();
 				obj = this->computeCost();
 				if (obj > prevobj){
@@ -50,13 +50,13 @@ Results IterativeDMeans<D, P>::cluster(std::vector< Data<D> >& obs, uint64_t nRe
 			}
 		}
 		double obj = this->computeCost();
-		if (obj < bestResults.objective){
+		if (obj < bestResults.obj){
 			//the objective is the best so far, save the results
 			bestResults = this->computeResults();
-			bestResults.objective = obj;
+			bestResults.obj = obj;
 		}
 	}
-	bestResults.timeTaken = this->timer.elapsed_ms();
+	bestResults.tTaken = this->timer.elapsed_ms();
 	return bestResults;
 }
 
@@ -97,7 +97,7 @@ void IterativeDMeans<D, P>::initialLabelling(std::vector< Data<D> >& obs){
 
 template <class D, class P>
 bool IterativeDMeans<D, P>::labelUpdate(){
-	bool labellingchanged = false;
+	bool labellingChanged = false;
 	//get the assignments across all clusters
 	std::vector<uint64_t> ids, lbls;
 	for (uint64_t k = 0; k < this->clusters.size(); k++){
@@ -105,7 +105,7 @@ bool IterativeDMeans<D, P>::labelUpdate(){
 		ids.insert(ids.end(), clusids.begin(), clusids.end());
 		lbls.insert(lbls.end(), clusids.size(), k);
 	}
-	std::vector<uint64_t> shuffs(ids.size())
+	std::vector<uint64_t> shuffs(ids.size());
 	std::iota(shuffs.begin(), shuffs.end(), 0);
 	std::random_shuffle(shuffs.begin(), shuffs.end());
 	//do reassignment

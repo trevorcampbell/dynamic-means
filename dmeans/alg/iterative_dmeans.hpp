@@ -12,7 +12,7 @@ class IterativeDMeans{
 	public:
 		IterativeDMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);
 		//initialize a new step and cluster
-		Results cluster(std::vector< Data<D> >& obs, uint64_t nRestarts);
+		Results cluster(std::vector< Data<D> >& obs, uint64_t nRestarts, bool checkCosts);
 		//reset DDP chain
 		void reset();
 	private:
@@ -28,11 +28,11 @@ class IterativeDMeans{
 		void parameterUpdate();
 		class MonotonicityViolationException{
 			public:
-				MonotonicityViolationException(double prevobj, double obj, string funcname){
+				MonotonicityViolationException(double prevobj, double obj, const char* funcname){
 					std::cout << "Monotonicity violated! Prevobj = " << prevobj << " obj = " << obj << " after calling " << funcname << std::endl;
 				}
 		};
-}
+};
 
 #include "iterative_dmeans_impl.hpp"
 
