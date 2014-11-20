@@ -13,6 +13,7 @@
 
 #include <dmeans/matching>
 #include <dmeans/iterative>
+#include <dmeans/models>
 
 using namespace std;
 
@@ -71,6 +72,7 @@ int main(int argc, char** argv){
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
+	IterativeDMeans(lambda, Q, tau, true);
 	DynMeans<V2d> dynm(lambda, Q, tau);
 
 	//run the experiment
