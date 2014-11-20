@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <cpplex/simplex.h>
+#include <cpplex/variable.h>
 #include <cpplex/pilal.h>
 
 using namespace std;
@@ -29,7 +30,7 @@ class MaxMatching{
 			public:
 				InvalidLabelsSizeException(int s1, int s2, int w){
 					std::cout << "The two label vectors/weight vector have an invalid size for max matching!" << std::endl;
-					std::cout << "size of labels1: " << s1 << " size of labels2: " << s2 << " size of weights: " w <<  std::endl;
+					std::cout << "size of labels1: " << s1 << " size of labels2: " << s2 << " size of weights: " << w <<  std::endl;
 				}
 		};
 		class LinearProgrammingException{

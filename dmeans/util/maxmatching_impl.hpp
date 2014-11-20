@@ -10,7 +10,7 @@ double MaxMatching::getObjective(){
 
 void MaxMatching::pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights){
 	//prune data with negative labels
-	for (int i = 0; i < labels1.size(); i++){
+	for (uint64_t i = 0; i < labels1.size(); i++){
 		if(labels1[i] < 0 || labels2[i] < 0){
 			labels1.erase(labels1.begin()+i);
 			labels2.erase(labels2.begin()+i);
@@ -24,7 +24,7 @@ void MaxMatching::pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>&
 	//prune labels already in the old matching
 	for (map<int, int>::iterator it = oldmatchings.begin(); it != oldmatchings.end(); ++it){
 		int l1 = it->first, l2 = it->second;
-		for (int i = 0; i < labels1.size(); i++){
+		for (uint64_t i = 0; i < labels1.size(); i++){
 			if(labels1[i] == l1 || labels2[i] == l2){
 				labels1.erase(labels1.begin()+i);
 				labels2.erase(labels2.begin()+i);
@@ -37,7 +37,7 @@ void MaxMatching::pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>&
 
 set<int> MaxMatching::getUniqueLabels(const vector<int>& labels){
 	set<int> lset;
-	for (int i = 0; i < labels.size(); i++){
+	for (uint64_t i = 0; i < labels.size(); i++){
 		lset.insert(labels[i]);
 	}
 	return lset;
@@ -55,7 +55,7 @@ void MaxMatching::getMaps(const vector<int>& labels1, const set<int>& l1set, con
 			//increment the weight of this variable (graph edge) based on the number
 			//of matching observations between the two
 			double weight = 0;
-			for (int i = 0; i < labels1.size(); i++){
+			for (uint64_t i = 0; i < labels1.size(); i++){
 				if (labels1[i] == *it1 && labels2[i] == *it2){
 					weight+= weights[i];
 				}
@@ -75,15 +75,15 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 	if (weights.size() == 0){
 		weights.resize(labels1.size(), 1);
 	}
-	this->pruneInvalidLabels(labels1, labels2, weights);
+	this->pruneInvalidLabelPairs(labels1, labels2, weights);
 
 	/*cout << "Labels 1:"<< endl;
-	for (int i =0 ; i < labels1.size(); i++){
+	for (uint64_t i =0 ; i < labels1.size(); i++){
 		cout << labels1[i] << " ";
 	}
 	cout << endl;
 	cout << "Labels 2:"<< endl;
-	for (int i =0 ; i < labels2.size(); i++){
+	for (uint64_t i =0 ; i < labels2.size(); i++){
 		cout << labels2[i] << " ";
 	}
 	cout << endl;*/
@@ -112,7 +112,7 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 	//construct the linear program
 	optimization::Simplex splx("MaxMatching");
 	//add variables
-	for(int i = 0; i < varMap.size(); i++){
+	for(uint64_t i = 0; i < varMap.size(); i++){
 		splx.add_variable(new optimization::Variable(&splx, std::to_string(i).c_str()));
 	}
 
@@ -149,13 +149,13 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 	this->objective = splx.get_objective();
 
 	/*cout << "raw output: " << endl;
-	for (int i = 0; i <invvarMap.size(); i++){
+	for (uint64_t i = 0; i <invvarMap.size(); i++){
 		cout << varweights[i] << endl;
 	}*/
 	//create the output
 	map<int, int> retMap;
 	set<int> usedL1Labels, usedL2Labels;
-	for (int i = 0; i < invvarMap.size(); i++){
+	for (uint64_t i = 0; i < invvarMap.size(); i++){
 		if (fabs(coeffs(i)-1.0) < 1e-6){
 			//ensure no duplicate L1 labels
 			if(usedL1Labels.find(invvarMap[i].first) != usedL1Labels.end()){
@@ -191,7 +191,7 @@ map<int, int> MaxMatching::getMaxConsistentMatching(vector<int> labels1, vector<
 	}
 	this->pruneInconsistentLabelPairs(labels1, labels2, weights);
 
-	map<int, int> retMap = this->getLabelMatching(labels1, labels2, weights);
+	map<int, int> retMap = this->getMaxMatching(labels1, labels2, weights);
 
 	//update the oldMatchings
 	for (map<int, int>::iterator it = retMap.begin(); it != retMap.end(); ++it){
