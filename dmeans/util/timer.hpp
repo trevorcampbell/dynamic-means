@@ -3,10 +3,10 @@
 
 class Timer{
 	typedef std::chrono::high_resolution_clock hrc;
-	typedef std::chrono::milliseconds msecs;
+	typedef std::chrono::milliseconds ms;
 	hrc::time_point t0;
 	double now_ms(){
-		return std::chrono::duration_cast<ms>(std::chrono::hrc::now().time_since_epoch()).count();
+		return std::chrono::duration_cast<ms>(hrc::now().time_since_epoch()).count();
 	}
 	void start(){
 		t0 = hrc::now();
