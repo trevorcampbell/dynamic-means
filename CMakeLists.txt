@@ -5,14 +5,14 @@ project(dmeans)
 set(CMAKE_COLOR_MAKEFILE ON)
 
 #set build type
-set(CMAKE_BUILD_TYPE Debug) 
-#set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Debug) 
+set(CMAKE_BUILD_TYPE Release)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # add flags depending on build type
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -std=c++0x -Wall -fopenmp")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++0x -Wall -fopenmp")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -std=c++0x -Wall -fopenmp")
 
 #first compile cpplex for the examples
 add_subdirectory(cpplex)
@@ -21,10 +21,13 @@ add_subdirectory(cpplex)
 file(GLOB_RECURSE HDRS "src/" 
 	"*.hpp")
 
+message("${HDRS}")
+
 add_custom_command(headers
 	DEPENDS ${HDRS}
-	COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME}
-	COMMAND cp -r src/* ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME}
+	COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME} #create the directory if required
+	COMMAND rm -rf ${CMAKE_INSTALL_PREFIX}/* #clean out the directory
+	COMMAND cp -r src/* ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME} #copy the headers into the directory
 	COMMENT "Installing header library to ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME}"
 	)
 
