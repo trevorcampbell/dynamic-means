@@ -19,7 +19,7 @@ class IterativeDMeans{
 		double lambda, Q, tau;
 		bool verbose;
 
-		std::vector< Cluster<P, D> > clusters;
+		std::vector< Cluster<D, P> > clusters;
 		Timer timer;
 
 		Results computeResults();

@@ -5,16 +5,16 @@
 #include<iterator>
 #include "data.hpp"
 
-template <class P, class D>
+template <class D, class P>
 class Cluster {
 	public:
 		const uint64_t id;
 
-		Cluster();
+		Cluster(double lambda, double Q, double tau);
 		void updatePrm();
 		double cost() const;
 		double gamma() const;
-		void assignData(Data& d);
+		void assignData(Data<D>& d);
 		std::vector<uint64_t> getAssignedIds() const;
 		Data<D> deassignData(uint64_t did);
 		std::vector<uint64_t> finalize();
@@ -25,7 +25,7 @@ class Cluster {
 	private:
 		static uint64_t nextId;
 		uint64_t age;
-		double w;
+		double w, lambda, Q, tau;
 		P prm;
 		std::map<uint64_t, Data<D> > clusData;
 
@@ -42,7 +42,9 @@ class Cluster {
 				}
 		};
 };
-uint64_t template<class P> Cluster<P>::nextId = 0;
+
+template<class D, class P> 
+uint64_t Cluster<D, P>::nextId = 0;
 
 #include "cluster_impl.hpp"
 #define __CLUSTER_HPP

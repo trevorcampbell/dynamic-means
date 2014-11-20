@@ -87,7 +87,7 @@ void IterativeDMeans<D, P>::initialLabelling(std::vector< Data<D> >& obs){
 			}
 		}
 		if (minCost > this->lambda){
-			this->clusters.push_back(Cluster());
+			this->clusters.push_back(Cluster<D, P>(this->lambda, this->Q, this->tau));
 			this->clusters.back().assignData(obs[i]);
 		} else {
 			this->clusters[minInd].assignData(obs[i]);
@@ -126,7 +126,7 @@ bool IterativeDMeans<D, P>::labelUpdate(){
 			}
 		}
 		if (minCost > this->lambda){
-			this->clusters.push_back(Cluster());
+			this->clusters.push_back(Cluster<D, P>(this->lambda, this->Q, this->tau));
 			this->clusters.back().assignData(obs);
 			this->clusters.back().updatePrm();
 			labellingChanged = true;
