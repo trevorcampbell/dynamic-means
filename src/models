@@ -1,5 +1,2 @@
-#ifndef ____MODELS_
 #include "model/vectorspace_model.hpp"
 #include "model/expgraph_model.hpp"
-#define ____MODELS_
-#endif

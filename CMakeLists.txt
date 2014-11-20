@@ -21,13 +21,10 @@ add_subdirectory(cpplex)
 file(GLOB_RECURSE HDRS "src/" 
 	"*.hpp")
 
-message("${HDRS}")
-
-add_custom_command(headers
-	DEPENDS ${HDRS}
+add_custom_target(headers
 	COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME} #create the directory if required
-	COMMAND rm -rf ${CMAKE_INSTALL_PREFIX}/* #clean out the directory
-	COMMAND cp -r src/* ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME} #copy the headers into the directory
+	COMMAND cp -r ${PROJECT_SOURCE_DIR}/src/* ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME} #copy the headers into the directory
+	DEPENDS ${HDRS}
 	COMMENT "Installing header library to ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME}"
 	)
 
@@ -41,6 +38,7 @@ include_directories(
   /usr/include
   /usr/local/include/
   /usr/local/include/cpplex
+  /usr/local/include/dmeans
   )
 
 link_directories(

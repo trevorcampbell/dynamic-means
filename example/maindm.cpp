@@ -1,4 +1,3 @@
-//#include <ros/ros.h>
 #include <fstream>
 #include <iostream>
 #include <map>

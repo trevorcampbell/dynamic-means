@@ -1,4 +1,1 @@
-#ifndef ____ITERATIVE_
 #include "alg/iterative_dmeans.hpp"
-#define ____ITERATIVE_
-#endif

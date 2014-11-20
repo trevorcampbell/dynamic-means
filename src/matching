@@ -1,4 +1,1 @@
-#ifndef ____MAXMATCHING_
 #include "util/maxmatching.hpp"
-#define ____MAXMATCHING_
-#endif
