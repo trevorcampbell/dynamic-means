@@ -142,7 +142,7 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 
 	//solve
 	splx.solve();
-	if (splx.must_be_fixed() || !splx.has_solutions() || (splx.has_solution() && splx.is_unlimited())){
+	if (splx.must_be_fixed() || !splx.has_solutions() || (splx.has_solutions() && splx.is_unlimited())){
 		throw LinearProgrammingException(splx.must_be_fixed(), splx.has_solutions(), splx.is_unlimited());
     }
 	coeffs = splx.get_solution();
