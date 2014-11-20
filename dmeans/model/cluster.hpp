@@ -4,7 +4,7 @@
 #include<iostream>
 #include<iterator>
 #include "data.hpp"
-
+namespace dmeans{
 template <class D, class P>
 class Cluster {
 	public:
@@ -47,5 +47,6 @@ template<class D, class P>
 uint64_t Cluster<D, P>::nextId = 0;
 
 #include "cluster_impl.hpp"
+}
 #define __CLUSTER_HPP
 #endif /* __CLUSTER_HPP */

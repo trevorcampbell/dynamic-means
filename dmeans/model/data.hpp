@@ -1,7 +1,7 @@
 #ifndef __DATA_HPP
 #include <set>
 #include <iostream>
-
+namespace dmeans{
 template <class D>
 class Data{
 	public:
@@ -31,5 +31,6 @@ class Data{
 		};
 };
 template<class D> std::set<uint64_t> Data<D>::usedIds;
+}
 #define __DATA_HPP
 #endif /* __DATA_HPP */

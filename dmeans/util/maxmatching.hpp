@@ -11,6 +11,8 @@
 #include <cpplex/pilal.h>
 
 using namespace std;
+
+namespace dmeans{
 class MaxMatching{
 	public:
 		void resetOldMatchings();
@@ -51,6 +53,12 @@ class MaxMatching{
 		};
 };
 
+
+#include "maxmatching_impl.hpp"
+}
+
+#define __MAXMATCHING_HPP
+#endif /* __MAXMATCHING_HPP */
 
 
 /*
@@ -107,6 +115,4 @@ int main(int argc, char** argv){
 
 
 
-#include "maxmatching_impl.hpp"
-#define __MAXMATCHING_HPP
-#endif /* __MAXMATCHING_HPP */
+

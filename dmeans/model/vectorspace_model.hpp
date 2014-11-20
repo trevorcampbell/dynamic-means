@@ -1,6 +1,6 @@
 #ifndef __VECTORSPACE_HPP
 #include <Eigen/Dense>
-
+namespace dmeans{
 class VectorData{
 	public:
 		Eigen::VectorXd v;
@@ -44,6 +44,6 @@ class VectorParameter{
 			return (isActive ? (vec.v-this->v).squaredNorm() : (vec.v-this->vOld).squaredNorm());
 		}
 };
-
+}
 #define __VECTORSPACE_HPP
 #endif /* __VECTORSPACE_HPP */

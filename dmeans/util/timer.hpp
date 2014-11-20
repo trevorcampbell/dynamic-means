@@ -1,6 +1,6 @@
 #ifndef __TIMER_HPP
 #include<chrono>
-
+namespace dmeans{
 class Timer{
 	typedef std::chrono::high_resolution_clock hrc;
 	typedef std::chrono::milliseconds ms;
@@ -15,5 +15,6 @@ class Timer{
 		return std::chrono::duration_cast<ms>(hrc::now()-t0).count();
 	}
 };
+}
 #define __TIMER_HPP
 #endif /* __TIMER_HPP */

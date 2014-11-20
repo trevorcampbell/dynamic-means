@@ -1,5 +1,5 @@
 #ifndef __RESULTS_HPP
-
+namespace dmeans{
 class Results{
 	public:
 		std::map<uint64_t, uint64_t> lbls;
@@ -7,5 +7,6 @@ class Results{
 		double tTaken;
 		double obj;
 };
+}
 #define __RESULTS_HPP
 #endif /* __RESULTS_HPP */

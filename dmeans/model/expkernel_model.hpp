@@ -1,6 +1,8 @@
 #ifndef __EXPKERNEL_HPP
 #include <Eigen/Dense>
 
+namespace dmeans{
+
 class ExpKernelData{
 	public:
 		Eigen::VectorXd v;
@@ -44,7 +46,7 @@ class ExpKernelParameter{
 			return (isActive ? (vec.v-this->v).squaredNorm() : (vec.v-this->vOld).squaredNorm());
 		}
 };
-
+}
 
 #define __EXPKERNEL_HPP
 #endif /* __EXPKERNEL_HPP */

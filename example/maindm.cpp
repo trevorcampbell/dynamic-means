@@ -71,13 +71,13 @@ int main(int argc, char** argv){
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
-	IterativeDMeans<VectorData, VectorParameter> dynm(lambda, Q, tau, true);
+	dmeans::IterativeDMeans<dmeans::VectorData, dmeans::VectorParameter> dynm(lambda, Q, tau, true);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
 	map<int, int> matchings;//stores the saved matchings from previous timesteps
 							//enables proper label tracking (see note at line 27)
-	MaxMatching maxm;
+	dmeans::MaxMatching maxm;
 	for (int i = 0; i < nSteps; i++){
 		//****************************
 		//birth/death/motion processes
@@ -99,7 +99,7 @@ int main(int argc, char** argv){
 		vector<int> learnedLabels;
 		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
-		dynm.cluster(clusterData, nRestarts, learnedLabels, learnedParams, obj, tTaken);
+		dmeans::Results res = dynm.cluster(clusterData, nRestarts, true);
 
 		//***************************************************
 		//calculate the accuracy via linear programming

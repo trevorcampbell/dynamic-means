@@ -7,6 +7,7 @@
 #include "../model/data.hpp"
 #include "../model/cluster.hpp"
 
+namespace dmeans{
 template<class D, class P>
 class IterativeDMeans{
 	public:
@@ -36,5 +37,6 @@ class IterativeDMeans{
 
 #include "iterative_dmeans_impl.hpp"
 
+}
 #define __ITERATIVE_DYNMEANS_HPP
 #endif /* __ITERATIVE_DYNMEANS_HPP */
