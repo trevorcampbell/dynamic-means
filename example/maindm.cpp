@@ -11,8 +11,8 @@
 #include <cmath>
 #include <random>
 
-#include <dmeans/matching>
 #include <dmeans/iterative>
+#include <dmeans/matching>
 #include <dmeans/models>
 
 using namespace std;
@@ -72,13 +72,13 @@ int main(int argc, char** argv){
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
-	IterativeDMeans(lambda, Q, tau, true);
-	DynMeans<V2d> dynm(lambda, Q, tau);
+	IterativeDMeans<VectorData, VectorParameter> dynm(lambda, Q, tau, true);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
 	map<int, int> matchings;//stores the saved matchings from previous timesteps
 							//enables proper label tracking (see note at line 27)
+	MaxMatching maxm;
 	for (int i = 0; i < nSteps; i++){
 		//****************************
 		//birth/death/motion processes
@@ -106,8 +106,9 @@ int main(int argc, char** argv){
 		//calculate the accuracy via linear programming
 		//including proper cluster label tracking (see above)
 		//***************************************************
-		matchings = getMaxMatchingConsistentWithOldMatching(learnedLabels, trueLabels, matchings);
-		double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
+		matchings = maxm.getMaxConsistentMatching(learnedLabels, trueLabels, std::vector<double>());
+		double acc = 100.0*maxm.getObjective()/ (double)learnedLabels.size();
+		//double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
 		cout << "Step " << i << ": Accuracy = " << acc <<  "\%" << endl;
 		cumulativeAccuracy += acc;
 	}
@@ -118,23 +119,23 @@ int main(int argc, char** argv){
 }
 
 
-//this function takes two label sets and a matching and outputs 
-//the accuracy of the labelling (assuming labels1 = learned, labels2 = true)
-double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> matchings){
-	if (labels1.size() != labels2.size()){
-		cout << "Error: computeAccuracy requires labels1/labels2 to have the same size" << endl;
-		return -1;
-	}
-
-	double acc = 0;
-	for (int i = 0; i < labels1.size(); i++){
-		if (matchings[labels1[i]] == labels2[i]){
-			acc += 1.0;
-		}
-	}
-	//compute the accuracy
-	return 100.0*acc/(double)labels1.size();
-}
+////this function takes two label sets and a matching and outputs 
+////the accuracy of the labelling (assuming labels1 = learned, labels2 = true)
+//double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> matchings){
+//	if (labels1.size() != labels2.size()){
+//		cout << "Error: computeAccuracy requires labels1/labels2 to have the same size" << endl;
+//		return -1;
+//	}
+//
+//	double acc = 0;
+//	for (int i = 0; i < labels1.size(); i++){
+//		if (matchings[labels1[i]] == labels2[i]){
+//			acc += 1.0;
+//		}
+//	}
+//	//compute the accuracy
+//	return 100.0*acc/(double)labels1.size();
+//}
 
 
 //this function takes a set of cluster centers and runs them through a birth/death/motion model

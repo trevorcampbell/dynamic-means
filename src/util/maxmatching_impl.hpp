@@ -1,11 +1,14 @@
 #ifndef __MAXMATCHING_IMPL_HPP
 
 void MaxMatching::resetOldMatchings(){
-	this->oldmatchings.clear();
+	oldmatchings.clear();
 }
 
+double MaxMatching::getObjective(){
+	return objective;
+}
 
-void pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights){
+void MaxMatching::pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights){
 	//prune data with negative labels
 	for (int i = 0; i < labels1.size(); i++){
 		if(labels1[i] < 0 || labels2[i] < 0){
@@ -17,7 +20,7 @@ void pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<d
 	}
 }
 
-void pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights){
+void MaxMatching::pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights){
 	//prune labels already in the old matching
 	for (map<int, int>::iterator it = oldmatchings.begin(); it != oldmatchings.end(); ++it){
 		int l1 = it->first, l2 = it->second;
@@ -32,7 +35,7 @@ void pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>& labels2, vec
 	}
 }
 
-set<int> getUniqueLabels(const vector<int>& labels){
+set<int> MaxMatching::getUniqueLabels(const vector<int>& labels){
 	set<int> lset;
 	for (int i = 0; i < labels.size(); i++){
 		lset.insert(labels[i]);
@@ -143,6 +146,7 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 		throw LinearProgrammingException(splx.must_be_fixed(), splx.has_solutions(), splx.is_unlimited());
     }
 	coeffs = splx.get_solution();
+	this->objective = splx.get_objective();
 
 	/*cout << "raw output: " << endl;
 	for (int i = 0; i <invvarMap.size(); i++){
@@ -178,7 +182,7 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 }
 
 
-map<int, int> getMaxConsistentMatching(vector<int> labels1, vector<int> labels2, vector<double> weights){
+map<int, int> MaxMatching::getMaxConsistentMatching(vector<int> labels1, vector<int> labels2, vector<double> weights){
 	if (labels1.size() != labels2.size() || labels1.size() == 0 || (weights.size() > 0 && weights.size() != labels1.size())){
 		throw InvalidLabelsSizeException(labels1.size(), labels2.size(), weights.size());
 	}

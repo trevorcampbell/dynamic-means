@@ -12,12 +12,13 @@
 using namespace std;
 class MaxMatching{
 	public:
-		MaxMatching();
 		void resetOldMatchings();
+		double getObjective();
 		map<int, int> getMaxMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
 		map<int, int> getMaxConsistentMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
 	private:
 		map<int, int> oldmatchings;
+		double objective;
 		void pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights);
 		void pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights);
 		set<int> getUniqueLabels(const vector<int>& labels);
