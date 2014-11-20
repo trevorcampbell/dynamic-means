@@ -22,10 +22,10 @@ file(GLOB_RECURSE HDRS "src/"
 	"*.hpp")
 
 add_custom_target(headers
-	COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME} #create the directory if required
-	COMMAND cp -r ${PROJECT_SOURCE_DIR}/src/* ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME} #copy the headers into the directory
+	COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/include/${CMAKE_PROJECT_NAME} #create the directory if required
+	COMMAND cp -r ${PROJECT_SOURCE_DIR}/src/* ${CMAKE_INSTALL_PREFIX}/include/${CMAKE_PROJECT_NAME} #copy the headers into the directory
 	DEPENDS ${HDRS}
-	COMMENT "Installing header library to ${CMAKE_INSTALL_PREFIX}/${CMAKE_PROJECT_NAME}"
+	COMMENT "Installing header library to ${CMAKE_INSTALL_PREFIX}/include/${CMAKE_PROJECT_NAME}"
 	)
 
 
