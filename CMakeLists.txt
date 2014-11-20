@@ -18,16 +18,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -std=c++0x -Wall -fopenmp")
 add_subdirectory(cpplex)
 
 #install the header library
-file(GLOB_RECURSE HDRS "src/" 
+file(GLOB_RECURSE HDRS "dmeans/" 
 	"*.hpp")
-
-add_custom_target(headers
-	COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/include/${CMAKE_PROJECT_NAME} #create the directory if required
-	COMMAND cp -r ${PROJECT_SOURCE_DIR}/src/* ${CMAKE_INSTALL_PREFIX}/include/${CMAKE_PROJECT_NAME} #copy the headers into the directory
-	DEPENDS ${HDRS}
-	COMMENT "Installing header library to ${CMAKE_INSTALL_PREFIX}/include/${CMAKE_PROJECT_NAME}"
-	)
-
 
 #find eigen using a module in cmake/
 find_package (Eigen3 REQUIRED)
@@ -35,6 +27,7 @@ message(${EIGEN3_INCLUDE_DIR})
 
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
+  ${PROJECT_SOURCE_DIR}
   /usr/include
   /usr/local/include/
   /usr/local/include/cpplex
@@ -55,4 +48,6 @@ target_link_libraries(dmeans_example
 	cpplex-simplex
   )
 
+install(FILES ${HDRS}
+	DESTINATION include/dmeans)
 
