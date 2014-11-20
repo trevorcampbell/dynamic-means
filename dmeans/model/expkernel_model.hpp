@@ -37,10 +37,11 @@ class ExpKernelParameter{
 				wt += 1.0;
 			}
 			vOld = tmpv / wt;
+			return std::vector<uint64_t>();
 		}
 
 		double distTo(const VectorData& vec, bool isActive){
-			return (isActive ? (vec-this->v).squaredNorm : (vec-this->vOld).squaredNorm());
+			return (isActive ? (vec.v-this->v).squaredNorm() : (vec.v-this->vOld).squaredNorm());
 		}
 };
 
