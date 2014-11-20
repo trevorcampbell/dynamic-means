@@ -97,7 +97,6 @@ int main(int argc, char** argv){
 		//***************************
 		vector<V2d> learnedParams;
 		vector<int> learnedLabels;
-		double tTaken, obj;
 		cout << "Step " << i << ": Clustering..." << endl;
 		dmeans::Results res = dynm.cluster(clusterData, nRestarts, true);
 
@@ -146,7 +145,7 @@ void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveC
 	normal_distribution<double> transitionDistRadial(0, motionStdDev);
 
 
-	for (int j = 0; j < clusterCenters.size(); j++){
+	for (uint64_t j = 0; j < clusterCenters.size(); j++){
 		//for each cluster center, decide whether it dies
 		if (aliveClusters[j] && uniformDist01(rng) < deathProbability){
 			cout << "Cluster " << j << " died." << endl;
@@ -180,7 +179,7 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 	uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
 	normal_distribution<double> likelihoodDistRadial(0, clusterStdDev);
 	//loop through alive centers, generate nDataPerClusterPerStep datapoints for each
-	for (int j = 0; j < clusterCenters.size(); j++){
+	for (uint64_t j = 0; j < clusterCenters.size(); j++){
 		if (aliveClusters[j]){
 			for (int k = 0; k < nDataPerClusterPerStep; k++){
 				V2d newData = clusterCenters[j];
