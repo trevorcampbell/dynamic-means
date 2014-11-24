@@ -18,9 +18,9 @@ void IterativeDMeans<D, P>::reset(){
 }
 
 template <class D, class P>
-Results IterativeDMeans<D, P>::cluster(std::vector< Data<D> >& obs, uint64_t nRestarts, bool checkCosts){
+Results<P> IterativeDMeans<D, P>::cluster(std::vector< Data<D> >& obs, uint64_t nRestarts, bool checkCosts){
 	this->timer.start();
-	Results bestResults;
+	Results<P> bestResults;
 	bestResults.obj = std::numeric_limits<double>::infinity();
 	for (uint64_t restart = 0; restart < nRestarts; restart++){
 		//initial round of labelling data without deassigning it
@@ -61,16 +61,25 @@ Results IterativeDMeans<D, P>::cluster(std::vector< Data<D> >& obs, uint64_t nRe
 }
 
 template <class D, class P>
-Results IterativeDMeans<D, P>::computeResults(){
-	Results r;
-	for(int k = 0; k < this->clusters.size(); k++){
+Results<P> IterativeDMeans<D, P>::computeResults(){
+	Results<P> r;
+	for(uint64_t k = 0; k < this->clusters.size(); k++){
 		r.prms[this->clusters[k].id] = this->clusters[k].getPrm();
 		std::vector<uint64_t> dids = this->clusters[k].getAssignedIds();
-		for(int i = 0; i < dids.size(); i++){
+		for(uint64_t i = 0; i < dids.size(); i++){
 			r.lbls[dids[i]] = this->clusters[k].id;
 		}
 	}
 	return r;
+}
+
+template <class D, class P>
+double IterativeDMeans<D, P>::computeCost(){
+	double cost = 0;
+	for(uint64_t k = 0; k < this->clusters.size(); k++){
+		cost += this->clusters[k].cost();
+	}
+	return cost;
 }
 
 template <class D, class P>
@@ -140,7 +149,7 @@ bool IterativeDMeans<D, P>::labelUpdate(){
 
 template <class D, class P>
 void IterativeDMeans<D, P>::parameterUpdate(){
-	for (int k = 0; k < this->clusters.size(); k++){
+	for (uint64_t k = 0; k < this->clusters.size(); k++){
 		this->clusters[k].updatePrm();
 	}
 }

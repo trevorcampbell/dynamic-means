@@ -13,7 +13,7 @@ class IterativeDMeans{
 	public:
 		IterativeDMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);
 		//initialize a new step and cluster
-		Results cluster(std::vector< Data<D> >& obs, uint64_t nRestarts, bool checkCosts);
+		Results<P> cluster(std::vector< Data<D> >& obs, uint64_t nRestarts, bool checkCosts);
 		//reset DDP chain
 		void reset();
 	private:
@@ -23,7 +23,8 @@ class IterativeDMeans{
 		std::vector< Cluster<D, P> > clusters;
 		Timer timer;
 
-		Results computeResults();
+		Results<P> computeResults();
+		double computeCost();
 		void initialLabelling(std::vector< Data<D> >& obs);
 		bool labelUpdate();
 		void parameterUpdate();
