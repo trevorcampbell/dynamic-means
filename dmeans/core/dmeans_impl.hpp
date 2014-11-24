@@ -60,7 +60,7 @@ Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, A& alg, uint64_t
 }
 
 template <class D, class P, class A>
-Results<P> DMeans<D, P, A>::computeResults(){
+Results<P> DMeans<D, P, A>::computeResults() const{
 	Results<P> r;
 	r.cost = 0;
 	for(auto it = this->clusters.begin(); it != this->clusters.end(); ++it){

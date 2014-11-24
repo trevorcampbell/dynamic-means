@@ -22,7 +22,7 @@ class DMeans{
 		std::map< uint64_t, Cluster<D, P> > clusters;
 		Timer timer;
 
-		Results<P> computeResults();
+		Results<P> computeResults() const;
 		void finalize();
 		void restart();
 };
