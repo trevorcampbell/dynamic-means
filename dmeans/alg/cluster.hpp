@@ -3,7 +3,6 @@
 #include<vector>
 #include<iostream>
 #include<iterator>
-#include "data.hpp"
 namespace dmeans{
 template <class D, class P>
 class Cluster {
