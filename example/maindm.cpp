@@ -10,9 +10,8 @@
 #include <cmath>
 #include <random>
 
-#include <dmeans/iterative>
+#include <dmeans/core>
 #include <dmeans/matching>
-#include <dmeans/models>
 
 using namespace std;
 
