@@ -1,4 +1,4 @@
-#ifndef __ITERATIVE_DMEANS_IMPL_HPP
+#ifndef __DMEANS_IMPL_HPP
 template <class D, class P, class A>
 DMeans<D, P, A>::DMeans(double lambda, double Q, double tau, bool verbose, int seed){
 	this->lambda = lambda;
@@ -37,9 +37,10 @@ Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestar
 	this->timer.start();
 	Results<P> bestResults;
 	bestResults.cost = std::numeric_limits<double>::infinity();
+	A<D, P> alg;
 	for (uint64_t k = 0; k < nRestarts; k++){
 		//cluster at this step
-		A::cluster(obs, this->clusters, this->lambda, this->Q, this->tau);
+		alg.cluster(obs, this->clusters, this->lambda, this->Q, this->tau, this->verbose);
 		//compute the resulting objective
 		Results<P> res = this->computeResults();
 		if (res.cost < bestResults.cost){
@@ -75,5 +76,5 @@ Results<P> DMeans<D, P, A>::computeResults() const{
 }
 
 
-#define __ITERATIVE_DMEANS_IMPL_HPP
-#endif /* __ITERATIVE_DMEANS_IMPL_HPP */
+#define __DMEANS_IMPL_HPP
+#endif 

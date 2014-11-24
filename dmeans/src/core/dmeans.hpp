@@ -1,4 +1,4 @@
-#ifndef __ITERATIVE_DYNMEANS_HPP
+#ifndef __DMEANS_HPP
 #include<vector>
 #include<iostream>
 #include<random>
@@ -30,5 +30,5 @@ class DMeans{
 #include "dmeans_impl.hpp"
 
 }
-#define __ITERATIVE_DYNMEANS_HPP
-#endif /* __ITERATIVE_DYNMEANS_HPP */
+#define __DMEANS_HPP
+#endif 

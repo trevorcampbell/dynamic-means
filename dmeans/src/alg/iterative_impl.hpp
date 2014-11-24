@@ -1,31 +1,18 @@
-#ifndef __ITERATIVE_DMEANS_IMPL_HPP
-template <class D, class P>
-IterativeDMeans<D, P>::IterativeDMeans(double lambda, double Q, double tau, bool verbose, int seed){
-	this->lambda = lambda;
-	this->Q = Q;
-	this->tau = tau;
-	this->verbose = verbose;
-	if (seed < 0){
-		std::srand(this->timer.now_ms());
-	} else {
-		std::srand(seed);
-	}
-}
-
-template <class D, class P>
-void IterativeDMeans<D, P>::reset(){
+#ifndef __ITERATIVE_IMPL_HPP
+template <class D, class P, bool M>
+void _Iterative<D, P, M>::reset(){
 	this->clusters.clear();
 }
 
-template <class D, class P>
-void IterativeDMeans<D, P>::finalize(){
+template <class D, class P, bool M>
+void _Iterative<D, P, M>::finalize(){
 	for(uint64_t k = 0; k < this->clusters.size(); k++){
 		this->clusters[k].finalize();
 	}
 }
 
-template <class D, class P>
-Results<P> IterativeDMeans<D, P>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts, bool checkCosts){
+template <class D, class P, bool M>
+void _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose){
 	this->timer.start();
 	std::vector<Cluster<D, P> > savedInitialClusters = this->clusters;
 	Results<P> bestResults;
@@ -73,21 +60,8 @@ Results<P> IterativeDMeans<D, P>::cluster(std::map<uint64_t, D>& obs, uint64_t n
 	return bestResults;
 }
 
-template <class D, class P>
-Results<P> IterativeDMeans<D, P>::computeResults(){
-	Results<P> r;
-	for(uint64_t k = 0; k < this->clusters.size(); k++){
-		r.prms[this->clusters[k].id] = this->clusters[k].getPrm();
-		std::vector<uint64_t> dids = this->clusters[k].getAssignedIds();
-		for(uint64_t i = 0; i < dids.size(); i++){
-			r.lbls[dids[i]] = this->clusters[k].id;
-		}
-	}
-	return r;
-}
-
-template <class D, class P>
-double IterativeDMeans<D, P>::computeCost(){
+template <class D, class P, bool M>
+double _Iterative<D, P, M>::computeCost(){
 	double cost = 0;
 	for(uint64_t k = 0; k < this->clusters.size(); k++){
 		cost += this->clusters[k].cost();
@@ -95,8 +69,8 @@ double IterativeDMeans<D, P>::computeCost(){
 	return cost;
 }
 
-template <class D, class P>
-void IterativeDMeans<D, P>::initialLabelling(std::map<uint64_t, D>& obs){
+template <class D, class P, bool M>
+void _Iterative<D, P, M>::initialLabelling(std::map<uint64_t, D>& obs){
 	std::vector<uint64_t> ids;
 	for (auto it = obs.begin(); it != obs.end(); ++it){
 		ids.push_back(it->first);
@@ -121,8 +95,8 @@ void IterativeDMeans<D, P>::initialLabelling(std::map<uint64_t, D>& obs){
 	}
 }
 
-template <class D, class P>
-bool IterativeDMeans<D, P>::labelUpdate(){
+template <class D, class P, bool M>
+bool _Iterative<D, P, M>::labelUpdate(){
 	bool labellingChanged = false;
 	//get the assignments across all clusters
 	std::vector<uint64_t> ids, lbls;
@@ -164,12 +138,12 @@ bool IterativeDMeans<D, P>::labelUpdate(){
 	return labellingChanged;
 }
 
-template <class D, class P>
-void IterativeDMeans<D, P>::parameterUpdate(){
+template <class D, class P, bool M>
+void _Iterative<D, P, M>::parameterUpdate(){
 	for (uint64_t k = 0; k < this->clusters.size(); k++){
 		this->clusters[k].updatePrm();
 	}
 }
 
-#define __ITERATIVE_DMEANS_IMPL_HPP
-#endif /* __ITERATIVE_DMEANS_IMPL_HPP */
+#define __ITERATIVE_IMPL_HPP
+#endif 

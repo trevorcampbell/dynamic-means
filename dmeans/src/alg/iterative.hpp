@@ -1,29 +1,15 @@
-#ifndef __ITERATIVE_DYNMEANS_HPP
+#ifndef __ITERATIVE_HPP
 #include<vector>
 #include<iostream>
 #include<random>
-#include "../util/timer.hpp"
-#include "../util/results.hpp"
-#include "cluster.hpp"
+#include "../core/cluster.hpp"
 
 namespace dmeans{
-template<class D, class P>
-class IterativeDMeans{
+template<class D, class P, bool M>
+class _Iterative{
 	public:
-		IterativeDMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);
-		//initialize a new step and cluster
-		Results<P> cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts, bool checkCosts);
-		//reset DDP chain
-		void reset();
+		void cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose);
 	private:
-		double lambda, Q, tau;
-		bool verbose;
-
-		std::vector< Cluster<D, P> > clusters;
-		Timer timer;
-
-		Results<P> computeResults();
-		void finalize();
 		double computeCost();
 		void initialLabelling(std::map<uint64_t, D>& obs);
 		bool labelUpdate();
@@ -36,8 +22,14 @@ class IterativeDMeans{
 		};
 };
 
+template<class D, class P>
+using _Iterative<D, P, true>  = IterativeWithMonotonicityChecks<D, P>;
+
+template<class D, class P>
+using _Iterative<D, P, false> = Iterative<D, P>;
+
 #include "iterative_dmeans_impl.hpp"
 
 }
-#define __ITERATIVE_DYNMEANS_HPP
-#endif /* __ITERATIVE_DYNMEANS_HPP */
+#define __ITERATIVE_HPP
+#endif 
