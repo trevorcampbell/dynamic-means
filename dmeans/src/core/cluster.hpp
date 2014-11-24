@@ -7,8 +7,6 @@ namespace dmeans{
 template <class D, class P>
 class Cluster {
 	public:
-		const uint64_t id;
-
 		Cluster();
 		Cluster(const Cluster<D, P>& rhs);
 		Cluster<D, P>& operator=(const Cluster<D, P>& rhs);
@@ -23,7 +21,9 @@ class Cluster {
 		bool isEmpty() const;
 		bool isNew() const;
 		P getPrm() const;
+		uint64_t id() const;
 	private:
+		uint64_t id_;
 		static uint64_t nextId;
 		uint64_t age;
 		double w, gamma;

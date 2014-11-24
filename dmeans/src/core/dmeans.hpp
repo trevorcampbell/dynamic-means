@@ -7,7 +7,7 @@
 #include "cluster.hpp"
 
 namespace dmeans{
-template<class D, class P, class A>
+template<class D, class P, template<typename, typename> class A>
 class DMeans{
 	public:
 		DMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);

@@ -10,8 +10,8 @@ class _Iterative{
 	public:
 		void cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose);
 	private:
-		void initialLabelling(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus);
-		bool labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus);
+		void initialLabelling(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda);
+		bool labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus, double lambda);
 		void parameterUpdate(std::map<uint64_t, Cluster<D, P> >& clus);
 		double computeCost(std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q);
 		class MonotonicityViolationException{
@@ -23,10 +23,10 @@ class _Iterative{
 };
 
 template<class D, class P>
-using _Iterative<D, P, true>  = IterativeWithMonotonicityChecks<D, P>;
+using IterativeWithMonotonicityChecks = _Iterative<D, P, true>; 
 
 template<class D, class P>
-using _Iterative<D, P, false> = Iterative<D, P>;
+using Iterative = _Iterative<D, P, false>;
 
 #include "iterative_impl.hpp"
 

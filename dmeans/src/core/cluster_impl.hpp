@@ -1,32 +1,44 @@
 #ifndef __CLUSTER_IMPL_HPP
 
 template<class D, class P>
-Cluster<D, P>::Cluster() : id(nextId++){
+Cluster<D, P>::Cluster(){
 	this->age = 0;
 	this->w = 0.0;
 	this->gamma = 0.0;
+	this->id_ = nextId++;
 }
 
 
 template<class D, class P>
-Cluster<D, P>::Cluster(const Cluster<D, P>& rhs) : id(rhs.id){
-	this->age = 0;
-	this->w = 0.0;
-	this->gamma = 0.0;
-	this->prm = rhs.prm;
-	this->clusData = rhs.clusData;
-}
-
-template<class D, class P>
-Cluster<D, P>& Cluster<D, P>::operator=(const Cluster<D, P>& rhs) : id(rhs.id){
-	if (this == &rhs){
-		return *this;
-	}
+Cluster<D, P>::Cluster(const Cluster<D, P>& rhs) {
 	this->age = rhs.age;
 	this->w = rhs.w;
 	this->gamma = rhs.gamma;
+	this->prm = rhs.prm;
+	this->clusData = rhs.clusData;
+	this->id_ = rhs.id_;
+}
+
+
+template<class D, class P>
+Cluster<D, P>& Cluster<D, P>::operator=(const Cluster<D, P>& rhs) {
+	if (this != &rhs){
+		this->age = rhs.age;
+		this->w = rhs.w;
+		this->gamma = rhs.gamma;
+		this->prm = rhs.prm;
+		this->clusData = rhs.clusData;
+		this->id_ = rhs.id_;
+	}
 	return *this;
 }
+
+template<class D, class P>
+uint64_t Cluster<D, P>::id() const{
+	return this->id_;
+}
+
+
 
 template<class D, class P>
 void Cluster<D, P>::updatePrm(){
@@ -42,7 +54,7 @@ void Cluster<D, P>::finalize(double tau){
 		this->w = this->gamma + std::distance(this->clusData.begin(), this->clusData.end());
 		this->age = 1;
 	}
-	this->gamma = 1.0/(1.0/this->w + this->tau*this->age);
+	this->gamma = 1.0/(1.0/this->w + tau*this->age);
 	this->clusData.clear();
 }
 
@@ -58,7 +70,7 @@ std::vector<uint64_t> Cluster<D, P>::getAssignedIds() const{
 template<class D, class P>
 void Cluster<D, P>::assignData(uint64_t did, D& d){
 	if (this->clusData.find(did) != this->clusData.end()){
-		throw DataAlreadyInClusterException(this->id, did);
+		throw DataAlreadyInClusterException(this->id_, did);
 	}
 	this->clusData[did] = d;
 }
@@ -66,7 +78,7 @@ void Cluster<D, P>::assignData(uint64_t did, D& d){
 template<class D, class P>
 D Cluster<D, P>::deassignData(uint64_t did){
 	if (this->clusData.find(did) == this->clusData.end()){
-			throw DataNotInClusterException(this->id, did); 
+			throw DataNotInClusterException(this->id_, did); 
 	}
 	D d = this->clusData[did];
 	this->clusData.erase(did);

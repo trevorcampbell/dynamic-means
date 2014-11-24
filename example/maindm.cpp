@@ -96,7 +96,7 @@ int main(int argc, char** argv){
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering..." << endl;
-		dmeans::Results<dmeans::VectorParameter> res = dynm.cluster(data, nRestarts);
+		dmeans::Results<dmeans::VectorParameter> res = dynm.cluster(dataMap, nRestarts);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
@@ -173,8 +173,8 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 				newData(1) += len*sin(ang);
 				dmeans::VectorData vd;
 				vd.v = newData;
-				clusterData[nextId] = vd;
-				trueLabels[nextId] = j;
+				dataMap[nextId] = vd;
+				trueLabelMap[nextId] = j;
 				nextId++;
 			}
 		}

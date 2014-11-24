@@ -2,13 +2,13 @@
 template <class D, class P, bool M>
 void _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose){
 	//initial round of labelling data without deassigning it
-	this->initialLabelling(obs, clus);
+	this->initialLabelling(obs, clus, lambda);
 	//label/parameter update iteration
 	bool labellingChanged = true;
 	if (!M){
 		while(labellingChanged){
 			this->parameterUpdate(clus);
-			labellingChanged = this->labelUpdate(clus);
+			labellingChanged = this->labelUpdate(clus, lambda);
 		}
 	} else {
 		double obj = this->computeCost(clus, lambda, Q);
@@ -20,7 +20,7 @@ void _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_t,
 				throw MonotonicityViolationException(prevobj, obj, "parameterUpdate()");
 			}
 			prevobj = obj;
-			labellingChanged = this->labelUpdate(clus);
+			labellingChanged = this->labelUpdate(clus, lambda);
 			obj = this->computeCost(clus, lambda, Q);
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "labelUpdate()");
@@ -39,7 +39,7 @@ double _Iterative<D, P, M>::computeCost(std::map<uint64_t, Cluster<D, P> >& clus
 }
 
 template <class D, class P, bool M>
-void _Iterative<D, P, M>::initialLabelling(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus){
+void _Iterative<D, P, M>::initialLabelling(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda){
 	std::vector<uint64_t> ids;
 	for (auto it = obs.begin(); it != obs.end(); ++it){
 		ids.push_back(it->first);
@@ -55,11 +55,11 @@ void _Iterative<D, P, M>::initialLabelling(std::map<uint64_t, D>& obs, std::map<
 				minInd = it->first;
 			}
 		}
-		if (minCost > this->lambda){
+		if (minCost > lambda){
 			Cluster<D, P> newclus;
 			newclus.assignData(ids[i], obs[ids[i]]);
 			newclus.updatePrm();
-			clus[newclus.id] = newclus;
+			clus[newclus.id()] = newclus;
 		} else {
 			clus[minInd].assignData(ids[i], obs[ids[i]]);
 		}
@@ -67,7 +67,7 @@ void _Iterative<D, P, M>::initialLabelling(std::map<uint64_t, D>& obs, std::map<
 }
 
 template <class D, class P, bool M>
-bool _Iterative<D, P, M>::labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus){
+bool _Iterative<D, P, M>::labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus, double lambda){
 	bool labellingChanged = false;
 	//get the assignments across all clusters
 	std::vector<uint64_t> ids, lbls;
@@ -96,11 +96,11 @@ bool _Iterative<D, P, M>::labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus){
 				minInd = it->first;
 			}
 		}
-		if (minCost > this->lambda){
+		if (minCost > lambda){
 			Cluster<D, P> newclus;
 			newclus.assignData(id, obs);
 			newclus.updatePrm();
-			clus[newclus.id] = newclus;
+			clus[newclus.id()] = newclus;
 			labellingChanged = true;
 		} else {
 			clus[minInd].assignData(id, obs);

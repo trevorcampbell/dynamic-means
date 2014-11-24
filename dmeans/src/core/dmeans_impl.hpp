@@ -1,5 +1,5 @@
 #ifndef __DMEANS_IMPL_HPP
-template <class D, class P, class A>
+template <class D, class P, template<typename, typename> class A>
 DMeans<D, P, A>::DMeans(double lambda, double Q, double tau, bool verbose, int seed){
 	this->lambda = lambda;
 	this->Q = Q;
@@ -12,12 +12,12 @@ DMeans<D, P, A>::DMeans(double lambda, double Q, double tau, bool verbose, int s
 	}
 }
 
-template <class D, class P, class A>
+template <class D, class P, template<typename, typename> class A>
 void DMeans<D, P, A>::reset(){
 	this->clusters.clear();
 }
 
-template <class D, class P, class A>
+template <class D, class P, template<typename, typename> class A>
 void DMeans<D, P, A>::finalize(){
 	for(auto it = this->clusters.begin(); it != this->clusters.end(); ++it){
 		it->second.finalize(this->tau);
@@ -25,14 +25,14 @@ void DMeans<D, P, A>::finalize(){
 }
 
 
-template <class D, class P, class A>
+template <class D, class P, template<typename, typename> class A>
 void DMeans<D, P, A>::restart(){
 	for(auto it = this->clusters.begin(); it != this->clusters.end(); ++it){
 		it->second.clearData();
 	}
 }
 
-template <class D, class P, class A>
+template <class D, class P, template<typename, typename> class A>
 Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts){
 	this->timer.start();
 	Results<P> bestResults;
@@ -60,7 +60,7 @@ Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestar
 	return bestResults;
 }
 
-template <class D, class P, class A>
+template <class D, class P, template<typename, typename> class A>
 Results<P> DMeans<D, P, A>::computeResults() const{
 	Results<P> r;
 	r.cost = 0;
