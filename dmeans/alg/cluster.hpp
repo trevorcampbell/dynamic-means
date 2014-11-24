@@ -14,11 +14,11 @@ class Cluster {
 		void updatePrm();
 		double cost() const;
 		double gamma() const;
-		void assignData(Data<D>& d);
+		void assignData(uint64_t id, D& d);
 		std::vector<uint64_t> getAssignedIds() const;
-		Data<D> deassignData(uint64_t did);
+		D deassignData(uint64_t did);
 		std::vector<uint64_t> finalize();
-		double distTo(const Data<D>& d) const;
+		double distTo(const D& d) const;
 		bool isEmpty() const;
 		bool isNew() const;
 		P getPrm() const;
@@ -27,7 +27,7 @@ class Cluster {
 		uint64_t age;
 		double w, lambda, Q, tau;
 		P prm;
-		std::map<uint64_t, Data<D> > clusData;
+		std::map<uint64_t, D> clusData;
 
 		class DataNotInClusterException{
 			public:

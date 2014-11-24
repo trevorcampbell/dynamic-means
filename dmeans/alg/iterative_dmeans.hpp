@@ -4,8 +4,7 @@
 #include<random>
 #include "../util/timer.hpp"
 #include "../util/results.hpp"
-#include "../model/data.hpp"
-#include "../model/cluster.hpp"
+#include "cluster.hpp"
 
 namespace dmeans{
 template<class D, class P>
@@ -13,7 +12,7 @@ class IterativeDMeans{
 	public:
 		IterativeDMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);
 		//initialize a new step and cluster
-		Results<P> cluster(std::vector< Data<D> >& obs, uint64_t nRestarts, bool checkCosts);
+		Results<P> cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts, bool checkCosts);
 		//reset DDP chain
 		void reset();
 	private:
@@ -25,7 +24,7 @@ class IterativeDMeans{
 
 		Results<P> computeResults();
 		double computeCost();
-		void initialLabelling(std::vector< Data<D> >& obs);
+		void initialLabelling(std::map<uint64_t, D>& obs);
 		bool labelUpdate();
 		void parameterUpdate();
 		class MonotonicityViolationException{

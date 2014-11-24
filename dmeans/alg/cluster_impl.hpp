@@ -48,26 +48,26 @@ std::vector<uint64_t> Cluster<D, P>::getAssignedIds() const{
 }
 
 template<class D, class P>
-void Cluster<D, P>::assignData(Data<D>& d){
-	if (this->clusData.find(d.id) != this->clusData.end()){
-		throw DataAlreadyInClusterException(this->id, d.id);
+void Cluster<D, P>::assignData(uint64_t did, D& d){
+	if (this->clusData.find(did) != this->clusData.end()){
+		throw DataAlreadyInClusterException(this->id, did);
 	}
-	this->clusData[d.id] = d;
+	this->clusData[did] = d;
 }
 
 template<class D, class P>
-Data<D> Cluster<D, P>::deassignData(uint64_t did){
+D Cluster<D, P>::deassignData(uint64_t did){
 	if (this->clusData.find(did) == this->clusData.end()){
 			throw DataNotInClusterException(this->id, did); 
 	}
-	Data<D> d = this->clusData[did];
+	D d = this->clusData[did];
 	this->clusData.erase(did);
 	return d;
 }
 
 template<class D, class P>
-double Cluster<D, P>::distTo(const Data<D>& d) const{
-	return this->prm.distTo(d.d, !this->clusData.empty());
+double Cluster<D, P>::distTo(const D& d) const{
+	return this->prm.distTo(d, !this->clusData.empty());
 }
 
 template<class D, class P>
