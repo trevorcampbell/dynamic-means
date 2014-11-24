@@ -10,10 +10,10 @@ class _Iterative{
 	public:
 		void cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose);
 	private:
-		double computeCost();
-		void initialLabelling(std::map<uint64_t, D>& obs);
-		bool labelUpdate();
-		void parameterUpdate();
+		void initialLabelling(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus);
+		bool labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus);
+		void parameterUpdate(std::map<uint64_t, Cluster<D, P> >& clus);
+		double computeCost(std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q);
 		class MonotonicityViolationException{
 			public:
 				MonotonicityViolationException(double prevobj, double obj, const char* funcname){

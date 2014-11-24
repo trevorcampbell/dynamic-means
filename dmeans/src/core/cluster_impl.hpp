@@ -7,6 +7,27 @@ Cluster<D, P>::Cluster() : id(nextId++){
 	this->gamma = 0.0;
 }
 
+
+template<class D, class P>
+Cluster<D, P>::Cluster(const Cluster<D, P>& rhs) : id(rhs.id){
+	this->age = 0;
+	this->w = 0.0;
+	this->gamma = 0.0;
+	this->prm = rhs.prm;
+	this->clusData = rhs.clusData;
+}
+
+template<class D, class P>
+Cluster<D, P>& Cluster<D, P>::operator=(const Cluster<D, P>& rhs) : id(rhs.id){
+	if (this == &rhs){
+		return *this;
+	}
+	this->age = rhs.age;
+	this->w = rhs.w;
+	this->gamma = rhs.gamma;
+	return *this;
+}
+
 template<class D, class P>
 void Cluster<D, P>::updatePrm(){
 	this->prm.update(this->clusData.begin(), this->clusData.end(), this->gamma);

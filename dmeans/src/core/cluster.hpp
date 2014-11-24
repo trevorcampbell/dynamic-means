@@ -10,6 +10,8 @@ class Cluster {
 		const uint64_t id;
 
 		Cluster();
+		Cluster(const Cluster<D, P>& rhs);
+		Cluster<D, P>& operator=(const Cluster<D, P>& rhs);
 		void updatePrm();
 		double cost(double lambda, double Q) const;
 		void assignData(uint64_t id, D& d);
