@@ -1,38 +1,27 @@
 #ifndef __CLUSTER_IMPL_HPP
 
 template<class D, class P>
-Cluster<D, P>::Cluster(double lambda, double Q, double tau) : id(nextId++){
+Cluster<D, P>::Cluster() : id(nextId++){
 	this->age = 0;
 	this->w = 0.0;
-	this->lambda = lambda;
-	this->Q = Q;
-	this->tau = tau;
+	this->gamma = 0.0;
 }
-
-template<class D, class P>
-double Cluster<D, P>::gamma() const{
-	if (this->age == 0){ //age only =0 for brand new clusters
-		return 0;
-	} else {
-		return 1.0/(1.0/this->w + this->tau*this->age);
-	}
-}
-
 
 template<class D, class P>
 void Cluster<D, P>::updatePrm(){
-	this->prm.update(this->clusData.begin(), this->clusData.end(), this->gamma());
+	this->prm.update(this->clusData.begin(), this->clusData.end(), this->gamma);
 }
 
 template<class D, class P>
-void Cluster<D, P>::finalize(){
+void Cluster<D, P>::finalize(double tau){
 	if(this->clusData.empty()){
 		this->age++;
 	} else {
-		this->prm.updateOld(this->clusData.begin(), this->clusData.end(), this->gamma());
-		this->w = this->gamma() + std::distance(this->clusData.begin(), this->clusData.end());
+		this->prm.updateOld(this->clusData.begin(), this->clusData.end(), this->gamma);
+		this->w = this->gamma + std::distance(this->clusData.begin(), this->clusData.end());
 		this->age = 1;
 	}
+	this->gamma = 1.0/(1.0/this->w + this->tau*this->age);
 	this->clusData.clear();
 }
 
@@ -64,14 +53,19 @@ D Cluster<D, P>::deassignData(uint64_t did){
 }
 
 template<class D, class P>
+void Cluster<D, P>::clearData(){
+	this->clusData.clear();
+}
+
+template<class D, class P>
 double Cluster<D, P>::distTo(const D& d) const{
 	return this->prm.distTo(d, !this->clusData.empty());
 }
 
 template<class D, class P>
-double Cluster<D, P>::cost() const{
-	return this->clusData.empty() ? 0.0 : (this->age == 0 ? this->lambda : this->Q*this->age) 
-		+ this->prm.cost(this->clusData.begin(), this->clusData.end(), this->gamma());
+double Cluster<D, P>::cost(double lambda, double Q) const{
+	return this->clusData.empty() ? 0.0 : (this->age == 0 ? lambda : Q*this->age) 
+		+ this->prm.cost(this->clusData.begin(), this->clusData.end(), this->gamma);
 }
 
 template<class D, class P>

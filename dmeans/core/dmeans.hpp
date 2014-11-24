@@ -7,33 +7,24 @@
 #include "cluster.hpp"
 
 namespace dmeans{
-template<class D, class P>
-class IterativeDMeans{
+template<class D, class P, class A>
+class DMeans{
 	public:
-		IterativeDMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);
+		DMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);
 		//initialize a new step and cluster
-		Results<P> cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts, bool checkCosts);
+		Results<P> cluster(std::map<uint64_t, D>& obs, A& alg, uint64_t nRestarts);
 		//reset DDP chain
 		void reset();
 	private:
 		double lambda, Q, tau;
 		bool verbose;
 
-		std::vector< Cluster<D, P> > clusters;
+		std::map< uint64_t, Cluster<D, P> > clusters;
 		Timer timer;
 
 		Results<P> computeResults();
 		void finalize();
-		double computeCost();
-		void initialLabelling(std::map<uint64_t, D>& obs);
-		bool labelUpdate();
-		void parameterUpdate();
-		class MonotonicityViolationException{
-			public:
-				MonotonicityViolationException(double prevobj, double obj, const char* funcname){
-					std::cout << "Monotonicity violated! Prevobj = " << prevobj << " obj = " << obj << " after calling " << funcname << std::endl;
-				}
-		};
+		void restart();
 };
 
 #include "iterative_dmeans_impl.hpp"

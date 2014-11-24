@@ -6,7 +6,7 @@ class Results{
 		std::map<uint64_t, uint64_t> lbls;
 		std::map<uint64_t, P> prms;
 		double tTaken;
-		double obj;
+		double cost;
 };
 }
 #define __RESULTS_HPP

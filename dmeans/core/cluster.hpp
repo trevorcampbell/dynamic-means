@@ -9,14 +9,14 @@ class Cluster {
 	public:
 		const uint64_t id;
 
-		Cluster(double lambda, double Q, double tau);
+		Cluster();
 		void updatePrm();
-		double cost() const;
-		double gamma() const;
+		double cost(double lambda, double Q) const;
 		void assignData(uint64_t id, D& d);
 		std::vector<uint64_t> getAssignedIds() const;
 		D deassignData(uint64_t did);
-		void finalize();
+		void clearData();
+		void finalize(double tau);
 		double distTo(const D& d) const;
 		bool isEmpty() const;
 		bool isNew() const;
@@ -24,7 +24,7 @@ class Cluster {
 	private:
 		static uint64_t nextId;
 		uint64_t age;
-		double w, lambda, Q, tau;
+		double w, gamma;
 		P prm;
 		std::map<uint64_t, D> clusData;
 
