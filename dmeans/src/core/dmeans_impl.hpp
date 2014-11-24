@@ -40,9 +40,10 @@ Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestar
 	A<D, P> alg;
 	for (uint64_t k = 0; k < nRestarts; k++){
 		//cluster at this step
-		alg.cluster(obs, this->clusters, this->lambda, this->Q, this->tau, this->verbose);
+		double cost = alg.cluster(obs, this->clusters, this->lambda, this->Q, this->tau, this->verbose);
 		//compute the resulting objective
-		Results<P> res = this->computeResults();
+		Results<P> res = this->getResults();
+		res.cost = cost;
 		if (res.cost < bestResults.cost){
 			//the objective is the best so far, save the results
 			bestResults = res;
@@ -51,9 +52,8 @@ Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestar
 		this->restart();
 	}
 	//restore the best clustering
-	for (auto it = obs.begin(); it != obs.end(); ++it){
-		uint64_t lbl = bestResults.lbls[it->first];
-		this->clusters[lbl].assignData(it->first, it->second);
+	for (auto it = bestResults.lbls.begin(); it != bestResults.lbls.end(); ++it){
+		this->clusters[it->second].assignData(it->first, obs[it->first]);
 	}
 	this->finalize();
 	bestResults.tTaken = this->timer.elapsed_ms();
@@ -61,16 +61,14 @@ Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestar
 }
 
 template <class D, class P, template<typename, typename> class A>
-Results<P> DMeans<D, P, A>::computeResults() const{
+Results<P> DMeans<D, P, A>::getResults() const{
 	Results<P> r;
-	r.cost = 0;
 	for(auto it = this->clusters.begin(); it != this->clusters.end(); ++it){
 		r.prms[it->first] = it->second.getPrm();
 		std::vector<uint64_t> dids = it->second.getAssignedIds();
 		for(uint64_t i = 0; i < dids.size(); i++){
 			r.lbls[dids[i]] = it->first;
 		}
-		r.cost += it->second.cost(this->lambda, this->Q);
 	}
 	return r;
 }

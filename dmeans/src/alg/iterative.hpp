@@ -8,7 +8,7 @@ namespace dmeans{
 template<class D, class P, bool M>
 class _Iterative{
 	public:
-		void cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose);
+		double cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose);
 	private:
 		void initialLabelling(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda);
 		bool labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus, double lambda);

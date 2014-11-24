@@ -11,13 +11,14 @@ class Cluster {
 		Cluster(const Cluster<D, P>& rhs);
 		Cluster<D, P>& operator=(const Cluster<D, P>& rhs);
 		void updatePrm();
-		double cost(double lambda, double Q) const;
 		void assignData(uint64_t id, D& d);
 		std::vector<uint64_t> getAssignedIds() const;
 		D deassignData(uint64_t did);
 		void clearData();
 		void finalize(double tau);
 		double distTo(const D& d) const;
+		double distToOld(const D& d) const;
+		double cost(double lambda, double Q) const;
 		bool isEmpty() const;
 		bool isNew() const;
 		P getPrm() const;
@@ -40,6 +41,13 @@ class Cluster {
 			public:
 				DataAlreadyInClusterException(uint64_t cid, uint64_t did){
 					std::cout << "Datapoint " << did << "is already in cluster " << cid << std::endl;
+				}
+		};
+
+		class ClusterEmptyDistanceException{
+			public:
+				ClusterEmptyDistanceException(uint64_t cid){
+					std::cout << "Requesting distance to the new parameter of empty cluster " << cid << std::endl;
 				}
 		};
 };

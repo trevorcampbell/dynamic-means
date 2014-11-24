@@ -1,6 +1,6 @@
 #ifndef __ITERATIVE_IMPL_HPP
 template <class D, class P, bool M>
-void _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose){
+double _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose){
 	//initial round of labelling data without deassigning it
 	this->initialLabelling(obs, clus, lambda);
 	//label/parameter update iteration
@@ -27,6 +27,7 @@ void _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_t,
 			}
 		}
 	}
+	return this->computeCost(clus, lambda, Q);
 }
 
 template <class D, class P, bool M>

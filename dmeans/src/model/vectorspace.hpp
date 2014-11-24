@@ -1,19 +1,26 @@
 #ifndef __VECTORSPACE_HPP
 #include <Eigen/Dense>
 namespace dmeans{
+template <int n>
 class VectorData{
 	public:
-		Eigen::VectorXd v;
-		double distTo(const VectorData& rhs) const{
+		Eigen::Matrix<double, n, 1> v;
+		double distTo(const VectorData<n>& rhs) const{
 			return (this->v - rhs.v).squaredNorm();
 		}
 };
 
-typedef std::map<uint64_t, VectorData >::const_iterator vector_dmap_iterator;
+template <int n>
+using vector_dmap_iterator = typename std::map<uint64_t, VectorData<n> >::const_iterator;
+
+template <int n>
 class VectorParameter{
 	public:
-		Eigen::VectorXd v, vOld;
-		void update(vector_dmap_iterator be, vector_dmap_iterator en, double gamma){
+		Eigen::Matrix<double, n, 1> v, vOld;
+		VectorParameter(){
+			v = vOld = Eigen::VectorXd::Zero(n);
+		}
+		void update(vector_dmap_iterator<n> be, vector_dmap_iterator<n> en, double gamma){
 			v = gamma*vOld;
 			double wt = gamma;
 			for(auto it = be; it != en; ++it){
@@ -22,14 +29,7 @@ class VectorParameter{
 			}
 			v /= wt;
 		}
-		double cost(vector_dmap_iterator be, vector_dmap_iterator en, double gamma) const{
-			double c = gamma*(v-vOld).squaredNorm();
-			for(auto it = be; it != en; ++it){
-				c += (v-it->second.v).squaredNorm();
-			}
-			return c;
-		}
-		void updateOld(vector_dmap_iterator be, vector_dmap_iterator en, double gamma){
+		void updateOld(vector_dmap_iterator<n> be, vector_dmap_iterator<n> en, double gamma){
 			Eigen::VectorXd tmpv = gamma*vOld;
 			double wt = gamma;
 			for(auto it = be; it != en; ++it){
@@ -39,8 +39,21 @@ class VectorParameter{
 			vOld = tmpv / wt;
 		}
 
-		double distTo(const VectorData & vec, bool isActive) const{
-			return (isActive ? (vec.v-this->v).squaredNorm() : (vec.v-this->vOld).squaredNorm());
+		double distTo(const VectorData<n> & vec) const{
+			return (vec.v-this->v).squaredNorm();
+		}
+
+		double distToOld(const VectorData<n> & vec) const{
+			return (vec.v-this->vOld).squaredNorm();
+		}
+
+		double cost(vector_dmap_iterator<n> be, vector_dmap_iterator<n> en, double gamma) const{
+			double cost = 0;
+			cost += gamma*(v-vOld).squaredNorm();
+			for(auto it = be; it != en; ++it){
+				cost += (it->second.v-v).squaredNorm();
+			}
+			return cost;
 		}
 };
 }

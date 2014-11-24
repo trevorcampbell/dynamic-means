@@ -47,7 +47,7 @@ void Cluster<D, P>::updatePrm(){
 
 template<class D, class P>
 void Cluster<D, P>::finalize(double tau){
-	if(this->clusData.empty()){
+	if(this->isEmpty()){
 		this->age++;
 	} else {
 		this->prm.updateOld(this->clusData.begin(), this->clusData.end(), this->gamma);
@@ -78,7 +78,7 @@ void Cluster<D, P>::assignData(uint64_t did, D& d){
 template<class D, class P>
 D Cluster<D, P>::deassignData(uint64_t did){
 	if (this->clusData.find(did) == this->clusData.end()){
-			throw DataNotInClusterException(this->id_, did); 
+		throw DataNotInClusterException(this->id_, did); 
 	}
 	D d = this->clusData[did];
 	this->clusData.erase(did);
@@ -92,13 +92,22 @@ void Cluster<D, P>::clearData(){
 
 template<class D, class P>
 double Cluster<D, P>::distTo(const D& d) const{
-	return this->prm.distTo(d, !this->clusData.empty());
+	if (this->isEmpty()){
+		throw ClusterEmptyDistanceException(this->id_);
+	}
+	return this->prm.distTo(d);
+}
+
+template<class D, class P>
+double Cluster<D, P>::distToOld(const D& d) const{
+	return this->prm.distToOld(d);
 }
 
 template<class D, class P>
 double Cluster<D, P>::cost(double lambda, double Q) const{
-	return this->clusData.empty() ? 0.0 : (this->age == 0 ? lambda : Q*this->age) 
-		+ this->prm.cost(this->clusData.begin(), this->clusData.end(), this->gamma);
+	return this->isEmpty() ? 0.0 :
+		(this->age == 0 ? lambda : Q*this->age)
+		+this->prm.cost(this->clusData.begin(), this->clusData.end(), this->gamma);
 }
 
 template<class D, class P>

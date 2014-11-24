@@ -20,7 +20,7 @@ typedef Eigen::Vector2d V2d;
 //function declarations
 double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> matchings);
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, map<uint64_t, dmeans::VectorData>& dataMap, map<uint64_t, uint64_t>& trueLabelMap, uint64_t& nextId);
+void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, map<uint64_t, dmeans::VectorData<2> >& dataMap, map<uint64_t, uint64_t>& trueLabelMap, uint64_t& nextId);
 
 //random number generator
 mt19937 rng;//uses the same seed every time, 5489u
@@ -71,7 +71,7 @@ int main(int argc, char** argv){
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
 	uint64_t nId = 0;
-	dmeans::DMeans<dmeans::VectorData, dmeans::VectorParameter, dmeans::IterativeWithMonotonicityChecks> dynm(lambda, Q, tau, true);
+	dmeans::DMeans<dmeans::VectorData<2>, dmeans::VectorParameter<2>, dmeans::IterativeWithMonotonicityChecks> dynm(lambda, Q, tau, true);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
@@ -88,7 +88,7 @@ int main(int argc, char** argv){
 		//generate the data for the current timestep
 		//******************************************
 		cout << "Step " << i << ": Generating data from the clusters..." << endl;
-		map<uint64_t, dmeans::VectorData> dataMap;
+		map<uint64_t, dmeans::VectorData<2> > dataMap;
 		map<uint64_t, uint64_t> trueLabelMap;
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, dataMap, trueLabelMap, nId);
 
@@ -96,7 +96,7 @@ int main(int argc, char** argv){
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering..." << endl;
-		dmeans::Results<dmeans::VectorParameter> res = dynm.cluster(dataMap, nRestarts);
+		dmeans::Results<dmeans::VectorParameter<2> > res = dynm.cluster(dataMap, nRestarts);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
@@ -157,7 +157,7 @@ void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveC
 }
 
 //this function takes a set of cluster centers and generates data from them
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, map<uint64_t, dmeans::VectorData>& dataMap, map<uint64_t, uint64_t>& trueLabelMap, uint64_t& nextId){
+void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, map<uint64_t, dmeans::VectorData<2> >& dataMap, map<uint64_t, uint64_t>& trueLabelMap, uint64_t& nextId){
 
 	//distributions
 	uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
@@ -171,7 +171,7 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 				double ang = uniformDistAng(rng);
 				newData(0) += len*cos(ang);
 				newData(1) += len*sin(ang);
-				dmeans::VectorData vd;
+				dmeans::VectorData<2> vd;
 				vd.v = newData;
 				dataMap[nextId] = vd;
 				trueLabelMap[nextId] = j;
