@@ -20,7 +20,7 @@ typedef Eigen::Vector2d V2d;
 //function declarations
 double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> matchings);
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<V2d>& clusterData, vector<int>& trueLabels);
+void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, map<uint64_t, dmeans::VectorData>& dataMap, map<uint64_t, uint64_t>& trueLabelMap, uint64_t& nextId);
 
 //random number generator
 mt19937 rng;//uses the same seed every time, 5489u
@@ -71,7 +71,7 @@ int main(int argc, char** argv){
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
 	uint64_t nId = 0;
-	dmeans::IterativeDMeans<dmeans::VectorData, dmeans::VectorParameter> dynm(lambda, Q, tau, true);
+	dmeans::DMeans<dmeans::VectorData, dmeans::VectorParameter, dmeans::IterativeWithMonotonicityChecks> dynm(lambda, Q, tau, true);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
@@ -88,28 +88,25 @@ int main(int argc, char** argv){
 		//generate the data for the current timestep
 		//******************************************
 		cout << "Step " << i << ": Generating data from the clusters..." << endl;
-		vector<V2d> clusterData;
-		vector<int> trueLabels;
-		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, clusterData, trueLabels);
-		map<uint64_t, dmeans::VectorData> dmData;
-		for (uint64_t j = 0; j < clusterData.size(); j++){
-			dmeans::VectorData vd;
-			vd.v = clusterData[j];
-			dmData[nId++] = vd;
-		}
+		map<uint64_t, dmeans::VectorData> dataMap;
+		map<uint64_t, uint64_t> trueLabelMap;
+		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, dataMap, trueLabelMap, nId);
 
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
-		vector<V2d> learnedParams;
-		vector<int> learnedLabels;
 		cout << "Step " << i << ": Clustering..." << endl;
-		dmeans::Results<dmeans::VectorParameter> res = dynm.cluster(dmData, nRestarts, true);
+		dmeans::Results<dmeans::VectorParameter> res = dynm.cluster(data, nRestarts);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
 		//including proper cluster label tracking (see above)
 		//***************************************************
+		vector<int> learnedLabels, trueLabels;
+		for(auto it = dataMap.begin(); it != dataMap.end(); ++it){
+			learnedLabels.push_back(res.lbls[it->first]);
+			trueLabels.push_back(trueLabelMap[it->first]);
+		}
 		matchings = maxm.getMaxConsistentMatching(learnedLabels, trueLabels, std::vector<double>());
 		double acc = 100.0*maxm.getObjective()/ (double)learnedLabels.size();
 		//double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
@@ -121,25 +118,6 @@ int main(int argc, char** argv){
 
 	return 0;
 }
-
-
-////this function takes two label sets and a matching and outputs 
-////the accuracy of the labelling (assuming labels1 = learned, labels2 = true)
-//double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> matchings){
-//	if (labels1.size() != labels2.size()){
-//		cout << "Error: computeAccuracy requires labels1/labels2 to have the same size" << endl;
-//		return -1;
-//	}
-//
-//	double acc = 0;
-//	for (int i = 0; i < labels1.size(); i++){
-//		if (matchings[labels1[i]] == labels2[i]){
-//			acc += 1.0;
-//		}
-//	}
-//	//compute the accuracy
-//	return 100.0*acc/(double)labels1.size();
-//}
 
 
 //this function takes a set of cluster centers and runs them through a birth/death/motion model
@@ -179,7 +157,7 @@ void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveC
 }
 
 //this function takes a set of cluster centers and generates data from them
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, vector<V2d>& clusterData, vector<int>& trueLabels){
+void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, map<uint64_t, dmeans::VectorData>& dataMap, map<uint64_t, uint64_t>& trueLabelMap, uint64_t& nextId){
 
 	//distributions
 	uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
@@ -193,8 +171,11 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 				double ang = uniformDistAng(rng);
 				newData(0) += len*cos(ang);
 				newData(1) += len*sin(ang);
-				clusterData.push_back(newData);
-				trueLabels.push_back(j);
+				dmeans::VectorData vd;
+				vd.v = newData;
+				clusterData[nextId] = vd;
+				trueLabels[nextId] = j;
+				nextId++;
 			}
 		}
 	}

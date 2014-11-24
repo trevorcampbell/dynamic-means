@@ -33,13 +33,13 @@ void DMeans<D, P, A>::restart(){
 }
 
 template <class D, class P, class A>
-Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, A& alg, uint64_t nRestarts){
+Results<P> DMeans<D, P, A>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts){
 	this->timer.start();
 	Results<P> bestResults;
 	bestResults.cost = std::numeric_limits<double>::infinity();
 	for (uint64_t k = 0; k < nRestarts; k++){
 		//cluster at this step
-		alg.cluster(obs, this->clusters, this->lambda, this->Q, this->tau);
+		A::cluster(obs, this->clusters, this->lambda, this->Q, this->tau);
 		//compute the resulting objective
 		Results<P> res = this->computeResults();
 		if (res.cost < bestResults.cost){

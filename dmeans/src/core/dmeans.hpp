@@ -12,7 +12,7 @@ class DMeans{
 	public:
 		DMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);
 		//initialize a new step and cluster
-		Results<P> cluster(std::map<uint64_t, D>& obs, A& alg, uint64_t nRestarts);
+		Results<P> cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts);
 		//reset DDP chain
 		void reset();
 	private:
