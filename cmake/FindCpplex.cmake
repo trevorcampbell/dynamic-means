@@ -24,6 +24,16 @@ find_path(CPPLEX_INCLUDE_DIR NAMES simplex.h pilal.h
     PATH_SUFFIXES cpplex
   )
 
+if(NOT CPPLEX_INCLUDE_DIR OR NOT CPPLEX_LIBS)
+	message("")
+	message("----------------------------------------------------------------------")
+	message("You have to build/install cpplex before trying to build/install dmeans")
+	message("The cpplex library is provided with this project, located in:")
+	message("${PROJECT_SOURCE_DIR}/cpplex")
+	message("----------------------------------------------------------------------")
+	message("")
+endif(NOT CPPLEX_INCLUDE_DIR OR NOT CPPLEX_LIBS)
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Cpplex DEFAULT_MSG CPPLEX_INCLUDE_DIR CPPLEX_LIBS)
 
