@@ -28,7 +28,7 @@ using _Iterative<D, P, true>  = IterativeWithMonotonicityChecks<D, P>;
 template<class D, class P>
 using _Iterative<D, P, false> = Iterative<D, P>;
 
-#include "iterative_dmeans_impl.hpp"
+#include "iterative_impl.hpp"
 
 }
 #define __ITERATIVE_HPP
