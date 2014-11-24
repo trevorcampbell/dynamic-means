@@ -92,11 +92,11 @@ int main(int argc, char** argv){
 		vector<V2d> clusterData;
 		vector<int> trueLabels;
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, clusterData, trueLabels);
-		vector<dmeans::Data<dmeans::VectorData> > dmData;
+		map<uint64_t, dmeans::VectorData> dmData;
 		for (uint64_t j = 0; j < clusterData.size(); j++){
 			dmeans::VectorData vd;
 			vd.v = clusterData[j];
-			dmData.push_back(dmeans::Data<dmeans::VectorData>(nId++, vd));
+			dmData[nId++] = vd;
 		}
 
 		//***************************
