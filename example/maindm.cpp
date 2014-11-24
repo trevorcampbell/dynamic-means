@@ -71,6 +71,7 @@ int main(int argc, char** argv){
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
+	int nId = 0;
 	dmeans::IterativeDMeans<dmeans::VectorData, dmeans::VectorParameter> dynm(lambda, Q, tau, true);
 
 	//run the experiment
@@ -91,6 +92,12 @@ int main(int argc, char** argv){
 		vector<V2d> clusterData;
 		vector<int> trueLabels;
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, clusterData, trueLabels);
+		vector<dmeans::Data<dmeans::VectorData> > dmData;
+		for (int j = 0; j < clusterData.size(); j++){
+			dmeans::VectorData vd;
+			vd.v = clusterData[j];
+			dmData.push_back(dmeans::Data(nId++, vd));
+		}
 
 		//***************************
 		//cluster using Dynamic Means
@@ -98,7 +105,7 @@ int main(int argc, char** argv){
 		vector<V2d> learnedParams;
 		vector<int> learnedLabels;
 		cout << "Step " << i << ": Clustering..." << endl;
-		dmeans::Results res = dynm.cluster(clusterData, nRestarts, true);
+		dmeans::Results res = dynm.cluster(dmData, nRestarts, true);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
