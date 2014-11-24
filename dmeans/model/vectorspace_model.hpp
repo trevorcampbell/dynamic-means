@@ -9,7 +9,7 @@ class VectorData{
 		}
 };
 
-typedef std::map<int, Data<VectorData> >::iterator vector_dmap_iterator;
+typedef std::map<uint64_t, VectorData >::iterator vector_dmap_iterator;
 class VectorParameter{
 	public:
 		Eigen::VectorXd v, vOld;

@@ -6,16 +6,16 @@ namespace dmeans{
 class ExpKernelData{
 	public:
 		Eigen::VectorXd v;
-		double distTo(const VectorData& rhs){
+		double distTo(const ExpKernelData& rhs){
 			return (this->v - rhs.v).squaredNorm();
 		}
 };
 
-typedef std::map<int, Data<VectorData> >::iterator vector_dmap_iterator;
+typedef std::map<int, ExpKernelData>::iterator expkernel_dmap_iterator;
 class ExpKernelParameter{
 	public:
 		Eigen::VectorXd v, vOld;
-		void update(vector_dmap_iterator be, vector_dmap_iterator en, double gamma){
+		void update(expkernel_dmap_iterator be, expkernel_dmap_iterator en, double gamma){
 			v = gamma*vOld;
 			double wt = gamma;
 			for(auto it = be; it != en; ++it){
@@ -24,14 +24,14 @@ class ExpKernelParameter{
 			}
 			v /= wt;
 		}
-		double cost(vector_dmap_iterator be, vector_dmap_iterator en, double gamma){
+		double cost(expkernel_dmap_iterator be, expkernel_dmap_iterator en, double gamma){
 			double c = gamma*(v-vOld).squaredNorm();
 			for(auto it = be; it != en; ++it){
 				c += (v-it->second.d.v).squaredNorm();
 			}
 			return c;
 		}
-		std::vector<uint64_t> updateOld(vector_dmap_iterator be, vector_dmap_iterator en, double gamma){
+		std::vector<uint64_t> updateOld(expkernel_dmap_iterator be, expkernel_dmap_iterator en, double gamma){
 			Eigen::VectorXd tmpv = gamma*vOld;
 			double wt = gamma;
 			for(auto it = be; it != en; ++it){
@@ -42,7 +42,7 @@ class ExpKernelParameter{
 			return std::vector<uint64_t>();
 		}
 
-		double distTo(const VectorData& vec, bool isActive){
+		double distTo(const ExpKernelData& vec, bool isActive){
 			return (isActive ? (vec.v-this->v).squaredNorm() : (vec.v-this->vOld).squaredNorm());
 		}
 };
