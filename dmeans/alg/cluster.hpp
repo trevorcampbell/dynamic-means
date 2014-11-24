@@ -16,7 +16,7 @@ class Cluster {
 		void assignData(uint64_t id, D& d);
 		std::vector<uint64_t> getAssignedIds() const;
 		D deassignData(uint64_t did);
-		std::vector<uint64_t> finalize();
+		void finalize();
 		double distTo(const D& d) const;
 		bool isEmpty() const;
 		bool isNew() const;

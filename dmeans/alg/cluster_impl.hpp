@@ -25,17 +25,15 @@ void Cluster<D, P>::updatePrm(){
 }
 
 template<class D, class P>
-std::vector<uint64_t> Cluster<D, P>::finalize(){
-	std::vector<uint64_t> savedData;
+void Cluster<D, P>::finalize(){
 	if(this->clusData.empty()){
 		this->age++;
 	} else {
-		savedData = this->prm.updateOld(this->clusData.begin(), this->clusData.end(), this->gamma());
+		this->prm.updateOld(this->clusData.begin(), this->clusData.end(), this->gamma());
 		this->w = this->gamma() + std::distance(this->clusData.begin(), this->clusData.end());
 		this->age = 1;
 	}
 	this->clusData.clear();
-	return savedData;
 }
 
 template<class D, class P>

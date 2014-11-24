@@ -18,9 +18,18 @@ void IterativeDMeans<D, P>::reset(){
 }
 
 template <class D, class P>
+void IterativeDMeans<D, P>::finalize(){
+	for(uint64_t k = 0; k < this->clusters.size(); k++){
+		this->clusters[k].finalize();
+	}
+}
+
+template <class D, class P>
 Results<P> IterativeDMeans<D, P>::cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts, bool checkCosts){
 	this->timer.start();
+	std::vector<Cluster<D, P> > savedInitialClusters = this->clusters;
 	Results<P> bestResults;
+	std::vector<Cluster<D, P> > bestClusters;
 	bestResults.obj = std::numeric_limits<double>::infinity();
 	for (uint64_t restart = 0; restart < nRestarts; restart++){
 		//initial round of labelling data without deassigning it
@@ -53,9 +62,13 @@ Results<P> IterativeDMeans<D, P>::cluster(std::map<uint64_t, D>& obs, uint64_t n
 		if (obj < bestResults.obj){
 			//the objective is the best so far, save the results
 			bestResults = this->computeResults();
+			bestClusters = this->clusters;
 			bestResults.obj = obj;
 		}
+		this->clusters = savedInitialClusters;
 	}
+	this->clusters = bestClusters;
+	this->finalize();
 	bestResults.tTaken = this->timer.elapsed_ms();
 	return bestResults;
 }

@@ -23,6 +23,7 @@ class IterativeDMeans{
 		Timer timer;
 
 		Results<P> computeResults();
+		void finalize();
 		double computeCost();
 		void initialLabelling(std::map<uint64_t, D>& obs);
 		bool labelUpdate();
