@@ -27,7 +27,7 @@ class DMeans{
 		void restart();
 };
 
-#include "iterative_dmeans_impl.hpp"
+#include "dmeans_impl.hpp"
 
 }
 #define __ITERATIVE_DYNMEANS_HPP

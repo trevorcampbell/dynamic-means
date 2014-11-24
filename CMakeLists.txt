@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 2.6)
-
+cmake_minimum_required(VERSION 2.8)
 project(dmeans)
+#include(ExternalProject)
 
 set(CMAKE_COLOR_MAKEFILE ON)
 
@@ -15,23 +15,25 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++0x -Wall -fopenmp")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -std=c++0x -Wall -fopenmp")
 
 #first compile cpplex for the examples
-add_subdirectory(cpplex)
+#ExternalProject_Add(cpplex,
+#	PREFIX ${PROJECT_SOURCE_DIR}/cpplex
+#	SOURCE_DIR ${PROJECT_SOURCE_DIR}/cpplex
+#	)
 
-#install the header library
-file(GLOB_RECURSE HDRS "dmeans/" 
-	"*.hpp")
 
 #find eigen using a module in cmake/
 find_package (Eigen3 REQUIRED)
-message(${EIGEN3_INCLUDE_DIR})
+find_package (Cpplex REQUIRED)
+message("Eigen3 found: ${EIGEN3_INCLUDE_DIR}")
+message("Cpplex found: ${CPPLEX_INCLUDE_DIR}")
 
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${PROJECT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}/cpplex/pilal/include
+  ${PROJECT_SOURCE_DIR}/cpplex/simplex/include
   /usr/include
   /usr/local/include/
-  /usr/local/include/cpplex
-  /usr/local/include/dmeans
   )
 
 link_directories(
@@ -41,13 +43,11 @@ link_directories(
 
 add_executable(dmeans_example example/maindm.cpp)
 
-add_dependencies(dmeans_example headers)
-
 target_link_libraries(dmeans_example
 	cpplex-pilal
 	cpplex-simplex
   )
 
-install(FILES ${HDRS}
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/dmeans
 	DESTINATION include/dmeans)
 
