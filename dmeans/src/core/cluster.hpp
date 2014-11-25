@@ -3,6 +3,18 @@
 #include<vector>
 #include<iostream>
 #include<iterator>
+
+//
+//
+//
+//
+//TODO
+//problem with the Model class
+//is that it will cause duplication of code between
+//multiple data/parameter types
+//e.g. many different Model::Data classes that are just vectors
+//but you compute distance with dot products or norms or whatever else
+
 namespace dmeans{
 template <class Model>
 class Cluster {
