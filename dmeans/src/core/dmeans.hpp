@@ -12,11 +12,10 @@ class DMeans{
 	public:
 		DMeans(bool verbose = false, int seed = -1);
 		//initialize a new step and cluster
-		Results<Model> cluster(std::vector<Model::Data>& obs, uint64_t nRestarts);
+		Results<Model> cluster(std::vector<typename Model::Data>& obs, uint64_t nRestarts);
 		//reset DDP chain
 		void reset();
 	private:
-		double lambda, Q, tau;
 		bool verbose;
 		uint64_t nextLabel;
 

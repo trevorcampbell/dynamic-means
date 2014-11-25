@@ -92,23 +92,20 @@ bool Cluster<Model>::isNew() const{
 
 template<class Model>
 bool Cluster<Model>::isPermanentlyDead() const {
-	return Model::isPermanentlyDead(this->age);
+	return Model::isClusterDead(this->age);
 }
 
-template<class Model> template<class T>
+template<class Model> 
 double Cluster<Model>::cost() const {
-	return Model::cost(this->clusData.begin(), this->clusData.end(), this->prm, this->oldprm, this->age);
+	return Model::clusterCost(this->clusData.begin(), this->clusData.end(), this->prm, this->oldprm, this->age);
 }
 
 template<class Model> 
 double Cluster<Model>::compareTo(typename Model::Data& d) const{
-	if (!this->isEmpty()) {
-		return Model::compare(d, this->prm, -1);
-	} else if (this->isEmpty() && !this->isNew()){
-		return Model::compare(d, this->oldprm, this->age);
-	} else {
+	if(this->isEmpty() && this->isNew()){
 		throw ClusterEmptyDistanceException();
 	}
+	return Model::compare(d, this->prm, this->age, !this->isEmpty());
 }
 
 template<class Model>

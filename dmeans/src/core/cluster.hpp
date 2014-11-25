@@ -27,7 +27,7 @@ class Cluster {
 	private:
 		uint64_t id;
 		uint64_t age;
-		Model::Parameter prm, oldprm;
+		typename Model::Parameter prm, oldprm;
 		std::map<uint64_t, typename Model::Data> clusData;
 
 		class DataNotInClusterException{

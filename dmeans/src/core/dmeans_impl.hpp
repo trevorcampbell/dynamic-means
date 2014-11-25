@@ -1,9 +1,6 @@
 #ifndef __DMEANS_IMPL_HPP
 template <class Model, template<typename> class Alg>
-DMeans<Model, Alg>::DMeans(double lambda, double Q, double tau, bool verbose, int seed){
-	this->lambda = lambda;
-	this->Q = Q;
-	this->tau = tau;
+DMeans<Model, Alg>::DMeans(bool verbose, int seed){
 	this->verbose = verbose;
 	this->nextLabel = 0;
 	if (seed < 0){
@@ -56,13 +53,13 @@ void DMeans<Model, Alg>::labelNewClusters(){
 
 
 template <class Model, template<typename> class Alg>
-Results<Model> DMeans<Model, Alg>::cluster(std::vector<Model::Data>& obs, uint64_t nRestarts){
+Results<Model> DMeans<Model, Alg>::cluster(std::vector<typename Model::Data>& obs, uint64_t nRestarts){
 	this->timer.start();//start the timer
 	//these store the best cost/clustering over nRestarts restarts
 	double minCost = std::numeric_limits<double>::infinity();
 	std::vector<Cluster<Model> > minClusters;
 	//convert the data to a map with unique indices for insertion into clusters
-	std::map<uint64_t, Model::Data> obsMap;
+	std::map<uint64_t, typename Model::Data> obsMap;
 	for(uint64_t i = 0; i < obs.size(); i++){
 		obsMap[i] = obs[i];
 	}

@@ -13,7 +13,7 @@ class _Iterative{
 	private:
 		bool verbose;
 
-		void initialLabelling(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda);
+		void initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda);
 		bool labelUpdate(std::map<uint64_t, Cluster<Model> >& clus, double lambda);
 		void parameterUpdate(std::map<uint64_t, Cluster<Model> >& clus);
 		double computeCost(std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q);

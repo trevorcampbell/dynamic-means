@@ -1,7 +1,7 @@
 #ifndef __ITERATIVE_IMPL_HPP
 
 template <class Model, bool monoCheck>
-double _Iterative<Model, monoCheck>::_Iterative(bool verbose){
+_Iterative<Model, monoCheck>::_Iterative(bool verbose){
 	this->verbose = verbose;
 }
 
@@ -11,7 +11,7 @@ double _Iterative<Model, monoCheck>::cluster(std::map<uint64_t, typename Model::
 	this->initialLabelling(obs, clus, lambda);
 	//label/parameter update iteration
 	bool labellingChanged = true;
-	if (!M){
+	if (!monoCheck){
 		while(labellingChanged){
 			this->parameterUpdate(clus);
 			labellingChanged = this->labelUpdate(clus, lambda);

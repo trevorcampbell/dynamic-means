@@ -71,7 +71,7 @@ int main(int argc, char** argv){
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	int nRestarts = 10;
 	uint64_t nId = 0;
-	dmeans::DMeans<dmeans::VectorData<2>, dmeans::VectorParameter<2>, dmeans::IterativeWithMonotonicityChecks> dynm(lambda, Q, tau, true);
+	dmeans::DMeans<dmeans::VectorSpaceModel<2, lambda, Q, tau>, dmeans::IterativeWithMonotonicityChecks> dynm(true);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
