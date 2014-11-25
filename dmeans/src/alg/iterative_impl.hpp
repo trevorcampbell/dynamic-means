@@ -7,51 +7,51 @@ _Iterative<Model, monoCheck>::_Iterative(Config cfg){
 }
 
 template <class Model, bool monoCheck>
-double _Iterative<Model, monoCheck>::cluster(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q, double tau, bool verbose){
+double _Iterative<Model, monoCheck>::cluster(std::map<uint64_t, typename Model::Data>& obs, std::vector<Cluster<Model> >& clus){
 	//initial round of labelling data without deassigning it
-	this->initialLabelling(obs, clus, lambda);
+	this->initialLabelling(obs, clus);
 	//label/parameter update iteration
 	bool labellingChanged = true;
 	if (!monoCheck){
 		while(labellingChanged){
 			this->parameterUpdate(clus);
-			labellingChanged = this->labelUpdate(clus, lambda);
+			labellingChanged = this->labelUpdate(clus);
 		}
 	} else {
-		double obj = this->computeCost(clus, lambda, Q);
+		double obj = this->computeCost(clus);
 		while(labellingChanged){
 			double prevobj = obj;
 			std::cout << "prm update" << std::endl;
 			this->parameterUpdate(clus);
-			obj = this->computeCost(clus, lambda, Q);
+			obj = this->computeCost(clus);
 			std::cout << "Obj: " << obj << std::endl;
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "parameterUpdate()");
 			}
 			prevobj = obj;
 			std::cout << "lbl update" << std::endl;
-			labellingChanged = this->labelUpdate(clus, lambda);
-			obj = this->computeCost(clus, lambda, Q);
+			labellingChanged = this->labelUpdate(clus);
+			obj = this->computeCost(clus);
 			std::cout << "Obj: " << obj << std::endl;
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "labelUpdate()");
 			}
 		}
 	}
-	return this->computeCost(clus, lambda, Q);
+	return this->computeCost(clus);
 }
 
 template <class Model, bool monoCheck>
-double _Iterative<Model, monoCheck>::computeCost(std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q){
+double _Iterative<Model, monoCheck>::computeCost(std::vector< Cluster<Model> >& clus){
 	double cost = 0;
 	for(auto it = clus.begin(); it != clus.end(); ++it){
-		cost += it->second.cost(lambda, Q);
+		cost += it->cost();
 	}
 	return cost;
 }
 
 template <class Model, bool monoCheck>
-void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda){
+void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::vector< Cluster<Model> >& clus){
 	std::vector<uint64_t> ids;
 	for (auto it = obs.begin(); it != obs.end(); ++it){
 		ids.push_back(it->first);
@@ -60,18 +60,18 @@ void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename 
 	for (uint64_t i = 0; i < ids.size(); i++){
 		double minCost = std::numeric_limits<double>::infinity();
 		uint64_t minInd = -1;
-		for(auto it = clus.begin(); it != clus.end(); ++it){
-			double d = it->second.distTo(obs[ids[i]]);
+		for(int k = 0; k < clus.size(); k++){
+			double d = clus[k].compareTo(obs[ids[i]]);
 			if (d < minCost){
 				minCost = d;
-				minInd = it->first;
+				minInd = k;
 			}
 		}
 		if (minCost > lambda){
 			Cluster<Model> newclus(this->cfg);
 			newclus.assignData(ids[i], obs[ids[i]]);
 			newclus.updatePrm();
-			clus[newclus.id()] = newclus;
+			clus.push_back(newclus);
 		} else {
 			clus[minInd].assignData(ids[i], obs[ids[i]]);
 		}
@@ -79,14 +79,14 @@ void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename 
 }
 
 template <class Model, bool monoCheck>
-bool _Iterative<Model, monoCheck>::labelUpdate(std::map<uint64_t, Cluster<Model> >& clus, double lambda){
+bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Cluster<Model> >& clus){
 	bool labellingChanged = false;
 	//get the assignments across all clusters
 	std::vector<uint64_t> ids, lbls;
-	for (auto it = clus.begin(); it != clus.end(); ++it){
-		std::vector<uint64_t> clusids = it->second.getAssignedIds();
+	for (int k = 0; k < clus.size(); k++){
+		std::vector<uint64_t> clusids = clus[k]getAssignedIds();
 		ids.insert(ids.end(), clusids.begin(), clusids.end());
-		lbls.insert(lbls.end(), clusids.size(), it->first);
+		lbls.insert(lbls.end(), clusids.size(), k);
 	}
 	std::vector<uint64_t> shuffs(ids.size());
 	std::iota(shuffs.begin(), shuffs.end(), 0);
@@ -101,18 +101,18 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::map<uint64_t, Cluster<Model>
 		}
 		double minCost = std::numeric_limits<double>::infinity();
 		uint64_t minInd = -1;
-		for(auto it = clus.begin(); it != clus.end(); ++it){
-			double d = it->second.distTo(obs);
+		for(int k = 0; k < clus.size(); k++){
+			double d = clus[k].compareTo(obs);
 			if (d < minCost){
 				minCost = d;
-				minInd = it->first;
+				minInd = k;
 			}
 		}
 		if (minCost > lambda){
 			Cluster<Model> newclus(this->cfg);
 			newclus.assignData(id, obs);
 			newclus.updatePrm();
-			clus[newclus.id()] = newclus;
+			clus.push_back(newclus);
 			labellingChanged = true;
 		} else {
 			clus[minInd].assignData(id, obs);
@@ -125,9 +125,9 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::map<uint64_t, Cluster<Model>
 }
 
 template <class Model, bool monoCheck>
-void _Iterative<Model, monoCheck>::parameterUpdate(std::map<uint64_t, Cluster<Model> >& clus){
+void _Iterative<Model, monoCheck>::parameterUpdate(std::vector< Cluster<Model> >& clus){
 	for (auto it = clus.begin(); it != clus.end(); ++it){
-		it->second.updatePrm();
+		it->updatePrm();
 	}
 }
 

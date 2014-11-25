@@ -4,24 +4,25 @@
 #include<random>
 #include "../core/cluster.hpp"
 #include "../util/config.hpp"
+#include<string>
 
 namespace dmeans{
 template<class Model, bool monoCheck>
 class _Iterative{
 	public:
 		_Iterative(Config cfg);
-		double cluster(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q, double tau, bool verbose);
+		double cluster(std::map<uint64_t, typename Model::Data>& obs, std::vector<Cluster<Model> >& clus);
 	private:
 		bool verbose;
 		Config cfg;
 
-		void initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda);
-		bool labelUpdate(std::map<uint64_t, Cluster<Model> >& clus, double lambda);
-		void parameterUpdate(std::map<uint64_t, Cluster<Model> >& clus);
-		double computeCost(std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q);
+		void initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::vector< Cluster<Model> >& clus);
+		bool labelUpdate(std::vector< Cluster<Model> >& clus);
+		void parameterUpdate(std::vector< Cluster<Model> >& clus);
+		double computeCost(std::vector< Cluster<Model> >& clus);
 		class MonotonicityViolationException{
 			public:
-				MonotonicityViolationException(double prevobj, double obj, const char* funcname){
+				MonotonicityViolationException(double prevobj, double obj, std::string funcname){
 					std::cout << "Monotonicity violated! Prevobj = " << prevobj << " obj = " << obj << " after calling " << funcname << std::endl;
 				}
 		};
