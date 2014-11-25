@@ -10,16 +10,16 @@ namespace dmeans{
 template<class Model, bool monoCheck>
 class _Iterative{
 	public:
-		_Iterative(Config cfg);
-		double cluster(std::map<uint64_t, typename Model::Data>& obs, std::vector<Cluster<Model> >& clus);
+		_Iterative(const Config& cfg);
+		double cluster(const std::map<uint64_t, typename Model::Data>& obs, std::vector<Cluster<Model> >& clus, const Model& model) const;
 	private:
 		bool verbose;
 		Config cfg;
 
-		void initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::vector< Cluster<Model> >& clus);
-		bool labelUpdate(std::vector< Cluster<Model> >& clus);
-		void parameterUpdate(std::vector< Cluster<Model> >& clus);
-		double computeCost(std::vector< Cluster<Model> >& clus);
+		void initialLabelling(const std::map<uint64_t, typename Model::Data>& obs, std::vector< Cluster<Model> >& clus, const Model& model) const;
+		bool labelUpdate(std::vector< Cluster<Model> >& clus, const Model& model) const;
+		void parameterUpdate(std::vector< Cluster<Model> >& clus, const Model& model) const;
+		double computeCost(const std::vector< Cluster<Model> >& clus, const Model& model) const;
 		class MonotonicityViolationException{
 			public:
 				MonotonicityViolationException(double prevobj, double obj, std::string funcname){

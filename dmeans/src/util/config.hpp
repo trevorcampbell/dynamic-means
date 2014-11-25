@@ -20,7 +20,7 @@ class Config{
 				params[key] = oss.str();
 			}
 		template<class T>
-			T get(std::string key, Type t, T default_value){
+			T get(std::string key, Type t, T default_value) const{
 				if(params.find(key) != params.end()){
 					T res;
 					std::istringstream iss;

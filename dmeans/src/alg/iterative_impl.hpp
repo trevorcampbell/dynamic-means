@@ -1,13 +1,13 @@
 #ifndef __ITERATIVE_IMPL_HPP
 
 template <class Model, bool monoCheck>
-_Iterative<Model, monoCheck>::_Iterative(Config cfg){
+_Iterative<Model, monoCheck>::_Iterative(const Config& cfg){
 	this->cfg = cfg;
 	this->verbose = cfg.get("verbose", Config::OPTIONAL, false);
 }
 
 template <class Model, bool monoCheck>
-double _Iterative<Model, monoCheck>::cluster(std::map<uint64_t, typename Model::Data>& obs, std::vector<Cluster<Model> >& clus){
+double _Iterative<Model, monoCheck>::cluster(const std::map<uint64_t, typename Model::Data>& obs, std::vector<Cluster<Model> >& clus, const Model& model) const{
 	//initial round of labelling data without deassigning it
 	this->initialLabelling(obs, clus);
 	//label/parameter update iteration
@@ -42,7 +42,7 @@ double _Iterative<Model, monoCheck>::cluster(std::map<uint64_t, typename Model::
 }
 
 template <class Model, bool monoCheck>
-double _Iterative<Model, monoCheck>::computeCost(std::vector< Cluster<Model> >& clus){
+double _Iterative<Model, monoCheck>::computeCost(const std::vector< Cluster<Model> >& clus, const Model& model) const{
 	double cost = 0;
 	for(auto it = clus.begin(); it != clus.end(); ++it){
 		cost += it->cost();
@@ -51,7 +51,7 @@ double _Iterative<Model, monoCheck>::computeCost(std::vector< Cluster<Model> >& 
 }
 
 template <class Model, bool monoCheck>
-void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::vector< Cluster<Model> >& clus){
+void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::vector< Cluster<Model> >& clus, const Model& model){
 	std::vector<uint64_t> ids;
 	for (auto it = obs.begin(); it != obs.end(); ++it){
 		ids.push_back(it->first);
@@ -79,7 +79,7 @@ void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename 
 }
 
 template <class Model, bool monoCheck>
-bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Cluster<Model> >& clus){
+bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Cluster<Model> >& clus, const Model& model){
 	bool labellingChanged = false;
 	//get the assignments across all clusters
 	std::vector<uint64_t> ids, lbls;
@@ -125,7 +125,7 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Cluster<Model> >& cl
 }
 
 template <class Model, bool monoCheck>
-void _Iterative<Model, monoCheck>::parameterUpdate(std::vector< Cluster<Model> >& clus){
+void _Iterative<Model, monoCheck>::parameterUpdate(std::vector< Cluster<Model> >& clus, const Model& model){
 	for (auto it = clus.begin(); it != clus.end(); ++it){
 		it->updatePrm();
 	}

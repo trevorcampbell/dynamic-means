@@ -10,16 +10,17 @@ template <class D, class P>
 class Cluster {
 	public:
 		Cluster();
-		Cluster(const Cluster<Model>& rhs);
-		Cluster<Model>& operator=(const Cluster<Model>& rhs);
+		Cluster(const Cluster<D, P>& rhs);
+		Cluster<D, P>& operator=(const Cluster<D, P>& rhs);
 		void setID(uint64_t id);
-		void assignData(uint64_t id, typename Model::Data& d);
+		void assignData(uint64_t id, const D& d);
 		std::vector<uint64_t> getAssignedIds() const;
-		typename Model::Data deassignData(uint64_t did);
+		D deassignData(uint64_t did);
 		void clearData();
+		void finalize();
 		bool isEmpty() const;
 		bool isNew() const;
-		void finalize();
+		uint64_t getAge() const;
 		double compareTo(const D& d) const;
 		P& getPrm() const;
 		P& getOldPrm() const;

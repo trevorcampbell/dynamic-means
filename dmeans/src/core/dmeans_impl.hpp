@@ -1,10 +1,11 @@
 #ifndef __DMEANS_IMPL_HPP
 template <class Model, template<typename> class Alg>
-DMeans<Model, Alg>::DMeans(Config cfg){
+DMeans<Model, Alg>::DMeans(Config cfg) : model(cfg){
 	this->cfg = cfg;
-	this->verbose = cfg.get("verbose", Config::OPTIONAL, false);
+	this->verbose = cfg.get("verbose", Config::Type::OPTIONAL, false);
+	this->nRestarts = this->cfg.get("nRestarts", Config::Type::OPTIONAL, 1);
 	this->nextLabel = 0;
-	uint64_t seed = cfg.get("seed", Config::OPTIONAL, -1);
+	uint64_t seed = cfg.get("seed", Config::Type::OPTIONAL, -1);
 	if (seed < 0){
 		std::srand(this->timer.now_ms());
 	} else {
@@ -23,7 +24,7 @@ void DMeans<Model, Alg>::finalize(){
 	auto it = this->clusters.begin();
 	while(it != this->clusters.end()){
 		it->finalize();
-		if (it->isPermanentlyDead()){
+		if(model.isClusterDead(it->getAge())){
 			it = this->clusters.erase(it);
 		} else {
 			++it;
@@ -55,7 +56,7 @@ void DMeans<Model, Alg>::labelNewClusters(){
 
 
 template <class Model, template<typename> class Alg>
-Results<Model> DMeans<Model, Alg>::cluster(std::vector<typename Model::Data>& obs, uint64_t nRestarts){
+Results<Model> DMeans<Model, Alg>::cluster(const std::vector<typename Model::Data>& obs){
 	this->timer.start();//start the timer
 	//these store the best cost/clustering over nRestarts restarts
 	double minCost = std::numeric_limits<double>::infinity();
@@ -66,9 +67,9 @@ Results<Model> DMeans<Model, Alg>::cluster(std::vector<typename Model::Data>& ob
 		obsMap[i] = obs[i];
 	}
 	Alg<Model> alg(this->cfg);
-	for (uint64_t k = 0; k < nRestarts; k++){
+	for (uint64_t k = 0; k < this->nRestarts; k++){
 		//cluster at this step
-		double cost = alg.cluster(obsMap, this->clusters, this->verbose);
+		double cost = alg.cluster(obsMap, this->clusters, this->model);
 		if (cost < minCost){
 			//the objective is the best so far, save the results
 			minCost = cost;

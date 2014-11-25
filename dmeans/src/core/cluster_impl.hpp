@@ -41,6 +41,11 @@ void Cluster<D, P>::finalize(){
 }
 
 template<class D, class P>
+uint64_t getAge() const{
+	return this->age;
+}
+
+template<class D, class P>
 std::vector<uint64_t> Cluster<D, P>::getAssignedIds() const{
 	std::vector<uint64_t> asids;
 	for (auto it = this->clusData.begin(); it != this->clusData.end(); ++it){
@@ -50,7 +55,7 @@ std::vector<uint64_t> Cluster<D, P>::getAssignedIds() const{
 }
 
 template<class D, class P>
-void Cluster<D, P>::assignData(uint64_t did, D& d){
+void Cluster<D, P>::assignData(uint64_t did, const D& d){
 	if (this->clusData.find(did) != this->clusData.end()){
 		throw DataAlreadyInClusterException(did);
 	}
@@ -58,7 +63,7 @@ void Cluster<D, P>::assignData(uint64_t did, D& d){
 }
 
 template<class D, class P>
-typename Model::Data Cluster<D, P>::deassignData(uint64_t did){
+D Cluster<D, P>::deassignData(uint64_t did){
 	if (this->clusData.find(did) == this->clusData.end()){
 		throw DataNotInClusterException(did); 
 	}

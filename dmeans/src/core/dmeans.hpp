@@ -13,15 +13,17 @@ class DMeans{
 	public:
 		DMeans(Config cfg);
 		//initialize a new step and cluster
-		Results<Model> cluster(std::vector<typename Model::Data>& obs, uint64_t nRestarts);
+		Results<Model> cluster(const std::vector<typename Model::Data>& obs);
 		//reset DDP chain
 		void reset();
 	private:
 		bool verbose;
 		uint64_t nextLabel;
+		uint64_t nRestarts;
 		Config cfg;
+		Model model;
 
-		std::vector<Cluster<Model> > clusters;
+		std::vector<typename Cluster<Model::Data, typename Model::Parameter> > clusters;
 		Timer timer;
 
 		Results<Model> getResults() const;
