@@ -1,10 +1,10 @@
 #ifndef __RESULTS_HPP
 namespace dmeans{
-template<class P>
+template<class Model>
 class Results{
 	public:
 		std::map<uint64_t, uint64_t> lbls;
-		std::map<uint64_t, P> prms;
+		std::map<uint64_t, typename Model::Parameter> prms;
 		double tTaken;
 		double cost;
 };
