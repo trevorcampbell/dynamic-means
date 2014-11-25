@@ -107,13 +107,13 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const 
 		double minCost = std::numeric_limits<double>::infinity();
 		uint64_t minInd = -1;
 		for(int k = 0; k < clus.size(); k++){
-			double d = clus[k].compareTo(obs);
+			double d = model.compare(clus[k], obs);
 			if (d < minCost){
 				minCost = d;
 				minInd = k;
 			}
 		}
-		if (minCost > lambda){
+		if (model.exceedsNewClusterCost(obs, minCost)){
 			Clus newclus();
 			newclus.assignData(id, obs);
 			model.updatePrm(newclus);
