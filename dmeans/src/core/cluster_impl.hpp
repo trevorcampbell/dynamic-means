@@ -1,7 +1,7 @@
 #ifndef __CLUSTER_IMPL_HPP
 
 template<class Model>
-Cluster<Model>::Cluster(){
+Cluster<Model>::Cluster(Config cfg) : model(cfg){
 	this->age = 0;
 	this->id = -1;
 }
@@ -14,6 +14,7 @@ Cluster<Model>::Cluster(const Cluster<Model>& rhs) {
 	this->oldprm = rhs.oldprm;
 	this->clusData = rhs.clusData;
 	this->id = rhs.id;
+	this->model = rhs.model;
 }
 
 
@@ -25,6 +26,7 @@ Cluster<Model>& Cluster<Model>::operator=(const Cluster<Model>& rhs) {
 		this->oldprm = rhs.oldprm;
 		this->clusData = rhs.clusData;
 		this->id = rhs.id;
+		this->model = rhs.model;
 	}
 	return *this;
 }
@@ -34,7 +36,7 @@ void Cluster<Model>::finalize(){
 	if(this->isEmpty()){
 		this->age++;
 	} else {
-		this->oldprm = Model::updatePrm(this->clusData.begin(), this->clusData.end(), this->oldprm, this->age);
+		this->oldprm = model.updatePrm(this->clusData.begin(), this->clusData.end(), this->oldprm, this->age);
 		this->age = 1;
 	}
 	this->clusData.clear();
@@ -92,12 +94,12 @@ bool Cluster<Model>::isNew() const{
 
 template<class Model>
 bool Cluster<Model>::isPermanentlyDead() const {
-	return Model::isClusterDead(this->age);
+	return model.isClusterDead(this->age);
 }
 
 template<class Model> 
 double Cluster<Model>::cost() const {
-	return Model::clusterCost(this->clusData.begin(), this->clusData.end(), this->prm, this->oldprm, this->age);
+	return model.clusterCost(this->clusData.begin(), this->clusData.end(), this->prm, this->oldprm, this->age);
 }
 
 template<class Model> 
@@ -105,12 +107,12 @@ double Cluster<Model>::compareTo(typename Model::Data& d) const{
 	if(this->isEmpty() && this->isNew()){
 		throw ClusterEmptyDistanceException();
 	}
-	return Model::compare(d, this->prm, this->age, !this->isEmpty());
+	return model.compare(d, this->prm, this->age, !this->isEmpty());
 }
 
 template<class Model>
 void Cluster<Model>::updatePrm(){
-	this->prm = Model::updatePrm(this->clusData.begin(), this->clusData.end(), this->oldprm, this->age);
+	this->prm = model.updatePrm(this->clusData.begin(), this->clusData.end(), this->oldprm, this->age);
 }
 
 template<class Model>

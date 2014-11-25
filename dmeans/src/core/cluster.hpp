@@ -8,7 +8,7 @@ namespace dmeans{
 template <class Model>
 class Cluster {
 	public:
-		Cluster();
+		Cluster(Config cfg);
 		Cluster(const Cluster<Model>& rhs);
 		Cluster<Model>& operator=(const Cluster<Model>& rhs);
 		void setID(uint64_t id);
@@ -28,6 +28,7 @@ class Cluster {
 		uint64_t id;
 		uint64_t age;
 		typename Model::Parameter prm, oldprm;
+		Model model;
 		std::map<uint64_t, typename Model::Data> clusData;
 
 		class DataNotInClusterException{

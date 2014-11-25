@@ -64,15 +64,17 @@ int main(int argc, char** argv){
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
-	const double lambda = 0.05;
+	Config cfg;
 	const double T_Q = 6.8;
 	const double K_tau = 1.01;
-	const double Q = lambda/T_Q;
-	const double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-	const int nRestarts = 10;
+	cfg["lambda"] = 0.05;
+	cfg["Q"] = lambda/T_Q;
+	cfg["tau"] = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
+	cfg["nRestarts"] = 10;
+	cfg["verbose"] = true;
 	uint64_t nId = 0;
-	typedef dmeans::VectorSpaceModel<2, lambda, Q, tau> VSModel;
-	dmeans::DMeans<VSModel, dmeans::IterativeWithMonotonicityChecks> dynm(true);
+	typedef dmeans::VectorSpaceModel<2> VSModel;
+	dmeans::DMeans<VSModel, dmeans::IterativeWithMonotonicityChecks> dynm(cfg);
 
 	//run the experiment
 	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step

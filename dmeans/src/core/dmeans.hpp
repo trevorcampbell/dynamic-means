@@ -10,7 +10,7 @@ namespace dmeans{
 template<class Model, template<typename> class Alg>
 class DMeans{
 	public:
-		DMeans(bool verbose = false, int seed = -1);
+		DMeans(Config cfg);
 		//initialize a new step and cluster
 		Results<Model> cluster(std::vector<typename Model::Data>& obs, uint64_t nRestarts);
 		//reset DDP chain
@@ -18,6 +18,7 @@ class DMeans{
 	private:
 		bool verbose;
 		uint64_t nextLabel;
+		Config cfg;
 
 		std::vector<Cluster<Model> > clusters;
 		Timer timer;

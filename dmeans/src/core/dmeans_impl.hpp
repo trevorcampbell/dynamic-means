@@ -1,8 +1,10 @@
 #ifndef __DMEANS_IMPL_HPP
 template <class Model, template<typename> class Alg>
-DMeans<Model, Alg>::DMeans(bool verbose, int seed){
-	this->verbose = verbose;
+DMeans<Model, Alg>::DMeans(Config cfg){
+	this->cfg = cfg;
+	this->verbose = cfg.get("verbose", Config::OPTIONAL, false);
 	this->nextLabel = 0;
+	uint64_t seed = cfg.get("seed", Config::OPTIONAL, -1);
 	if (seed < 0){
 		std::srand(this->timer.now_ms());
 	} else {
@@ -63,7 +65,7 @@ Results<Model> DMeans<Model, Alg>::cluster(std::vector<typename Model::Data>& ob
 	for(uint64_t i = 0; i < obs.size(); i++){
 		obsMap[i] = obs[i];
 	}
-	Alg<Model> alg(this->verbose); //the algorithm that does clustering per timestep
+	Alg<Model> alg(this->cfg);
 	for (uint64_t k = 0; k < nRestarts; k++){
 		//cluster at this step
 		double cost = alg.cluster(obsMap, this->clusters, this->verbose);

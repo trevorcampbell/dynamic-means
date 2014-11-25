@@ -1,8 +1,9 @@
 #ifndef __ITERATIVE_IMPL_HPP
 
 template <class Model, bool monoCheck>
-_Iterative<Model, monoCheck>::_Iterative(bool verbose){
-	this->verbose = verbose;
+_Iterative<Model, monoCheck>::_Iterative(Config cfg){
+	this->cfg = cfg;
+	this->verbose = cfg.get("verbose", Config::OPTIONAL, false);
 }
 
 template <class Model, bool monoCheck>
@@ -67,7 +68,7 @@ void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename 
 			}
 		}
 		if (minCost > lambda){
-			Cluster<Model> newclus;
+			Cluster<Model> newclus(this->cfg);
 			newclus.assignData(ids[i], obs[ids[i]]);
 			newclus.updatePrm();
 			clus[newclus.id()] = newclus;
@@ -108,7 +109,7 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::map<uint64_t, Cluster<Model>
 			}
 		}
 		if (minCost > lambda){
-			Cluster<Model> newclus;
+			Cluster<Model> newclus(this->cfg);
 			newclus.assignData(id, obs);
 			newclus.updatePrm();
 			clus[newclus.id()] = newclus;

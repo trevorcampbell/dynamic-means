@@ -8,10 +8,11 @@ namespace dmeans{
 template<class Model, bool monoCheck>
 class _Iterative{
 	public:
-		_Iterative(bool verbose);
+		_Iterative(Config cfg);
 		double cluster(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q, double tau, bool verbose);
 	private:
 		bool verbose;
+		Config cfg;
 
 		void initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda);
 		bool labelUpdate(std::map<uint64_t, Cluster<Model> >& clus, double lambda);
