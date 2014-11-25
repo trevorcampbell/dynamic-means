@@ -21,9 +21,9 @@ class MaxMatching{
 		map<int, int> getMaxConsistentMatching(vector<int> labels1, vector<int> labels2, vector<double> weights);
 	private:
 		map<int, int> oldmatchings;
-		double objective;
+		double objective, prunedobjective;
 		void pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights);
-		void pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights);
+		double prunePrematchedLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights);
 		set<int> getUniqueLabels(const vector<int>& labels);
 		void getMaps(const vector<int>& labels1, const set<int>& l1set, const vector<int>& labels2, const set<int>& l2set, const vector<double>& weights,
 							map< pair<int, int>, int>& varMap, map<int, pair<int, int> >& invvarMap, map<int, double>& weightMap);

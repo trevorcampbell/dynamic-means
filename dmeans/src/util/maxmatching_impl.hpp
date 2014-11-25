@@ -5,7 +5,7 @@ void MaxMatching::resetOldMatchings(){
 }
 
 double MaxMatching::getObjective(){
-	return objective;
+	return objective + prunedobjective;
 }
 
 void MaxMatching::pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights){
@@ -20,12 +20,16 @@ void MaxMatching::pruneInvalidLabelPairs(vector<int>& labels1, vector<int>& labe
 	}
 }
 
-void MaxMatching::pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights){
+double MaxMatching::prunePrematchedLabelPairs(vector<int>& labels1, vector<int>& labels2, vector<double>& weights){
 	//prune labels already in the old matching
+	double prunedobjective = 0.0;
 	for (map<int, int>::iterator it = oldmatchings.begin(); it != oldmatchings.end(); ++it){
 		int l1 = it->first, l2 = it->second;
 		for (uint64_t i = 0; i < labels1.size(); i++){
 			if(labels1[i] == l1 || labels2[i] == l2){
+				if(labels1[i] == l1 && labels2[i] == l2){
+					prunedobjective += weights[i];
+				}
 				labels1.erase(labels1.begin()+i);
 				labels2.erase(labels2.begin()+i);
 				weights.erase(weights.begin()+i);
@@ -33,6 +37,7 @@ void MaxMatching::pruneInconsistentLabelPairs(vector<int>& labels1, vector<int>&
 			}
 		}
 	}
+	return prunedobjective;
 }
 
 set<int> MaxMatching::getUniqueLabels(const vector<int>& labels){
@@ -72,6 +77,8 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 	if (labels1.size() != labels2.size() || (weights.size() > 0 && weights.size() != labels1.size())){
 		throw InvalidLabelsSizeException(labels1.size(), labels2.size(), weights.size());
 	}
+
+	this->prunedobjective = 0.0;//just clear this out in case it was set by an earlier call to getMaxConsistentMatching
 	
 	if (weights.size() == 0){
 		weights.resize(labels1.size(), 1);
@@ -79,6 +86,7 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 	this->pruneInvalidLabelPairs(labels1, labels2, weights);
 
 	if (labels1.size() == 0){
+		this->objective = 0.0;
 		return map<int, int>();
 	}
 
@@ -198,9 +206,11 @@ map<int, int> MaxMatching::getMaxConsistentMatching(vector<int> labels1, vector<
 	if (weights.size() == 0){
 		weights.resize(labels1.size(), 1);
 	}
-	this->pruneInconsistentLabelPairs(labels1, labels2, weights);
+	double pruneobj = this->prunePrematchedLabelPairs(labels1, labels2, weights);
 
 	if (labels1.size() == 0){
+		this->objective = 0.0;
+		this->prunedobjective = pruneobj;
 		return oldmatchings;
 	}
 
@@ -211,7 +221,9 @@ map<int, int> MaxMatching::getMaxConsistentMatching(vector<int> labels1, vector<
 		oldmatchings[it->first] = it->second;
 	}
 
+
 	//output the updated oldmatchings
+	this->prunedobjective = pruneobj;
 	return oldmatchings;
 }
 
