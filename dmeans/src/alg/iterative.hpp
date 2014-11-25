@@ -3,6 +3,7 @@
 #include<iostream>
 #include<random>
 #include "../core/cluster.hpp"
+#include "../util/config.hpp"
 
 namespace dmeans{
 template<class Model, bool monoCheck>

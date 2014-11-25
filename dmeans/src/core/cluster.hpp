@@ -3,6 +3,7 @@
 #include<vector>
 #include<iostream>
 #include<iterator>
+#include "../util/config.hpp"
 
 namespace dmeans{
 template <class Model>

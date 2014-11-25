@@ -5,6 +5,7 @@
 #include "../util/timer.hpp"
 #include "../util/results.hpp"
 #include "cluster.hpp"
+#include "../util/config.hpp"
 
 namespace dmeans{
 template<class Model, template<typename> class Alg>
