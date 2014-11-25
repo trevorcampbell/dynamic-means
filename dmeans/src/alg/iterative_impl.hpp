@@ -6,7 +6,7 @@ double _Iterative<Model, monoCheck>::_Iterative(bool verbose){
 }
 
 template <class Model, bool monoCheck>
-double _Iterative<Model, monoCheck>::cluster(std::map<uint64_t, Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q, double tau, bool verbose){
+double _Iterative<Model, monoCheck>::cluster(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q, double tau, bool verbose){
 	//initial round of labelling data without deassigning it
 	this->initialLabelling(obs, clus, lambda);
 	//label/parameter update iteration
@@ -50,7 +50,7 @@ double _Iterative<Model, monoCheck>::computeCost(std::map<uint64_t, Cluster<Mode
 }
 
 template <class Model, bool monoCheck>
-void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda){
+void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda){
 	std::vector<uint64_t> ids;
 	for (auto it = obs.begin(); it != obs.end(); ++it){
 		ids.push_back(it->first);
@@ -94,7 +94,7 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::map<uint64_t, Cluster<Model>
 	for (uint64_t i = 0; i < shuffs.size(); i++){
 		uint64_t cl = lbls[shuffs[i]];
 		uint64_t id = ids[shuffs[i]];
-		Model::Data obs = clus[cl].deassignData(id);
+		typename Model::Data obs = clus[cl].deassignData(id);
 		if (clus[cl].isNew() && clus[cl].isEmpty()){
 			clus.erase(cl);
 		}

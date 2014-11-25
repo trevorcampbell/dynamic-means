@@ -9,7 +9,7 @@ template<class Model, bool monoCheck>
 class _Iterative{
 	public:
 		_Iterative(bool verbose);
-		double cluster(std::map<uint64_t, Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q, double tau, bool verbose);
+		double cluster(std::map<uint64_t, typename Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q, double tau, bool verbose);
 	private:
 		bool verbose;
 

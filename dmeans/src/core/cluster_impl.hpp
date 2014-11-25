@@ -50,7 +50,7 @@ std::vector<uint64_t> Cluster<Model>::getAssignedIds() const{
 }
 
 template<class Model>
-void Cluster<Model>::assignData(uint64_t did, Model::Data& d){
+void Cluster<Model>::assignData(uint64_t did, typename Model::Data& d){
 	if (this->clusData.find(did) != this->clusData.end()){
 		throw DataAlreadyInClusterException(did);
 	}
@@ -58,11 +58,11 @@ void Cluster<Model>::assignData(uint64_t did, Model::Data& d){
 }
 
 template<class Model>
-Model::Data Cluster<Model>::deassignData(uint64_t did){
+typename Model::Data Cluster<Model>::deassignData(uint64_t did){
 	if (this->clusData.find(did) == this->clusData.end()){
 		throw DataNotInClusterException(did); 
 	}
-	Model::Data d = this->clusData[did];
+	typename Model::Data d = this->clusData[did];
 	this->clusData.erase(did);
 	return d;
 }
@@ -101,7 +101,7 @@ double Cluster<Model>::cost() const {
 }
 
 template<class Model> 
-double Cluster<Model>::compareTo(Model::Data& d) const{
+double Cluster<Model>::compareTo(typename Model::Data& d) const{
 	if (!this->isEmpty()) {
 		return Model::compare(d, this->prm, -1);
 	} else if (this->isEmpty() && !this->isNew()){
@@ -117,7 +117,7 @@ void Cluster<Model>::updatePrm(){
 }
 
 template<class Model>
-const Model::Parameter& Cluster<Model>::getPrm() const{
+const typename Model::Parameter& Cluster<Model>::getPrm() const{
 	return this->prm;
 }
 

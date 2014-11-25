@@ -12,9 +12,9 @@ class Cluster {
 		Cluster(const Cluster<Model>& rhs);
 		Cluster<Model>& operator=(const Cluster<Model>& rhs);
 		void setID(uint64_t id);
-		void assignData(uint64_t id, Model::Data& d);
+		void assignData(uint64_t id, typename Model::Data& d);
 		std::vector<uint64_t> getAssignedIds() const;
-		Model::Data deassignData(uint64_t did);
+		typename Model::Data deassignData(uint64_t did);
 		void clearData();
 		bool isEmpty() const;
 		bool isNew() const;
@@ -22,13 +22,13 @@ class Cluster {
 		void finalize();
 		void updatePrm();
 		double cost() const;
-		double compareTo(Model::Data& d) const;
-		const Model::Parameter& getPrm() const;
+		double compareTo(typename Model::Data& d) const;
+		const typename Model::Parameter& getPrm() const;
 	private:
 		uint64_t id;
 		uint64_t age;
 		Model::Parameter prm, oldprm;
-		std::map<uint64_t, Model::Data> clusData;
+		std::map<uint64_t, typename Model::Data> clusData;
 
 		class DataNotInClusterException{
 			public:
