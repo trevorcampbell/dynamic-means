@@ -67,11 +67,11 @@ int main(int argc, char** argv){
 	Config cfg;
 	const double T_Q = 6.8;
 	const double K_tau = 1.01;
-	cfg["lambda"] = 0.05;
-	cfg["Q"] = lambda/T_Q;
-	cfg["tau"] = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-	cfg["nRestarts"] = 10;
-	cfg["verbose"] = true;
+	cfg.set("lambda", 0.05);
+	cfg.set("Q", lambda/T_Q);
+	cfg.set("tau", (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0));
+	cfg.set("nRestarts", 10);
+	cfg.set("verbose", true);
 	uint64_t nId = 0;
 	typedef dmeans::VectorSpaceModel<2> VSModel;
 	dmeans::DMeans<VSModel, dmeans::IterativeWithMonotonicityChecks> dynm(cfg);
