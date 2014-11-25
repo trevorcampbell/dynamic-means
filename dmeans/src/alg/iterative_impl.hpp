@@ -14,14 +14,18 @@ double _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_
 		double obj = this->computeCost(clus, lambda, Q);
 		while(labellingChanged){
 			double prevobj = obj;
+			std::cout << "prm update" << std::endl;
 			this->parameterUpdate(clus);
 			obj = this->computeCost(clus, lambda, Q);
+			std::cout << "Obj: " << obj << std::endl;
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "parameterUpdate()");
 			}
 			prevobj = obj;
+			std::cout << "lbl update" << std::endl;
 			labellingChanged = this->labelUpdate(clus, lambda);
 			obj = this->computeCost(clus, lambda, Q);
+			std::cout << "Obj: " << obj << std::endl;
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "labelUpdate()");
 			}
@@ -105,7 +109,9 @@ bool _Iterative<D, P, M>::labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus, 
 			labellingChanged = true;
 		} else {
 			clus[minInd].assignData(id, obs);
-			labellingChanged = true;
+			if (cl != minInd){
+				labellingChanged = true;
+			}
 		}
 	}
 	return labellingChanged;

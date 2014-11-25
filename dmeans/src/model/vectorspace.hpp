@@ -56,6 +56,7 @@ class VectorParameter{
 			return cost;
 		}
 };
+
 }
 #define __VECTORSPACE_HPP
 #endif /* __VECTORSPACE_HPP */

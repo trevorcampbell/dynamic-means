@@ -1,65 +1,57 @@
 #ifndef __CLUSTER_IMPL_HPP
 
-template<class D, class P>
-Cluster<D, P>::Cluster(){
+template<class Model>
+Cluster<Model>::Cluster(){
 	this->age = 0;
 	this->w = 0.0;
 	this->gamma = 0.0;
-	this->id_ = nextId++;
+	this->id = -1;
 }
 
 
-template<class D, class P>
-Cluster<D, P>::Cluster(const Cluster<D, P>& rhs) {
+template<class Model>
+Cluster<Model>::Cluster(const Cluster<Model>& rhs) {
 	this->age = rhs.age;
 	this->w = rhs.w;
 	this->gamma = rhs.gamma;
 	this->prm = rhs.prm;
 	this->clusData = rhs.clusData;
-	this->id_ = rhs.id_;
+	this->id = rhs.id;
 }
 
 
-template<class D, class P>
-Cluster<D, P>& Cluster<D, P>::operator=(const Cluster<D, P>& rhs) {
+template<class Model>
+Cluster<Model>& Cluster<Model>::operator=(const Cluster<Model>& rhs) {
 	if (this != &rhs){
 		this->age = rhs.age;
 		this->w = rhs.w;
 		this->gamma = rhs.gamma;
 		this->prm = rhs.prm;
 		this->clusData = rhs.clusData;
-		this->id_ = rhs.id_;
+		this->id = rhs.id;
 	}
 	return *this;
 }
 
-template<class D, class P>
-uint64_t Cluster<D, P>::id() const{
-	return this->id_;
+
+template<class Model>
+void Cluster<Model>::updatePrm(){
+	this->prm.update(this->clusData.begin(), this->clusData.end(), this->oldprm);
 }
 
-
-
-template<class D, class P>
-void Cluster<D, P>::updatePrm(){
-	this->prm.update(this->clusData.begin(), this->clusData.end(), this->gamma);
-}
-
-template<class D, class P>
-void Cluster<D, P>::finalize(double tau){
+template<class Model>
+void Cluster<Model>::finalize(){
 	if(this->isEmpty()){
 		this->age++;
 	} else {
-		this->prm.updateOld(this->clusData.begin(), this->clusData.end(), this->gamma);
-		this->w = this->gamma + std::distance(this->clusData.begin(), this->clusData.end());
+		this->oldprm.updateOld(this->clusData.begin(), this->clusData.end(), this->oldprm);
 		this->age = 1;
 	}
-	this->gamma = 1.0/(1.0/this->w + tau*this->age);
 	this->clusData.clear();
 }
 
-template<class D, class P>
-std::vector<uint64_t> Cluster<D, P>::getAssignedIds() const{
+template<class Model>
+std::vector<uint64_t> Cluster<Model>::getAssignedIds() const{
 	std::vector<uint64_t> asids;
 	for (auto it = this->clusData.begin(); it != this->clusData.end(); ++it){
 		asids.push_back(it->first);
@@ -67,61 +59,74 @@ std::vector<uint64_t> Cluster<D, P>::getAssignedIds() const{
 	return asids;
 }
 
-template<class D, class P>
-void Cluster<D, P>::assignData(uint64_t did, D& d){
+template<class Model>
+void Cluster<Model>::assignData(uint64_t did, Model::Data& d){
 	if (this->clusData.find(did) != this->clusData.end()){
-		throw DataAlreadyInClusterException(this->id_, did);
+		throw DataAlreadyInClusterException(did);
 	}
 	this->clusData[did] = d;
 }
 
-template<class D, class P>
-D Cluster<D, P>::deassignData(uint64_t did){
+template<class Model>
+Model::Data Cluster<Model>::deassignData(uint64_t did){
 	if (this->clusData.find(did) == this->clusData.end()){
-		throw DataNotInClusterException(this->id_, did); 
+		throw DataNotInClusterException(did); 
 	}
-	D d = this->clusData[did];
+	Model::Data d = this->clusData[did];
 	this->clusData.erase(did);
 	return d;
 }
 
-template<class D, class P>
-void Cluster<D, P>::clearData(){
+template<class Model>
+void Cluster<Model>::clearData(){
 	this->clusData.clear();
 }
 
-template<class D, class P>
-double Cluster<D, P>::distTo(const D& d) const{
+template<class Model>
+void Cluster<Model>::setID(uint64_t id){
+	if (this->id >= 0){
+		throw IDAlreadySetException(this->id, id);
+	}
+	this->id = id;
+}
+
+template<class Model>
+double Cluster<Model>::distTo(const Model::Data& d) const{
 	if (this->isEmpty()){
-		throw ClusterEmptyDistanceException(this->id_);
+		throw ClusterEmptyDistanceException();
 	}
 	return this->prm.distTo(d);
 }
 
-template<class D, class P>
-double Cluster<D, P>::distToOld(const D& d) const{
+template<class Model>
+double Cluster<Model>::distToOld(const Model::Data& d) const{
 	return this->prm.distToOld(d);
 }
 
-template<class D, class P>
-double Cluster<D, P>::cost(double lambda, double Q) const{
+template<class Model>
+double Cluster<Model>::cost(double lambda, double Q) const{
 	return this->isEmpty() ? 0.0 :
 		(this->age == 0 ? lambda : Q*this->age)
 		+this->prm.cost(this->clusData.begin(), this->clusData.end(), this->gamma);
 }
 
-template<class D, class P>
-bool Cluster<D, P>::isEmpty() const{
+template<class Model>
+bool Cluster<Model>::isEmpty() const{
 	return this->clusData.empty();
 }
 
-template<class D, class P>
-bool Cluster<D, P>::isNew() const{
+template<class Model>
+bool Cluster<Model>::isNew() const{
 	return this->age == 0;
 }
 
-template<class D, class P>
-P Cluster<D, P>::getPrm() const{
+template<class Model>
+bool Cluster<Model>::isPermanentlyDead() const{
+	return Model::isPermanentlyDead(this->age);
+}
+
+template<class Model>
+const Model::Parameter& Cluster<Model>::getPrm() const{
 	return this->prm;
 }
 

@@ -7,24 +7,26 @@
 #include "cluster.hpp"
 
 namespace dmeans{
-template<class D, class P, template<typename, typename> class A>
+template<class Model, template<typename> class Alg>
 class DMeans{
 	public:
-		DMeans(double lambda, double Q, double tau, bool verbose = false, int seed = -1);
+		DMeans(bool verbose = false, int seed = -1);
 		//initialize a new step and cluster
-		Results<P> cluster(std::map<uint64_t, D>& obs, uint64_t nRestarts);
+		Results<Model> cluster(std::vector<Model::Data>& obs, uint64_t nRestarts);
 		//reset DDP chain
 		void reset();
 	private:
 		double lambda, Q, tau;
 		bool verbose;
+		uint64_t nextLabel;
 
-		std::map< uint64_t, Cluster<D, P> > clusters;
+		std::vector<Cluster<Model> > clusters;
 		Timer timer;
 
-		Results<P> getResults() const;
+		Results<Model> getResults() const;
 		void finalize();
 		void restart();
+		void labelNewClusters();
 };
 
 #include "dmeans_impl.hpp"
