@@ -6,10 +6,10 @@
 #include "../util/config.hpp"
 
 namespace dmeans{
-template <class Model>
+template <class D, class P>
 class Cluster {
 	public:
-		Cluster(Config cfg);
+		Cluster();
 		Cluster(const Cluster<Model>& rhs);
 		Cluster<Model>& operator=(const Cluster<Model>& rhs);
 		void setID(uint64_t id);
@@ -19,18 +19,15 @@ class Cluster {
 		void clearData();
 		bool isEmpty() const;
 		bool isNew() const;
-		bool isPermanentlyDead() const;
 		void finalize();
-		void updatePrm();
-		double cost() const;
-		double compareTo(typename Model::Data& d) const;
-		const typename Model::Parameter& getPrm() const;
+		double compareTo(const D& d) const;
+		P& getPrm() const;
+		P& getOldPrm() const;
 	private:
 		uint64_t id;
 		uint64_t age;
-		typename Model::Parameter prm, oldprm;
-		Model model;
-		std::map<uint64_t, typename Model::Data> clusData;
+		P prm, oldprm;
+		std::map<uint64_t, D> clusData;
 
 		class DataNotInClusterException{
 			public:
@@ -42,13 +39,6 @@ class Cluster {
 			public:
 				DataAlreadyInClusterException(uint64_t did){
 					std::cout << "Cluster already owns datapoint " << did << std::endl;
-				}
-		};
-
-		class ClusterEmptyDistanceException{
-			public:
-				ClusterEmptyDistanceException(){
-					std::cout << "Requesting distance to the new parameter of an empty cluster " << std::endl;
 				}
 		};
 		class IDAlreadySetException{

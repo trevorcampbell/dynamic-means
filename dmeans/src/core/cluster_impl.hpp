@@ -1,49 +1,47 @@
 #ifndef __CLUSTER_IMPL_HPP
 
-template<class Model>
-Cluster<Model>::Cluster(Config cfg) : model(cfg){
+template<class D, class P>
+Cluster<D, P>::Cluster(){
 	this->age = 0;
 	this->id = -1;
 }
 
 
-template<class Model>
-Cluster<Model>::Cluster(const Cluster<Model>& rhs) {
+template<class D, class P>
+Cluster<D, P>::Cluster(const Cluster<D, P>& rhs) {
 	this->age = rhs.age;
 	this->prm = rhs.prm;
 	this->oldprm = rhs.oldprm;
 	this->clusData = rhs.clusData;
 	this->id = rhs.id;
-	this->model = rhs.model;
 }
 
 
-template<class Model>
-Cluster<Model>& Cluster<Model>::operator=(const Cluster<Model>& rhs) {
+template<class D, class P>
+Cluster<D, P>& Cluster<D, P>::operator=(const Cluster<D, P>& rhs) {
 	if (this != &rhs){
 		this->age = rhs.age;
 		this->prm = rhs.prm;
 		this->oldprm = rhs.oldprm;
 		this->clusData = rhs.clusData;
 		this->id = rhs.id;
-		this->model = rhs.model;
 	}
 	return *this;
 }
 
-template<class Model>
-void Cluster<Model>::finalize(){
+template<class D, class P>
+void Cluster<D, P>::finalize(){
 	if(this->isEmpty()){
 		this->age++;
 	} else {
-		this->oldprm = model.updatePrm(this->clusData.begin(), this->clusData.end(), this->oldprm, this->age);
+		this->oldprm = this->prm;
 		this->age = 1;
 	}
 	this->clusData.clear();
 }
 
-template<class Model>
-std::vector<uint64_t> Cluster<Model>::getAssignedIds() const{
+template<class D, class P>
+std::vector<uint64_t> Cluster<D, P>::getAssignedIds() const{
 	std::vector<uint64_t> asids;
 	for (auto it = this->clusData.begin(); it != this->clusData.end(); ++it){
 		asids.push_back(it->first);
@@ -51,75 +49,56 @@ std::vector<uint64_t> Cluster<Model>::getAssignedIds() const{
 	return asids;
 }
 
-template<class Model>
-void Cluster<Model>::assignData(uint64_t did, typename Model::Data& d){
+template<class D, class P>
+void Cluster<D, P>::assignData(uint64_t did, D& d){
 	if (this->clusData.find(did) != this->clusData.end()){
 		throw DataAlreadyInClusterException(did);
 	}
 	this->clusData[did] = d;
 }
 
-template<class Model>
-typename Model::Data Cluster<Model>::deassignData(uint64_t did){
+template<class D, class P>
+typename Model::Data Cluster<D, P>::deassignData(uint64_t did){
 	if (this->clusData.find(did) == this->clusData.end()){
 		throw DataNotInClusterException(did); 
 	}
-	typename Model::Data d = this->clusData[did];
+	D d = this->clusData[did];
 	this->clusData.erase(did);
 	return d;
 }
 
-template<class Model>
-void Cluster<Model>::clearData(){
+template<class D, class P>
+void Cluster<D, P>::clearData(){
 	this->clusData.clear();
 }
 
-template<class Model>
-void Cluster<Model>::setID(uint64_t id){
+template<class D, class P>
+void Cluster<D, P>::setID(uint64_t id){
 	if (this->id >= 0){
 		throw IDAlreadySetException(this->id, id);
 	}
 	this->id = id;
 }
 
-template<class Model>
-bool Cluster<Model>::isEmpty() const{
+template<class D, class P>
+bool Cluster<D, P>::isEmpty() const{
 	return this->clusData.empty();
 }
 
-template<class Model>
-bool Cluster<Model>::isNew() const{
+template<class D, class P>
+bool Cluster<D, P>::isNew() const{
 	return this->age == 0;
 }
 
-template<class Model>
-bool Cluster<Model>::isPermanentlyDead() const {
-	return model.isClusterDead(this->age);
-}
-
-template<class Model> 
-double Cluster<Model>::cost() const {
-	return model.clusterCost(this->clusData.begin(), this->clusData.end(), this->prm, this->oldprm, this->age);
-}
-
-template<class Model> 
-double Cluster<Model>::compareTo(typename Model::Data& d) const{
-	if(this->isEmpty() && this->isNew()){
-		throw ClusterEmptyDistanceException();
-	}
-	return model.compare(d, this->prm, this->age, !this->isEmpty());
-}
-
-template<class Model>
-void Cluster<Model>::updatePrm(){
-	this->prm = model.updatePrm(this->clusData.begin(), this->clusData.end(), this->oldprm, this->age);
-}
-
-template<class Model>
-const typename Model::Parameter& Cluster<Model>::getPrm() const{
+template<class D, class P>
+P& Cluster<D, P>::getPrm() const{
 	return this->prm;
 }
 
+template<class D, class P>
+P& Cluster<D, P>::getOldPrm() const{
+	return this->oldprm;
+}
 
 #define __CLUSTER_IMPL_HPP
 #endif /* __CLUSTER_IMPL_HPP */
