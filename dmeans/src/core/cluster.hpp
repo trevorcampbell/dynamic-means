@@ -13,6 +13,7 @@ class Cluster {
 		Cluster(const Cluster<D, P>& rhs);
 		Cluster<D, P>& operator=(const Cluster<D, P>& rhs);
 		void setID(uint64_t id);
+		uint64_t getID() const;
 		void assignData(uint64_t id, const D& d);
 		std::vector<uint64_t> getAssignedIds() const;
 		D deassignData(uint64_t did);
@@ -21,8 +22,10 @@ class Cluster {
 		bool isEmpty() const;
 		bool isNew() const;
 		uint64_t getAge() const;
-		P& getPrm();
-		P& getOldPrm();
+		P& getPrmRef();
+		P& getOldPrmRef();
+		P getPrm() const;
+		P getOldPrm() const;
 	private:
 		uint64_t id;
 		uint64_t age;
@@ -45,6 +48,12 @@ class Cluster {
 			public:
 				IDAlreadySetException(uint64_t cid, uint64_t nid){
 					std::cout << "Trying to change cluster id " << cid << " to " << nid << std::endl;
+				}
+		};
+		class IDUnsetException{
+			public:
+				IDUnsetException(){
+					std::cout << "Trying to get cluster with unset id." << std::endl;
 				}
 		};
 };

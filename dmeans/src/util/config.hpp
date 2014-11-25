@@ -14,7 +14,7 @@ class Config{
 			void set(std::string key, T val){
 				std::ostringstream oss;
 				oss << val;
-				if (!oss.good()){
+				if (oss.fail()){
 					throw ToStringConversionException(key);
 				}
 				params[key] = oss.str();
@@ -26,7 +26,7 @@ class Config{
 					std::istringstream iss;
 					iss.str(params.at(key));
 					iss >> res;
-					if (!iss.good()){
+					if (iss.fail()){
 						throw FromStringConversionException(key, params.at(key));
 					}
 					return res;

@@ -89,10 +89,10 @@ template <class Model, template<typename> class Alg>
 Results<Model> DMeans<Model, Alg>::getResults() const{
 	Results<Model> r;
 	for(auto it = this->clusters.begin(); it != this->clusters.end(); ++it){
-		r.prms[it->id] = it->getPrm();
+		r.prms[it->getID()] = it->getPrm();
 		std::vector<uint64_t> dids = it->getAssignedIds();
 		for(uint64_t i = 0; i < dids.size(); i++){
-			r.lbls[dids[i]] = it->id;
+			r.lbls[dids[i]] = it->getID();
 		}
 	}
 	return r;

@@ -86,6 +86,14 @@ void Cluster<D, P>::setID(uint64_t id){
 }
 
 template<class D, class P>
+uint64_t Cluster<D, P>::getID() const{
+	if (this->id < 0){
+		throw IDUnsetException();
+	}
+	return this->id;
+}
+
+template<class D, class P>
 bool Cluster<D, P>::isEmpty() const{
 	return this->clusData.empty();
 }
@@ -96,12 +104,22 @@ bool Cluster<D, P>::isNew() const{
 }
 
 template<class D, class P>
-P& Cluster<D, P>::getPrm(){
+P& Cluster<D, P>::getPrmRef(){
 	return this->prm;
 }
 
 template<class D, class P>
-P& Cluster<D, P>::getOldPrm(){
+P& Cluster<D, P>::getOldPrmRef(){
+	return this->oldprm;
+}
+
+template<class D, class P>
+P Cluster<D, P>::getPrm() const{
+	return this->prm;
+}
+
+template<class D, class P>
+P Cluster<D, P>::getOldPrm() const{
 	return this->oldprm;
 }
 
