@@ -2,4 +2,4 @@
 #include "src/core/cluster.hpp"
 #include "src/core/dmeans.hpp"
 #include "src/alg/iterative.hpp"
-#include "src/model/vectorspace.hpp"
+#include "src/model/vectorspacemodel.hpp"
