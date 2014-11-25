@@ -1,4 +1,5 @@
 #include <fstream>
+#include<algorithm>
 #include <iostream>
 #include <map>
 #include <vector>
@@ -16,11 +17,12 @@
 using namespace std;
 
 typedef Eigen::Vector2d V2d;
+typedef dmeans::VectorSpaceModel<2> VSModel;
 
 //function declarations
 double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> matchings);
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, map<uint64_t, V2d >& dataMap, map<uint64_t, uint64_t>& trueLabelMap, uint64_t& nextId);
+void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<VSModel::Data>& data, vector<uint64_t>& trueLabels);
 
 //random number generator
 mt19937 rng;//uses the same seed every time, 5489u
@@ -67,13 +69,15 @@ int main(int argc, char** argv){
 	Config cfg;
 	const double T_Q = 6.8;
 	const double K_tau = 1.01;
-	cfg.set("lambda", 0.05);
-	cfg.set("Q", lambda/T_Q);
-	cfg.set("tau", (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0));
+	const double lambda = 0.05;
+	const double Q = lambda/T_Q;
+	const double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
+
+	cfg.set("lambda", lambda);
+	cfg.set("Q", Q);
+	cfg.set("tau", tau);
 	cfg.set("nRestarts", 10);
 	cfg.set("verbose", true);
-	uint64_t nId = 0;
-	typedef dmeans::VectorSpaceModel<2> VSModel;
 	dmeans::DMeans<VSModel, dmeans::IterativeWithMonotonicityChecks> dynm(cfg);
 
 	//run the experiment
@@ -91,33 +95,29 @@ int main(int argc, char** argv){
 		//generate the data for the current timestep
 		//******************************************
 		cout << "Step " << i << ": Generating data from the clusters..." << endl;
-		map<uint64_t, V2d > rawDataMap;
-		map<uint64_t, VSModel::Data > dataMap;
-		map<uint64_t, uint64_t> trueLabelMap;
-		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, rawDataMap, trueLabelMap, nId);
-		for(auto it = rawDataMap.begin(); it != rawDataMap.end(); ++it){
-			VSModel::Data d;
-			d.v = it->second;
-			dataMap[it->first] = d;
-		}
+		vector<VSModel::Data> data;
+		vector<uint64_t> trueLabels;
+		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, data, trueLabels);
 
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering..." << endl;
-		dmeans::Results<VSModel> res = dynm.cluster(dataMap, nRestarts);
+		dmeans::Results<VSModel> res = dynm.cluster(data);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
 		//including proper cluster label tracking (see above)
 		//***************************************************
-		vector<int> learnedLabels, trueLabels;
-		for(auto it = dataMap.begin(); it != dataMap.end(); ++it){
-			learnedLabels.push_back(res.lbls[it->first]);
-			trueLabels.push_back(trueLabelMap[it->first]);
+		vector<int> rlblint, tlblint;
+		for (uint64_t j = 0; j < trueLabels.size(); j++){
+			rlblint.push_back(res.lbls[j]);
+			tlblint.push_back(trueLabels[j]);
 		}
-		matchings = maxm.getMaxConsistentMatching(learnedLabels, trueLabels, std::vector<double>());
-		double acc = 100.0*maxm.getObjective()/ (double)learnedLabels.size();
+		//std::transform(res.lbls.begin(), res.lbls.end(), rlblint.begin(), [](uint64_t u) -> int { int ui = u; return ui;});
+		//std::transform(trueLabels.begin(), trueLabels.end(), tlblint.begin(), [](uint64_t u) -> int { int ui = u; return ui;});
+		matchings = maxm.getMaxConsistentMatching(rlblint, tlblint, std::vector<double>());
+		double acc = 100.0*maxm.getObjective()/ (double)data.size();
 		//double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
 		cout << "Step " << i << ": Accuracy = " << acc <<  "\%" << endl;
 		cumulativeAccuracy += acc;
@@ -166,7 +166,7 @@ void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveC
 }
 
 //this function takes a set of cluster centers and generates data from them
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, map<uint64_t, V2d >& dataMap, map<uint64_t, uint64_t>& trueLabelMap, uint64_t& nextId){
+void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, vector<VSModel::Data>& data, vector<uint64_t>& trueLabels){
 
 	//distributions
 	uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
@@ -180,9 +180,10 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 				double ang = uniformDistAng(rng);
 				newData(0) += len*cos(ang);
 				newData(1) += len*sin(ang);
-				dataMap[nextId] = newData;
-				trueLabelMap[nextId] = j;
-				nextId++;
+				VSModel::Data d;
+				d.v = newData;
+				data.push_back(d);
+				trueLabels.push_back(j);
 			}
 		}
 	}

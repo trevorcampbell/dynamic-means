@@ -24,10 +24,10 @@ class Config{
 				if(params.find(key) != params.end()){
 					T res;
 					std::istringstream iss;
-					iss.str(params[key]);
+					iss.str(params.at(key));
 					iss >> res;
 					if (!iss.good()){
-						throw FromStringConversionException(key, params[key]);
+						throw FromStringConversionException(key, params.at(key));
 					}
 					return res;
 				} else if (t == Type::OPTIONAL){
@@ -40,16 +40,19 @@ class Config{
 		std::map<std::string, std::string> params;
 
 		class ParameterNotFoundException{
+			public:
 			ParameterNotFoundException(std::string s){
 				std::cout << "Could not find parameter " << s << " in the config object." << std::endl;
 			}
 		};
 		class FromStringConversionException{
+			public:
 			FromStringConversionException(std::string k, std::string s){
 				std::cout << "Could not convert parameter " << k << " = " << s << " from string to a usable type for output." << std::endl;
 			}
 		};
 		class ToStringConversionException{
+			public:
 			ToStringConversionException(std::string k){
 				std::cout << "Could not store parameter " << k << " in the config -- the value could not be converted to string." << std::endl;
 			}

@@ -9,7 +9,7 @@
 namespace dmeans{
 template<class Model, bool monoCheck>
 class _Iterative{
-	typedef Cluster<typename Model::Data, typename Model::Parameter> Clus;
+	using Clus = Cluster<typename Model::Data, typename Model::Parameter>;
 	public:
 		_Iterative(const Config& cfg);
 		double cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const;

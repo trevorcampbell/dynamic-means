@@ -23,7 +23,7 @@ class DMeans{
 		Config cfg;
 		Model model;
 
-		std::vector<typename Cluster<Model::Data, typename Model::Parameter> > clusters;
+		std::vector<Cluster<typename Model::Data, typename Model::Parameter> > clusters;
 		Timer timer;
 
 		Results<Model> getResults() const;

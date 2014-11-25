@@ -21,8 +21,8 @@ class Cluster {
 		bool isEmpty() const;
 		bool isNew() const;
 		uint64_t getAge() const;
-		P& getPrm() const;
-		P& getOldPrm() const;
+		P& getPrm();
+		P& getOldPrm();
 	private:
 		uint64_t id;
 		uint64_t age;

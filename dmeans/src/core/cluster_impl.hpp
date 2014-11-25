@@ -41,7 +41,7 @@ void Cluster<D, P>::finalize(){
 }
 
 template<class D, class P>
-uint64_t getAge() const{
+uint64_t Cluster<D, P>::getAge() const{
 	return this->age;
 }
 
@@ -96,12 +96,12 @@ bool Cluster<D, P>::isNew() const{
 }
 
 template<class D, class P>
-P& Cluster<D, P>::getPrm() const{
+P& Cluster<D, P>::getPrm(){
 	return this->prm;
 }
 
 template<class D, class P>
-P& Cluster<D, P>::getOldPrm() const{
+P& Cluster<D, P>::getOldPrm(){
 	return this->oldprm;
 }
 
