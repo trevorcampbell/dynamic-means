@@ -120,14 +120,15 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 	pilal::Matrix coeffs(1, varMap.size(), 0);
 	//constrant type 1: the sum of outgoing edges from each of the A vertices = 1
 	for (set<int>::iterator it1 = l1set.begin(); it1 != l1set.end(); it1++){
+		coeffs.empty();
 		for (set<int>::iterator it2 = l2set.begin(); it2 != l2set.end(); it2++){
 			coeffs(0, varMap[pair<int,int>(*it1, *it2)]) = 1;
 		}
 		splx.add_constraint(optimization::Constraint(coeffs, optimization::ConstraintType::CT_LESS_EQUAL, 1));
 	}
 	//constraint type 2: the sum of incoming edges to each fo the B vertices = 1
-	coeffs.empty();
 	for (set<int>::iterator it2 = l2set.begin(); it2 != l2set.end(); it2++){
+		coeffs.empty();
 		for (set<int>::iterator it1 = l1set.begin(); it1 != l1set.end(); it1++){
 			coeffs(0, varMap[pair<int,int>(*it1, *it2)]) = 1;
 		}

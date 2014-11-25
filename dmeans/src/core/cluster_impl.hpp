@@ -3,7 +3,8 @@
 template<class D, class P>
 Cluster<D, P>::Cluster(){
 	this->age = 0;
-	this->id = -1;
+	this->idset = false;
+	this->id = 0;
 }
 
 
@@ -14,6 +15,7 @@ Cluster<D, P>::Cluster(const Cluster<D, P>& rhs) {
 	this->oldprm = rhs.oldprm;
 	this->clusData = rhs.clusData;
 	this->id = rhs.id;
+	this->idset = rhs.idset;
 }
 
 
@@ -25,6 +27,7 @@ Cluster<D, P>& Cluster<D, P>::operator=(const Cluster<D, P>& rhs) {
 		this->oldprm = rhs.oldprm;
 		this->clusData = rhs.clusData;
 		this->id = rhs.id;
+		this->idset = rhs.idset;
 	}
 	return *this;
 }
@@ -79,15 +82,16 @@ void Cluster<D, P>::clearData(){
 
 template<class D, class P>
 void Cluster<D, P>::setID(uint64_t id){
-	if (this->id >= 0){
+	if (this->idset){
 		throw IDAlreadySetException(this->id, id);
 	}
 	this->id = id;
+	this->idset = true;
 }
 
 template<class D, class P>
 uint64_t Cluster<D, P>::getID() const{
-	if (this->id < 0){
+	if (!this->idset){
 		throw IDUnsetException();
 	}
 	return this->id;

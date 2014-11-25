@@ -5,7 +5,7 @@ DMeans<Model, Alg>::DMeans(Config cfg) : model(cfg){
 	this->verbose = cfg.get("verbose", Config::Type::OPTIONAL, false);
 	this->nRestarts = this->cfg.get("nRestarts", Config::Type::OPTIONAL, 1);
 	this->nextLabel = 0;
-	uint64_t seed = cfg.get("seed", Config::Type::OPTIONAL, -1);
+	int seed = cfg.get("seed", Config::Type::OPTIONAL, -1);
 	if (seed < 0){
 		std::srand(this->timer.now_ms());
 	} else {

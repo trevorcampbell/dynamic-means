@@ -29,6 +29,7 @@ class Cluster {
 		typename std::map<uint64_t, D>::const_iterator data_cbegin() const;
 		typename std::map<uint64_t, D>::const_iterator data_cend() const;
 	private:
+		bool idset;
 		uint64_t id;
 		uint64_t age;
 		P prm, oldprm;

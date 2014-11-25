@@ -8,8 +8,12 @@ _Iterative<Model, monoCheck>::_Iterative(const Config& cfg){
 
 template <class Model, bool monoCheck>
 double _Iterative<Model, monoCheck>::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
+	std::cout << "Iterative mode clustering" << std::endl;
+	std::cout << "Initial size: " << clus.size() << std::endl;
+	std::cout << "Clustering " << obs.size() << " datapoints" << std::endl;
 	//initial round of labelling data without deassigning it
 	this->initialLabelling(obs, clus, model);
+	std::cout << "Post initial labelling # clustrs: " << clus.size() << std::endl;
 	//label/parameter update iteration
 	bool labellingChanged = true;
 	if (!monoCheck){
