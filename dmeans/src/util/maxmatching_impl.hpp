@@ -69,13 +69,18 @@ void MaxMatching::getMaps(const vector<int>& labels1, const set<int>& l1set, con
 
 map<int, int> 
 MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<double> weights){
-	if (labels1.size() != labels2.size() || labels1.size() == 0 || (weights.size() > 0 && weights.size() != labels1.size())){
+	if (labels1.size() != labels2.size() || (weights.size() > 0 && weights.size() != labels1.size())){
 		throw InvalidLabelsSizeException(labels1.size(), labels2.size(), weights.size());
 	}
+	
 	if (weights.size() == 0){
 		weights.resize(labels1.size(), 1);
 	}
 	this->pruneInvalidLabelPairs(labels1, labels2, weights);
+
+	if (labels1.size() == 0){
+		return map<int, int>();
+	}
 
 	/*cout << "Labels 1:"<< endl;
 	for (uint64_t i =0 ; i < labels1.size(); i++){
@@ -187,13 +192,17 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 
 
 map<int, int> MaxMatching::getMaxConsistentMatching(vector<int> labels1, vector<int> labels2, vector<double> weights){
-	if (labels1.size() != labels2.size() || labels1.size() == 0 || (weights.size() > 0 && weights.size() != labels1.size())){
+	if (labels1.size() != labels2.size() || (weights.size() > 0 && weights.size() != labels1.size())){
 		throw InvalidLabelsSizeException(labels1.size(), labels2.size(), weights.size());
 	}
 	if (weights.size() == 0){
 		weights.resize(labels1.size(), 1);
 	}
 	this->pruneInconsistentLabelPairs(labels1, labels2, weights);
+
+	if (labels1.size() == 0){
+		return oldmatchings;
+	}
 
 	map<int, int> retMap = this->getMaxMatching(labels1, labels2, weights);
 

@@ -98,6 +98,7 @@ int main(int argc, char** argv){
 		vector<VSModel::Data> data;
 		vector<uint64_t> trueLabels;
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, data, trueLabels);
+		cout << "Clustering " << data.size() << " datapoints " << endl;
 
 		//***************************
 		//cluster using Dynamic Means
