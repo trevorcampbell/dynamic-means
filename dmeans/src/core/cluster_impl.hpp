@@ -3,8 +3,6 @@
 template<class Model>
 Cluster<Model>::Cluster(){
 	this->age = 0;
-	this->w = 0.0;
-	this->gamma = 0.0;
 	this->id = -1;
 }
 
@@ -12,9 +10,8 @@ Cluster<Model>::Cluster(){
 template<class Model>
 Cluster<Model>::Cluster(const Cluster<Model>& rhs) {
 	this->age = rhs.age;
-	this->w = rhs.w;
-	this->gamma = rhs.gamma;
 	this->prm = rhs.prm;
+	this->oldprm = rhs.oldprm;
 	this->clusData = rhs.clusData;
 	this->id = rhs.id;
 }
@@ -24,19 +21,12 @@ template<class Model>
 Cluster<Model>& Cluster<Model>::operator=(const Cluster<Model>& rhs) {
 	if (this != &rhs){
 		this->age = rhs.age;
-		this->w = rhs.w;
-		this->gamma = rhs.gamma;
 		this->prm = rhs.prm;
+		this->oldprm = rhs.oldprm;
 		this->clusData = rhs.clusData;
 		this->id = rhs.id;
 	}
 	return *this;
-}
-
-
-template<class Model>
-void Cluster<Model>::updatePrm(){
-	this->prm.update(this->clusData.begin(), this->clusData.end(), this->oldprm);
 }
 
 template<class Model>
@@ -44,7 +34,7 @@ void Cluster<Model>::finalize(){
 	if(this->isEmpty()){
 		this->age++;
 	} else {
-		this->oldprm.updateOld(this->clusData.begin(), this->clusData.end(), this->oldprm);
+		this->oldprm = Model::updatePrm(this->clusData.begin(), this->clusData.end(), this->oldprm, this->age);
 		this->age = 1;
 	}
 	this->clusData.clear();
@@ -91,26 +81,6 @@ void Cluster<Model>::setID(uint64_t id){
 }
 
 template<class Model>
-double Cluster<Model>::distTo(const Model::Data& d) const{
-	if (this->isEmpty()){
-		throw ClusterEmptyDistanceException();
-	}
-	return this->prm.distTo(d);
-}
-
-template<class Model>
-double Cluster<Model>::distToOld(const Model::Data& d) const{
-	return this->prm.distToOld(d);
-}
-
-template<class Model>
-double Cluster<Model>::cost(double lambda, double Q) const{
-	return this->isEmpty() ? 0.0 :
-		(this->age == 0 ? lambda : Q*this->age)
-		+this->prm.cost(this->clusData.begin(), this->clusData.end(), this->gamma);
-}
-
-template<class Model>
 bool Cluster<Model>::isEmpty() const{
 	return this->clusData.empty();
 }
@@ -121,14 +91,36 @@ bool Cluster<Model>::isNew() const{
 }
 
 template<class Model>
-bool Cluster<Model>::isPermanentlyDead() const{
+bool Cluster<Model>::isPermanentlyDead() const {
 	return Model::isPermanentlyDead(this->age);
+}
+
+template<class Model> template<class T>
+double Cluster<Model>::cost() const {
+	return Model::cost(this->clusData.begin(), this->clusData.end(), this->prm, this->oldprm, this->age);
+}
+
+template<class Model> 
+double Cluster<Model>::compareTo(Model::Data& d) const{
+	if (!this->isEmpty()) {
+		return Model::compare(d, this->prm, -1);
+	} else if (this->isEmpty() && !this->isNew()){
+		return Model::compare(d, this->oldprm, this->age);
+	} else {
+		throw ClusterEmptyDistanceException();
+	}
+}
+
+template<class Model>
+void Cluster<Model>::updatePrm(){
+	this->prm = Model::updatePrm(this->clusData.begin(), this->clusData.end(), this->oldprm, this->age);
 }
 
 template<class Model>
 const Model::Parameter& Cluster<Model>::getPrm() const{
 	return this->prm;
 }
+
 
 #define __CLUSTER_IMPL_HPP
 #endif /* __CLUSTER_IMPL_HPP */

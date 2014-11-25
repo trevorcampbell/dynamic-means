@@ -1,6 +1,12 @@
 #ifndef __ITERATIVE_IMPL_HPP
-template <class D, class P, bool M>
-double _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q, double tau, bool verbose){
+
+template <class Model, bool monoCheck>
+double _Iterative<Model, monoCheck>::_Iterative(bool verbose){
+	this->verbose = verbose;
+}
+
+template <class Model, bool monoCheck>
+double _Iterative<Model, monoCheck>::cluster(std::map<uint64_t, Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q, double tau, bool verbose){
 	//initial round of labelling data without deassigning it
 	this->initialLabelling(obs, clus, lambda);
 	//label/parameter update iteration
@@ -34,8 +40,8 @@ double _Iterative<D, P, M>::cluster(std::map<uint64_t, D>& obs, std::map<uint64_
 	return this->computeCost(clus, lambda, Q);
 }
 
-template <class D, class P, bool M>
-double _Iterative<D, P, M>::computeCost(std::map<uint64_t, Cluster<D, P> >& clus, double lambda, double Q){
+template <class Model, bool monoCheck>
+double _Iterative<Model, monoCheck>::computeCost(std::map<uint64_t, Cluster<Model> >& clus, double lambda, double Q){
 	double cost = 0;
 	for(auto it = clus.begin(); it != clus.end(); ++it){
 		cost += it->second.cost(lambda, Q);
@@ -43,8 +49,8 @@ double _Iterative<D, P, M>::computeCost(std::map<uint64_t, Cluster<D, P> >& clus
 	return cost;
 }
 
-template <class D, class P, bool M>
-void _Iterative<D, P, M>::initialLabelling(std::map<uint64_t, D>& obs, std::map<uint64_t, Cluster<D, P> >& clus, double lambda){
+template <class Model, bool monoCheck>
+void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, Model::Data>& obs, std::map<uint64_t, Cluster<Model> >& clus, double lambda){
 	std::vector<uint64_t> ids;
 	for (auto it = obs.begin(); it != obs.end(); ++it){
 		ids.push_back(it->first);
@@ -61,7 +67,7 @@ void _Iterative<D, P, M>::initialLabelling(std::map<uint64_t, D>& obs, std::map<
 			}
 		}
 		if (minCost > lambda){
-			Cluster<D, P> newclus;
+			Cluster<Model> newclus;
 			newclus.assignData(ids[i], obs[ids[i]]);
 			newclus.updatePrm();
 			clus[newclus.id()] = newclus;
@@ -71,8 +77,8 @@ void _Iterative<D, P, M>::initialLabelling(std::map<uint64_t, D>& obs, std::map<
 	}
 }
 
-template <class D, class P, bool M>
-bool _Iterative<D, P, M>::labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus, double lambda){
+template <class Model, bool monoCheck>
+bool _Iterative<Model, monoCheck>::labelUpdate(std::map<uint64_t, Cluster<Model> >& clus, double lambda){
 	bool labellingChanged = false;
 	//get the assignments across all clusters
 	std::vector<uint64_t> ids, lbls;
@@ -88,7 +94,7 @@ bool _Iterative<D, P, M>::labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus, 
 	for (uint64_t i = 0; i < shuffs.size(); i++){
 		uint64_t cl = lbls[shuffs[i]];
 		uint64_t id = ids[shuffs[i]];
-		D obs = clus[cl].deassignData(id);
+		Model::Data obs = clus[cl].deassignData(id);
 		if (clus[cl].isNew() && clus[cl].isEmpty()){
 			clus.erase(cl);
 		}
@@ -102,7 +108,7 @@ bool _Iterative<D, P, M>::labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus, 
 			}
 		}
 		if (minCost > lambda){
-			Cluster<D, P> newclus;
+			Cluster<Model> newclus;
 			newclus.assignData(id, obs);
 			newclus.updatePrm();
 			clus[newclus.id()] = newclus;
@@ -117,8 +123,8 @@ bool _Iterative<D, P, M>::labelUpdate(std::map<uint64_t, Cluster<D, P> >& clus, 
 	return labellingChanged;
 }
 
-template <class D, class P, bool M>
-void _Iterative<D, P, M>::parameterUpdate(std::map<uint64_t, Cluster<D, P> >& clus){
+template <class Model, bool monoCheck>
+void _Iterative<Model, monoCheck>::parameterUpdate(std::map<uint64_t, Cluster<Model> >& clus){
 	for (auto it = clus.begin(); it != clus.end(); ++it){
 		it->second.updatePrm();
 	}

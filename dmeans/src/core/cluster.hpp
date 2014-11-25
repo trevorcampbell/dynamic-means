@@ -4,17 +4,6 @@
 #include<iostream>
 #include<iterator>
 
-//
-//
-//
-//
-//TODO
-//problem with the Model class
-//is that it will cause duplication of code between
-//multiple data/parameter types
-//e.g. many different Model::Data classes that are just vectors
-//but you compute distance with dot products or norms or whatever else
-
 namespace dmeans{
 template <class Model>
 class Cluster {
@@ -22,18 +11,19 @@ class Cluster {
 		Cluster();
 		Cluster(const Cluster<Model>& rhs);
 		Cluster<Model>& operator=(const Cluster<Model>& rhs);
-		void updatePrm();
+		void setID(uint64_t id);
 		void assignData(uint64_t id, Model::Data& d);
 		std::vector<uint64_t> getAssignedIds() const;
 		Model::Data deassignData(uint64_t did);
 		void clearData();
-		void finalize();
-		double cost() const;
 		bool isEmpty() const;
 		bool isNew() const;
 		bool isPermanentlyDead() const;
+		void finalize();
+		void updatePrm();
+		double cost() const;
+		double compareTo(Model::Data& d) const;
 		const Model::Parameter& getPrm() const;
-		void setID(uint64_t id);
 	private:
 		uint64_t id;
 		uint64_t age;
