@@ -114,13 +114,23 @@ P& Cluster<D, P>::getOldPrmRef(){
 }
 
 template<class D, class P>
-P Cluster<D, P>::getPrm() const{
+const P& Cluster<D, P>::getPrm() const{
 	return this->prm;
 }
 
 template<class D, class P>
-P Cluster<D, P>::getOldPrm() const{
+const P& Cluster<D, P>::getOldPrm() const{
 	return this->oldprm;
+}
+
+template<class D, class P>
+typename std::map<uint64_t, D>::const_iterator Cluster<D, P>::data_cbegin() const{
+	return this->clusData.cbegin();
+}
+
+template<class D, class P>
+typename std::map<uint64_t, D>::const_iterator Cluster<D, P>::data_cend() const{
+	return this->clusData.cend();
 }
 
 #define __CLUSTER_IMPL_HPP

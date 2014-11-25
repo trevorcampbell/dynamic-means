@@ -24,8 +24,10 @@ class Cluster {
 		uint64_t getAge() const;
 		P& getPrmRef();
 		P& getOldPrmRef();
-		P getPrm() const;
-		P getOldPrm() const;
+		const P& getPrm() const;
+		const P& getOldPrm() const;
+		typename std::map<uint64_t, D>::const_iterator data_cbegin() const;
+		typename std::map<uint64_t, D>::const_iterator data_cend() const;
 	private:
 		uint64_t id;
 		uint64_t age;
