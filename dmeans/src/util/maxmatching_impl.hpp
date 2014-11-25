@@ -108,16 +108,19 @@ MaxMatching::getMaxMatching(vector<int> labels1, vector<int> labels2, vector<dou
 	map<int, double> weightMap;
 	this->getMaps(labels1, l1set, labels2, l2set, weights, varMap, invvarMap, weightMap);
 	
+	pilal::Matrix coeffs(1, varMap.size(), 0);
 
 	//construct the linear program
 	optimization::Simplex splx("MaxMatching");
 	//add variables
 	for(uint64_t i = 0; i < varMap.size(); i++){
+		coeffs.empty();
 		splx.add_variable(new optimization::Variable(&splx, std::to_string(i).c_str()));
+		coeffs(0, i) = 1;
+		splx.add_constraint(optimization::Constraint(coeffs, optimization::ConstraintType::CT_NON_NEGATIVE, 0));
 	}
 
 	//add constraints
-	pilal::Matrix coeffs(1, varMap.size(), 0);
 	//constrant type 1: the sum of outgoing edges from each of the A vertices = 1
 	for (set<int>::iterator it1 = l1set.begin(); it1 != l1set.end(); it1++){
 		coeffs.empty();
