@@ -21,7 +21,6 @@ class Cluster {
 		bool isEmpty() const;
 		bool isNew() const;
 		uint64_t getAge() const;
-		double compareTo(const D& d) const;
 		P& getPrm() const;
 		P& getOldPrm() const;
 	private:

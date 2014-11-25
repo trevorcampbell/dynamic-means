@@ -7,84 +7,82 @@ _Iterative<Model, monoCheck>::_Iterative(const Config& cfg){
 }
 
 template <class Model, bool monoCheck>
-double _Iterative<Model, monoCheck>::cluster(const std::map<uint64_t, typename Model::Data>& obs, std::vector<Cluster<Model> >& clus, const Model& model) const{
+double _Iterative<Model, monoCheck>::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
 	//initial round of labelling data without deassigning it
-	this->initialLabelling(obs, clus);
+	this->initialLabelling(obs, clus, model);
 	//label/parameter update iteration
 	bool labellingChanged = true;
 	if (!monoCheck){
 		while(labellingChanged){
-			this->parameterUpdate(clus);
-			labellingChanged = this->labelUpdate(clus);
+			this->parameterUpdate(clus, model);
+			labellingChanged = this->labelUpdate(clus, model);
 		}
 	} else {
-		double obj = this->computeCost(clus);
+		double obj = this->computeCost(clus, model);
 		while(labellingChanged){
 			double prevobj = obj;
 			std::cout << "prm update" << std::endl;
-			this->parameterUpdate(clus);
-			obj = this->computeCost(clus);
+			this->parameterUpdate(clus, model);
+			obj = this->computeCost(clus, model);
 			std::cout << "Obj: " << obj << std::endl;
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "parameterUpdate()");
 			}
 			prevobj = obj;
 			std::cout << "lbl update" << std::endl;
-			labellingChanged = this->labelUpdate(clus);
-			obj = this->computeCost(clus);
+			labellingChanged = this->labelUpdate(clus, model);
+			obj = this->computeCost(clus, model);
 			std::cout << "Obj: " << obj << std::endl;
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "labelUpdate()");
 			}
 		}
 	}
-	return this->computeCost(clus);
+	return this->computeCost(clus, model);
 }
 
-template <class Model, bool monoCheck>
-double _Iterative<Model, monoCheck>::computeCost(const std::vector< Cluster<Model> >& clus, const Model& model) const{
-	double cost = 0;
-	for(auto it = clus.begin(); it != clus.end(); ++it){
-		cost += it->cost();
-	}
-	return cost;
-}
+
 
 template <class Model, bool monoCheck>
-void _Iterative<Model, monoCheck>::initialLabelling(std::map<uint64_t, typename Model::Data>& obs, std::vector< Cluster<Model> >& clus, const Model& model){
-	std::vector<uint64_t> ids;
-	for (auto it = obs.begin(); it != obs.end(); ++it){
-		ids.push_back(it->first);
-	}
-	std::random_shuffle(ids.begin(), ids.end());
-	for (uint64_t i = 0; i < ids.size(); i++){
+void _Iterative<Model, monoCheck>::initialLabelling(const std::vector< typename Model::Data>& obs, std::vector< Clus >& clus, const Model& model){
+	std::vector<uint64_t> shuffs(obs.size());
+	std::iota(ids.begin(), shuffs.end(), 0);
+	std::random_shuffle(shuffs.begin(), shuffs.end());
+	for (uint64_t i = 0; i < shuffs.size(); i++){
+		int id = shuffs[i];
 		double minCost = std::numeric_limits<double>::infinity();
 		uint64_t minInd = -1;
 		for(int k = 0; k < clus.size(); k++){
-			double d = clus[k].compareTo(obs[ids[i]]);
+			double d = model.compare(clus[k], obs[id]);
 			if (d < minCost){
 				minCost = d;
 				minInd = k;
 			}
 		}
-		if (minCost > lambda){
-			Cluster<Model> newclus(this->cfg);
-			newclus.assignData(ids[i], obs[ids[i]]);
-			newclus.updatePrm();
+		if (model.exceedsNewClusterCost(obs[id], minCost)){
+			Clus newclus();
+			newclus.assignData(id, obs[id]);
+			model.updatePrm(newclus);
 			clus.push_back(newclus);
 		} else {
-			clus[minInd].assignData(ids[i], obs[ids[i]]);
+			clus[minInd].assignData(id, obs[id]);
 		}
 	}
 }
 
 template <class Model, bool monoCheck>
-bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Cluster<Model> >& clus, const Model& model){
+bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const Model& model){
 	bool labellingChanged = false;
+	//first create a map of lbl to cluster index to make deletion easier
+	std::map<uint64_t, uint64_t> lblToIdx;
+	for (int k = 0; k < clus.size(); k++){
+		lblToIdx[k] = k;
+	}
+
 	//get the assignments across all clusters
 	std::vector<uint64_t> ids, lbls;
 	for (int k = 0; k < clus.size(); k++){
-		std::vector<uint64_t> clusids = clus[k]getAssignedIds();
+		std::vector<uint64_t> clusids = clus[k].getAssignedIds();
 		ids.insert(ids.end(), clusids.begin(), clusids.end());
 		lbls.insert(lbls.end(), clusids.size(), k);
 	}
@@ -93,11 +91,18 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Cluster<Model> >& cl
 	std::random_shuffle(shuffs.begin(), shuffs.end());
 	//do reassignment
 	for (uint64_t i = 0; i < shuffs.size(); i++){
-		uint64_t cl = lbls[shuffs[i]];
+		uint64_t lbl = lbls[shuffs[i]];
+		uint64_t cid = lblToIdx[lbl];
 		uint64_t id = ids[shuffs[i]];
-		typename Model::Data obs = clus[cl].deassignData(id);
-		if (clus[cl].isNew() && clus[cl].isEmpty()){
-			clus.erase(cl);
+		typename Model::Data obs = clus[cid].deassignData(id);
+		if (clus[cid].isNew() && clus[cid].isEmpty()){
+			clus.erase(clus.begin()+cid);
+			lblToIdx.erase(lbl);
+			for(auto it = lblToIdx.begin(); it != lblToIdx.end(); ++it){
+				if (it->second > cid){
+					it->second--;
+				}
+			}
 		}
 		double minCost = std::numeric_limits<double>::infinity();
 		uint64_t minInd = -1;
@@ -109,9 +114,9 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Cluster<Model> >& cl
 			}
 		}
 		if (minCost > lambda){
-			Cluster<Model> newclus(this->cfg);
+			Clus newclus();
 			newclus.assignData(id, obs);
-			newclus.updatePrm();
+			model.updatePrm(newclus);
 			clus.push_back(newclus);
 			labellingChanged = true;
 		} else {
@@ -125,10 +130,19 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Cluster<Model> >& cl
 }
 
 template <class Model, bool monoCheck>
-void _Iterative<Model, monoCheck>::parameterUpdate(std::vector< Cluster<Model> >& clus, const Model& model){
+void _Iterative<Model, monoCheck>::parameterUpdate(std::vector< Clus >& clus, const Model& model){
 	for (auto it = clus.begin(); it != clus.end(); ++it){
-		it->updatePrm();
+		model.updatePrm(*it);
 	}
+}
+
+template <class Model, bool monoCheck>
+double _Iterative<Model, monoCheck>::computeCost(const std::vector< Clus >& clus, const Model& model) const{
+	double cost = 0;
+	for(auto it = clus.begin(); it != clus.end(); ++it){
+		cost += model.clusterCost(*it);
+	}
+	return cost;
 }
 
 #define __ITERATIVE_IMPL_HPP

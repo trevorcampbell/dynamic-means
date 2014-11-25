@@ -60,16 +60,11 @@ Results<Model> DMeans<Model, Alg>::cluster(const std::vector<typename Model::Dat
 	this->timer.start();//start the timer
 	//these store the best cost/clustering over nRestarts restarts
 	double minCost = std::numeric_limits<double>::infinity();
-	std::vector<Cluster<Model> > minClusters;
-	//convert the data to a map with unique indices for insertion into clusters
-	std::map<uint64_t, typename Model::Data> obsMap;
-	for(uint64_t i = 0; i < obs.size(); i++){
-		obsMap[i] = obs[i];
-	}
+	std::vector<Cluster<typename Model::Data, typename Model::Parameter> > minClusters;
 	Alg<Model> alg(this->cfg);
 	for (uint64_t k = 0; k < this->nRestarts; k++){
 		//cluster at this step
-		double cost = alg.cluster(obsMap, this->clusters, this->model);
+		double cost = alg.cluster(obs, this->clusters, this->model);
 		if (cost < minCost){
 			//the objective is the best so far, save the results
 			minCost = cost;
