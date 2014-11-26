@@ -12,7 +12,7 @@
 #include <random>
 
 #include <dmeans/core>
-#include <dmeans/utils>
+#include <dmeans/iterative>
 
 using namespace std;
 

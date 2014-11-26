@@ -1,2 +1,1 @@
 #include "src/alg/iterative.hpp"
-#include "src/alg/spectral.hpp"
