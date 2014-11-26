@@ -12,7 +12,7 @@
 #include <random>
 
 #include <dmeans/core>
-#include <dmeans/matching>
+#include <dmeans/utils>
 
 using namespace std;
 
