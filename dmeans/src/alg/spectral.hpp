@@ -11,16 +11,12 @@ class Spectral{
 		bool verbose;
 		Config cfg;
 
-		void initialLabelling(const std::vector< typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const;
-		bool labelUpdate(std::vector<Clus>& clus, const Model& model) const;
-		void parameterUpdate(std::vector<Clus>& clus, const Model& model) const;
-		double computeCost(const std::vector<Clus>& clus, const Model& model) const;
-		class MonotonicityViolationException{
-			public:
-				MonotonicityViolationException(double prevobj, double obj, std::string funcname){
-					std::cout << "Monotonicity violated! Prevobj = " << prevobj << " obj = " << obj << " after calling " << funcname << std::endl;
-				}
-		};
+		MXd& getKernelMatUpper(const std::vector<typename Model::Data>& obs, const Model& model) const;
+		void findClosestConstrained(const MXd& ZV, MXd& X) const;
+		void findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const; 
+		void orthonormalize(MXd& V) const; 
+		double getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const;
+		vector<int> getLblsFromIndicatorMat(const MXd& X) const;
 };
 
 #include "spectral_impl.hpp"
