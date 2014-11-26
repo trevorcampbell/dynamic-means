@@ -1,11 +1,11 @@
 #ifndef __DMEANS_HPP
 #include<vector>
 #include<iostream>
-#include<random>
 #include "../util/timer.hpp"
 #include "../util/results.hpp"
 #include "cluster.hpp"
 #include "../util/config.hpp"
+#include "../util/random.hpp"
 
 namespace dmeans{
 template<class Model, template<typename> class Alg>
