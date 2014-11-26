@@ -3,7 +3,7 @@
 #include <iostream>
 #include <numeric>
 
-SparseVectorApproximation::SparseVectorApproximation(int K, double eps){
+SparseVectorApproximation::SparseVectorApproximation(uint64_t K, double eps){
 	this->K = K;
 	this->eps = eps;
 }
@@ -24,19 +24,19 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 	std::cout << "SpVecApprox: Initial cost = " << cost << std::endl;
 
 	//store the current set of indices
-	std::vector<int> idcs(acoeffs.size()); //idcs stores the mapping from current matrix row/col to original matrix row/col
+	std::vector<uint64_t> idcs(acoeffs.size()); //idcs stores the mapping from current matrix row/col to original matrix row/col
 	std::iota(idcs.begin(), idcs.end(), 0); 
-	std::vector<int> srtidcs = idcs; //srtidcs stores a list of current matrix row/cols sorted by cost reduction (best is .back())
+	std::vector<uint64_t> srtidcs = idcs; //srtidcs stores a list of current matrix row/cols sorted by cost reduction (best is .back())
 
 	//gram schmidt loop 
 	while (cost > this->eps && this->bvecs.size() < this->K){
 		//sort to find the index with maximum cost reduction
 		VXd costreds = acolsums.array()*acolsums.array()/(m.diagonal().array());
 		std::sort(srtidcs.begin(), srtidcs.end(), 
-				[&costreds](const int & a, const int & b) -> bool
+				[&costreds](const uint64_t & a, const uint64_t & b) -> bool
 				{ return costreds(a) < costreds(b); });
 		//add the best vector to the basis; project everything onto orthogonal subspace and remove the vector from further consideration
-		int kMax = srtidcs.back();
+		uint64_t kMax = srtidcs.back();
 		cost -= costreds(kMax);
 		this->bvecs.push_back(idcs[kMax]);
 		this->projectOntoOrthogonalSubspace(acolsums, m, idcs, srtidcs, kMax);
@@ -46,15 +46,15 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 	//final computation of coefficients
 	MXd W = MXd::Zero(this->bvecs.size(), this->bvecs.size());
 	MXd B = MXd::Zero(this->bvecs.size(), msave.cols());
-	for(int i = 0; i < this->bvecs.size(); i++){
-		for (int j = 0; j < this->bvecs.size(); j++){
+	for(uint64_t i = 0; i < this->bvecs.size(); i++){
+		for (uint64_t j = 0; j < this->bvecs.size(); j++){
 			W(i, j) = msave(this->bvecs[i], this->bvecs[j]);
 		}
-		for (int j = 0; j < msave.cols(); j++){
+		for (uint64_t j = 0; j < (uint64_t)msave.cols(); j++){
 			B(i, j) = msave(this->bvecs[i], j);
 		}
 	}
-	//for (int i =0 ; i < bvecs.size(); i++){
+	//for (uint64_t i =0 ; i < bvecs.size(); i++){
 	//	std::cout << bvecs[i] << " ";
 	//}
 	//std::cout << std::endl;
@@ -63,17 +63,17 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 
 	std::cout << "SpVecApprox: Computing coefficients using LDLT decomposition" << std::endl;
 	VXd finalcoeffs = W.ldlt().solve(B*acoeffs);
-	for(int i = 0; i < finalcoeffs.size(); i++){
+	for(uint64_t i = 0; i < (uint64_t)finalcoeffs.size(); i++){
 		this->coeffs.push_back(finalcoeffs(i));
 	}
 	std::cout << "SpVecApprox: Done!"<< std::endl;
 }
 
 
-void SparseVectorApproximation::projectOntoOrthogonalSubspace(VXd& acolsums, MXd& m, std::vector<int>& idcs, std::vector<int>& srtidcs, const int kMax){
+void SparseVectorApproximation::projectOntoOrthogonalSubspace(VXd& acolsums, MXd& m, std::vector<uint64_t>& idcs, std::vector<uint64_t>& srtidcs, const uint64_t kMax){
 	//rank one update to the column sums
 	double ack = acolsums(kMax)/m(kMax, kMax);
-	for(int i =0 ; i < acolsums.size(); i++){
+	for(uint64_t i =0 ; i < (uint64_t)acolsums.size(); i++){
 		acolsums(i) -= ack*m(kMax, i);
 	}
 	//rank one update to the gram matrix
@@ -83,7 +83,7 @@ void SparseVectorApproximation::projectOntoOrthogonalSubspace(VXd& acolsums, MXd
 	removeRowCol(m, kMax);
 	removeElem(acolsums, kMax);
 	idcs.erase(idcs.begin()+kMax);
-	for(int i =0 ; i < srtidcs.size(); i++){
+	for(uint64_t i =0 ; i < srtidcs.size(); i++){
 		if (srtidcs[i] >= kMax){
 			srtidcs[i]--;
 		}
@@ -92,9 +92,9 @@ void SparseVectorApproximation::projectOntoOrthogonalSubspace(VXd& acolsums, MXd
 	return;
 }
 
-void SparseVectorApproximation::removeRowCol(MXd& m, int k){
-	uint32_t nRows = m.rows();
-	uint32_t nCols = m.cols();
+void SparseVectorApproximation::removeRowCol(MXd& m, uint64_t k){
+	uint64_t nRows = m.rows();
+	uint64_t nCols = m.cols();
 	if (k < nRows-1){
 		m.block(k, 0, nRows-1-k, nCols) = m.block(k+1, 0, nRows-1-k, nCols).eval();
 		m.block(0, k, nRows, nCols-1-k) = m.block(0, k+1, nRows, nCols-1-k).eval();
@@ -103,8 +103,8 @@ void SparseVectorApproximation::removeRowCol(MXd& m, int k){
 	return;
 }
 
-void SparseVectorApproximation::removeElem(VXd& v, int k){
-	uint32_t nRows = v.size();
+void SparseVectorApproximation::removeElem(VXd& v, uint64_t k){
+	uint64_t nRows = v.size();
 	if (k < nRows-1){
 		v.segment(k, nRows-1-k) = v.tail(nRows-1-k).eval();
 	}
@@ -113,7 +113,7 @@ void SparseVectorApproximation::removeElem(VXd& v, int k){
 }
 
 
-void SparseVectorApproximation::getApprox(std::vector<int>& vecs, std::vector<double>& acoeffs){
+void SparseVectorApproximation::getApprox(std::vector<uint64_t>& vecs, std::vector<double>& acoeffs){
 	vecs = this->bvecs;
 	acoeffs = this->coeffs;
 	return;

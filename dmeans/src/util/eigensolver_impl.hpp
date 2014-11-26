@@ -1,9 +1,10 @@
 #ifndef __EIGENSOLVER_IMPL_HPP
+
 EigenSolver::EigenSolver(MXd& A_UpperTriangle, Type t, uint64_t nEigs, double lowerThresh){
 	if (A_UpperTriangle.rows() != A_UpperTriangle.cols()){
 		throw MatrixNotSquareException(A_UpperTriangle.rows() , A_UpperTriangle.cols());
 	}
-	if (t==EIGEN_SELF_ADJOINT || nEigs==0 || nEigs > A_UpperTriangle.rows()){
+	if (t==EIGEN_SELF_ADJOINT || nEigs==0 || nEigs > (uint64_t)A_UpperTriangle.rows()){
 		this->selfadjointSolver(A_UpperTriangle);
 	} else {
 		this->redsvdSolver(A_UpperTriangle, nEigs);
@@ -18,12 +19,12 @@ EigenSolver::EigenSolver(MXd& A_UpperTriangle, Type t, uint64_t nEigs, double lo
 //To learn about it, please see "Finding structure with randomness: Stochastic algorithms for constructing approximate matrix
 //decompositions", N. Halko, P.G. Martinsson, J. Tropp, arXiv 0909.4061
 void EigenSolver::redsvdSolver(MXd& AUp, uint64_t r){
-	r = (r < AUp.cols()) ? r : AUp.cols();
+	r = (r < (uint64_t)AUp.cols()) ? r : (uint64_t)AUp.cols();
 	//compute gaussian matrix
 	normal_distribution<> nrm(0, 1);
 	MXd M(AUp.rows(), r);
-	for (int i = 0; i < AUp.rows(); i++){
-		for (int j =0 ; j < r; j++){
+	for (uint64_t i = 0; i < (uint64_t)AUp.rows(); i++){
+		for (uint64_t j =0 ; j < r; j++){
 			M(i, j) = nrm(RNG::get());
 		}
 	}
@@ -50,10 +51,10 @@ void EigenSolver::selfadjointSolver(MXd& AUp){
 }
 
 void EigenSolver::columnGramSchmidt(MXd& m){
-	for (int i = 0; i < m.cols(); i++){
+	for (uint64_t i = 0; i < (uint64_t)m.cols(); i++){
 		if (m.col(i).norm() < 1e-8){
 			//remove it if it's super small (pretty much dependent with previous vectors)
-			if (i < m.cols()-1){
+			if (i < (uint64_t)m.cols()-1){
 				m.block(0, i, m.rows(), m.cols()-i-1) = m.block(0, i+1, m.rows(), m.cols()-i-1).eval();
 			}
 			m.conservativeResize(m.rows(), m.cols()-1);
@@ -61,7 +62,7 @@ void EigenSolver::columnGramSchmidt(MXd& m){
 			continue;
 		}
 		m.col(i) /= m.col(i).norm();
-		for (int j = i+1; j < m.cols(); j++){
+		for (uint64_t j = i+1; j < (uint64_t)m.cols(); j++){
 			m.col(j) -= m.col(j).dot(m.col(i))*m.col(i);
 		}
 	}

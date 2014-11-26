@@ -13,6 +13,8 @@
 
 #include <dmeans/core>
 #include <dmeans/iterative>
+#include <dmeans/model>
+#include <dmeans/utils>
 
 using namespace std;
 
@@ -66,7 +68,7 @@ int main(int argc, char** argv){
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
-	Config cfg;
+	dmeans::Config cfg;
 	const double T_Q = 6.8;
 	const double K_tau = 1.01;
 	const double lambda = 0.05;

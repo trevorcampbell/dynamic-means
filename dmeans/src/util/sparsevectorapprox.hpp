@@ -9,18 +9,18 @@ typedef Eigen::VectorXd VXd;
 namespace dmeans{
 class SparseVectorApproximation{
 	public:
-		SparseVectorApproximation(int K, double eps);
+		SparseVectorApproximation(uint64_t K, double eps);
 		void fromKernelMatrix(MXd m, VXd acoeffs);
-		void getApprox(std::vector<int>& vecs, std::vector<double>& acoeffs);
+		void getApprox(std::vector<uint64_t>& vecs, std::vector<double>& acoeffs);
 	private:
-		int K;
+		uint64_t K;
 		double eps;
-		std::vector<int> bvecs;
+		std::vector<uint64_t> bvecs;
 		std::vector<double> coeffs;
 
-		void projectOntoOrthogonalSubspace(VXd& acolsums, MXd& m, std::vector<int>& idcs, std::vector<int>& srtidcs, const int kMax);
-		void removeRowCol(MXd& m, int k);
-		void removeElem(VXd& v, int k);
+		void projectOntoOrthogonalSubspace(VXd& acolsums, MXd& m, std::vector<uint64_t>& idcs, std::vector<uint64_t>& srtidcs, const uint64_t kMax);
+		void removeRowCol(MXd& m, uint64_t k);
+		void removeElem(VXd& v, uint64_t k);
 };
 
 #include "sparsevectorapprox_impl.hpp"

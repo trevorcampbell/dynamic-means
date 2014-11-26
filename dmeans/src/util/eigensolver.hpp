@@ -8,7 +8,6 @@ namespace dmeans{
 typedef Eigen::MatrixXd MXd;
 typedef Eigen::VectorXd VXd;
 
-template<class T>
 class EigenSolver{
 	public:
 		enum Type{
@@ -17,7 +16,7 @@ class EigenSolver{
 		};
 
 		EigenSolver(MXd& A_UpperTriangle, Type t, uint64_t nEigs = 0, double lowerThresh=-1);
-		void redsvdSolver(SMXd& AUp, int r);
+		void redsvdSolver(MXd& AUp, uint64_t r);
 		void selfadjointSolver(MXd& A_Up);
 		void getResults(VXd& eigvals, MXd& eigvecs);
 	private:
