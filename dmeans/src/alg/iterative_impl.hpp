@@ -73,6 +73,7 @@ void _Iterative<Model, monoCheck>::initialLabelling(const std::vector< typename 
 			clus[minInd].assignData(id, obs[id]);
 		}
 	}
+	
 }
 
 template <class Model, bool monoCheck>

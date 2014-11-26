@@ -65,6 +65,7 @@ class VectorSpaceModel{
 					wt += 1.0;
 				}
 				c.getPrmRef().v /= wt;
+				c.getPrmRef().w = wt;
 			}
 		}
 
