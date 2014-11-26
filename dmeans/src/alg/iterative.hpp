@@ -16,7 +16,6 @@ class _Iterative{
 		double cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const;
 	private:
 		bool verbose;
-		Config cfg;
 
 		void initialLabelling(const std::vector< typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const;
 		bool labelUpdate(std::vector<Clus>& clus, const Model& model) const;

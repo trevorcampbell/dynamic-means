@@ -2,10 +2,10 @@
 
 namespace dmeans{
 template<class Model, bool monoCheck>
-class _Iterative{
+class Spectral{
 	using Clus = Cluster<typename Model::Data, typename Model::Parameter>;
 	public:
-		_Iterative(const Config& cfg);
+		Spectral(const Config& cfg);
 		double cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const;
 	private:
 		bool verbose;

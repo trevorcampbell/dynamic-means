@@ -2,7 +2,6 @@
 
 template <class Model, bool monoCheck>
 _Iterative<Model, monoCheck>::_Iterative(const Config& cfg){
-	this->cfg = cfg;
 	this->verbose = cfg.get("verbose", Config::OPTIONAL, false);
 }
 
