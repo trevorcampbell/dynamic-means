@@ -1,4 +1,7 @@
 #ifndef __SPECTRAL_HPP
+#include<Eigen/Dense>
+#include "../util/eigensolver.hpp"
+
 
 namespace dmeans{
 template<class Model, bool monoCheck>
@@ -9,9 +12,12 @@ class Spectral{
 		double cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const;
 	private:
 		bool verbose;
+		EigenSolver::Type solverType;
+		uint64_t nEigs;
 		Config cfg;
+		uint64_t nProjectionRestarts;
 
-		MXd& getKernelMatUpper(const std::vector<typename Model::Data>& obs, const Model& model) const;
+		MXd& getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const;
 		void findClosestConstrained(const MXd& ZV, MXd& X) const;
 		void findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const; 
 		void orthonormalize(MXd& V) const; 

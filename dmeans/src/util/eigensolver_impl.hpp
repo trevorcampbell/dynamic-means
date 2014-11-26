@@ -3,13 +3,10 @@ EigenSolver::EigenSolver(MXd& A_UpperTriangle, Type t, uint64_t nEigs, double lo
 	if (A_UpperTriangle.rows() != A_UpperTriangle.cols()){
 		throw MatrixNotSquareException(A_UpperTriangle.rows() , A_UpperTriangle.cols());
 	}
-	switch(t){
-		case EIGEN_SELF_ADJOINT:
-			this->selfadjointSolver(A_UpperTriangle);
-		case REDSVD:
-			nEigs = (nEigs==0 ? A_UpperTriangle.rows() : nEigs);
-			nEigs = (nEigs > A_UpperTriangle.rows() ? A_UpperTriangle.rows() : nEigs);
-			this->redsvdSolver(A_UpperTriangle, nEigs);
+	if (t==EIGEN_SELF_ADJOINT || nEigs==0 || nEigs > A_UpperTriangle.rows()){
+		this->selfadjointSolver(A_UpperTriangle);
+	} else {
+		this->redsvdSolver(A_UpperTriangle, nEigs);
 	}
 	if (lowerThresh > 0){
 		this->pruneSmallEigs(lowerThresh);

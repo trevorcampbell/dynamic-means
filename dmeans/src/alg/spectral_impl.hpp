@@ -1,39 +1,32 @@
 #ifndef __SPECTRAL_IMPL_HPP
 Spectral::Spectral(const Config& cfg){
-
+	this->solverType = this->cfg.get("eigenSolverType", Config::Type::OPTIONAL, EigenSolver::Type::EIGEN_SELF_ADJOINT);
+	if (this->solverType == EigenSolver::Type::EIGEN_SELF_ADJOINT){
+		this->nEigs = 0;
+	} else {
+		this->nEigs = this->cfg.get("eigenDimension", Config::Type::REQUIRED, 0);
+	}
+	this->verbose = cfg.get("verbose", Config::Type::OPTIONAL, false);
+	this->nProjectionRestarts = this->cfg.get("nProjectionRestarts", Config::Type::OPTIONAL, 1);
 }
 
 double Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
-	if (nA <= 0){
-		cout << "libspecdynmeans: WARNING: data size <=0 (= " << nA << "); Returning empty labels."<<  endl;
-		finalLabels = vector<int>();
-		tTaken = 0;
-		finalObj = 0;
-		return;
-	}
-	if (nRestarts <= 0){
-		cout << "libspecdynmeans: ERROR: nRestarts <=0 (= " << nRestarts << ")"<<  endl;
-		return;
-	}
-	if (verbose){
-		cout << "libspecdynmeans: Clustering " << nA << " datapoints with " << nRestarts << " restarts." << endl;
-	}
-
+	if(obs.size() == 0){return 0.0;}
 
 	//compute the kernel matrix
-	SMXd kUpper;
-	this->getKernelMat(aff, kUpper);
+	MXd KUp = this->getKernelMatUpper(obs, clus, model);
 	//solve the eigensystem
-	MXd Z;
-	VXd eigvals;
-	if (verbose){
-		cout << "libspecdynmeans: Solving the eigensystem..." << flush;
+	EigenSolver eigsol(KUp, this->solverType, this->nEigs, model.getEigenvalueLowerThreshold());
+
+	MXd Z; VXd eigvals;
+	eigsol.getResults(eigvals, Z);
+
+	if (eigvals.size() == 0){
+		//all eigenvalues/vectors were thresholded out -- just use a constant single column
+		Z = MXd::Ones(KUp.rows(), 1);
+		eigvals = VXd::Ones(1);
 	}
-	this->solveEigensystem(kUpper, nClusMax+nB, type, Z); //number of eigvecs = # of clusters to track + 
-													//number of old prms (for possible old clus indicator vecs)
-	if (verbose){
-		cout << "Done!" << endl;
-	}
+
 	//premultiply Z with \hat{Gamma}^{-1/2}
 	for (int j = nA; j < nA+nB; j++){
 		Z.row(j) *= 1.0/sqrt(this->gammas[j-nA]);
@@ -72,10 +65,10 @@ double Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vect
 	if (verbose){
 		cout << "libspecdynmeans: Finding discretized solution with " << nRestarts << " restarts" << endl;
 	}
-	for (int i = 0; i < nRestarts; i++){
+	for (int i = 0; i < nProjectionRestarts; i++){
 		V.setZero();
 		//initialize unitary V via ``most orthogonal rows'' method
-		int rndRow = this->rng()%(nA+nB);
+		int rndRow = (RNG::get())()%(nA+nB);
 		V.col(0) = Z.row(rndRow).transpose();
 		MXd c(nA+nB, 1);
 		c.setZero();
@@ -109,55 +102,22 @@ double Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vect
 			minNCutsObj = nCutsObj;
 			minLbls = tmplbls;
 		}
-
-		if (verbose){
-			cout << "libspecdynmeans: Attempt " << i+1 << "/" << nRestarts << ", Obj = " << nCutsObj << " MinObj = " << minNCutsObj << "                                       \r" <<  flush;
-		}
 	}
 
-	if (verbose){
-		vector<int> unqlbls = minLbls;
-		sort(unqlbls.begin(), unqlbls.end());
-		unqlbls.erase(unique(unqlbls.begin(), unqlbls.end()), unqlbls.end());
-		int numnew = 0;
-		for (int i = 0; i < unqlbls.size(); i++){
-			if (find(this->oldprmlbls.begin(), this->oldprmlbls.end(), unqlbls[i]) == this->oldprmlbls.end()){
-				numnew++;
-			}
-		}
-		int numoldinst = unqlbls.size() - numnew;
-		int numolduninst = this->ages.size() - numoldinst;
-		cout << endl << "libspecdynmeans: Done clustering. Min Objective: " << minNCutsObj << " Old Uninst: " << numolduninst  << " Old Inst: " << numoldinst  << " New: " << numnew <<  endl;
-	}
-
-	//update the state of the ddp chain
-	this->finalizeStep(aff, minLbls, finalGammas, finalPrmLbls);
-
-	//output results
-	finalObj =  minNCutsObj;
-	finalLabels = minLbls;
-	//get final time taken
-	timeval tCur;
-	gettimeofday(&tCur, NULL);
-	tTaken = (double)(tCur.tv_sec - tStart.tv_sec) + (double)(tCur.tv_usec - tStart.tv_usec)/1.0e6;
 	return;
-
-
 }
 
-MXd& Spectral::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const Model& model) const{
-const int nA = aff.getNNodes();
-	const int nB = this->oldprmlbls.size();
-	kUpper.resize(nA+nB, nA+nB);
+MXd& Spectral::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
+	const int nA = obs.size();
+	const int nB = clus.size();
+	MXd KUp = MXd::Zeros(nA+nB, nA+nB);
 
-	vector<TD> kUpperTrips;
-	kUpperTrips.reserve(nA+nB);//just start with some heuristic size
 	//insert ATA matrix
 	for (int i = 0; i < nA; i++){
 		for (int j = i; j < nA; j++){
 			double sim = aff.simDD(i, j);
 			if (sim > 1e-16){
-				kUpperTrips.push_back(TD(i, j, sim));
+				KUp(i, j) = sim;
 			}
 		}
 	}
@@ -166,23 +126,20 @@ const int nA = aff.getNNodes();
 		for (int j = 0; j < nB; j++){
 			double sim = aff.simDP(i, j);
 			if (sim > 1e-16){
-				kUpperTrips.push_back(TD(i, j+nA, sqrt(this->gammas[j])*sim));
+				KUp(i, j+nA) =  sqrt(this->gammas[j])*sim;
 			}
 		}
 	}
 	//insert BTB
 	for (int i = 0; i < nB; i++){
-		kUpperTrips.push_back(TD(i+nA, i+nA, this->gammas[i]+this->agecosts[i]));
+		double sim = aff.simPP(i);
+		KUp(i+nA, i+nA) = this->gammas[i]*sim+this->agecosts[i];
 	}
-
-	kUpper.setFromTriplets(kUpperTrips.begin(), kUpperTrips.end());
-	return;
-
-
+	return KUp;
 }
 
 void Spectral::findClosestConstrained(const MXd& ZV, MXd& X) const{
-const int nRows = ZV.rows();
+	const int nRows = ZV.rows();
 	const int nCols = ZV.cols();
 	const int nB = this->ages.size();
 	const int nA = nRows-nB;
@@ -227,10 +184,8 @@ const int nRows = ZV.rows();
 }
 
 void Spectral::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{
-V = X.transpose()*Z;
+	V = X.transpose()*Z;
 	this->orthonormalize(V);
-
-
 }
 
 void Spectral::orthonormalize(MXd& V) const{
@@ -411,8 +366,6 @@ const int nB = this->ages.size();
 		}
 	}
 	return lbls;
-
-
 }
 
 

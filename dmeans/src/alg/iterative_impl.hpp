@@ -7,6 +7,7 @@ _Iterative<Model, monoCheck>::_Iterative(const Config& cfg){
 
 template <class Model, bool monoCheck>
 double _Iterative<Model, monoCheck>::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
+	if(obs.size() == 0){return 0.0;}
 	//initial round of labelling data without deassigning it
 	this->initialLabelling(obs, clus, model);
 	//label/parameter update iteration
