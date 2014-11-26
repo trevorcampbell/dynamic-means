@@ -233,8 +233,6 @@ void _Spectral<Model, monoCheck>::findClosestConstrained(const MXd& ZV, MXd& X, 
 		}
 	}
 	return;
-
-
 }
 
 template<class Model, bool monoCheck>
@@ -328,32 +326,33 @@ void _Spectral<Model, monoCheck>::orthonormalize(MXd& V) const{
 }
 
 template<class Model, bool monoCheck>
-double _Spectral<Model, monoCheck>::getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const{
-const int nA = lbls.size();
-	const int nB = this->ages.size();
+double _Spectral<Model, monoCheck>::getNormalizedCutsObj(const MXd& KUp, const vector<int>& lbls, const int nOld) const{
+	const int nA = lbls.size();
+	const int nB = nOld;
 	map<int, double> nums, denoms;
-	for (int i = 0; i < spmatUpper.outerSize(); ++i){
-		for (SMXd::InnerIterator it(spmatUpper, i); it; ++it){
+	for (int i = 0; i < KUp.rows(); ++i){
+		for (int j = 0; j < KUp.cols(); j++){
 			int l1, l2;
 			//decide whether the row corresponds to an old cluster or a new datapt
-			if (it.row() >= nA){
+			if (i >= nA){
 				//the label is determined by the row
-				l1 = this->oldprmlbls[it.row() - nA];
+				l1 = i-nA;
 			} else {
-				l1 = lbls[it.row()]; 
+				l1 = lbls[i];
 			}
 			//decide whether the col corresponds to an old cluster or a new datapt
-			if (it.col() >= nA){
+			if (j >= nA){
 				//the label is determined by the col
-				l2 = this->oldprmlbls[it.col() - nA];
+				l2 = j-nA;
 			} else {
-				l2 = lbls[it.col()];
+				l2 = lbls[j];
 			}
 			//accumulate the numerator/denominator
+			double value = i < j ? KUp(i, j) : KUp(j, i); //account for KUp being uppertri
 			if (l1 != l2) {
-				nums[l1] += it.value();//this relies on nums[] default value constructor setting to 0
+				nums[l1] += value;//this relies on nums[] default value constructor setting to 0
 			}
-			denoms[l1] += it.value();//this relies on denoms[] default value constructor setting to 0
+			denoms[l1] += value;//this relies on denoms[] default value constructor setting to 0
 		}
 	}
 	double obj = 0;
@@ -363,18 +362,16 @@ const int nA = lbls.size();
 		}
 	}
 	return obj;
-
-
 }
 
 template<class Model, bool monoCheck>
-vector<int> _Spectral<Model, monoCheck>::getLblsFromIndicatorMat(const MXd& X) const{
-const int nB = this->ages.size();
+vector<int> _Spectral<Model, monoCheck>::getLblsFromIndicatorMat(const MXd& X, const int nOld) const{
+	const int nB = nOld;
 	const int nA = X.rows()-nB;
 	const int nR = X.rows();
 	const int nC = X.cols();
 	vector<int> lbls;
-	int nextNewLbl = this->maxLblPrevUsed+1;
+	int nextNewLbl = nOld+1;
 	//first find the correspondance between columns and labels
 	map<int, int> colToLbl;
 	for (int i = 0; i < nC; i++){
@@ -400,7 +397,7 @@ const int nB = this->ages.size();
 				nextNewLbl++;
 			}
 		} else { //old cluster
-			colToLbl[i] = this->oldprmlbls[oneRow];
+			colToLbl[i] = oneRow;
 		}
 	}
 	//now push back the labels

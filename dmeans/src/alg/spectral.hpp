@@ -23,8 +23,8 @@ class _Spectral{
 		void findClosestConstrained(const MXd& ZV, MXd& X, const int nOld) const;
 		void findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const; 
 		void orthonormalize(MXd& V) const; 
-		double getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const;
-		vector<int> getLblsFromIndicatorMat(const MXd& X) const;
+		double getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls, const int nOld) const;
+		vector<int> getLblsFromIndicatorMat(const MXd& X, const int nOld) const;
 		class MonotonicityViolationException{
 			public:
 				MonotonicityViolationException(double prevobj, double obj, std::string funcname){
