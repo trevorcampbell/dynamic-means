@@ -1,5 +1,6 @@
 #ifndef __SPECTRAL_IMPL_HPP
-_Spectral::_Spectral(const Config& cfg){
+template<class Model, bool monoCheck>
+_Spectral<Model, monoCheck>::_Spectral(const Config& cfg){
 	this->solverType = this->cfg.get("eigenSolverType", Config::Type::OPTIONAL, EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	if (this->solverType == EigenSolver::Type::EIGEN_SELF_ADJOINT){
 		this->nEigs = 0;
@@ -10,7 +11,8 @@ _Spectral::_Spectral(const Config& cfg){
 	this->nProjectionRestarts = this->cfg.get("nProjectionRestarts", Config::Type::OPTIONAL, 1);
 }
 
-double _Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
+template<class Model, bool monoCheck>
+double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
 	if(obs.size() == 0){return 0.0;}
 
 	//compute the kernel matrix
@@ -32,7 +34,7 @@ double _Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vec
 
 	//premultiply Z with \hat{Gamma}^{-1/2}
 	for (int j = nA; j < nA+nB; j++){
-		Z.row(j) *= 1.0/sqrt(this->gammas[j-nA]);
+		Z.row(j) *= 1.0/sqrt(model.oldWeight(clus[j-nA])); 
 	}
 	const int nZCols = Z.cols(); //number of clusters currently instantiated
 
@@ -49,7 +51,7 @@ double _Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vec
 	//for the old rows, decide whether the sq norm is too small to be considered instantiated
 	for (int j = nA; j < nA+nB; j++){
 		double rowsqnorm = Z.row(j).squaredNorm();
-		if (0.5/(nA+this->gammas[j-nA]) <= rowsqnorm){
+		if (0.5/(nA+model.oldWeight(clus[j-nA])) <= rowsqnorm){
 			//it's a non-degenerate row, normalize it
 			Z.row(j) *= (1.0/sqrt(rowsqnorm));
 		}
@@ -86,15 +88,34 @@ double _Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vec
 		//solve the alternating minimization for X
 		double obj, prevobj;
 		obj = prevobj = numeric_limits<double>::infinity();
-		do{
-			prevobj = obj;
+		if (!monoCheck){
+			do{
+				prevobj = obj;
 
-			this->findClosestConstrained(Z*V, X);
+				this->findClosestConstrained(Z*V, X);
 
-			this->findClosestRelaxed(Z, X, V); 
+				this->findClosestRelaxed(Z, X, V); 
 
-			obj = (X-Z*V).squaredNorm();
-		} while( fabs(obj - prevobj)/obj > 1e-6);
+				obj = (X-Z*V).squaredNorm();
+			} while( fabs(obj - prevobj)/obj > 1e-6);
+		} else {
+			double tmpobj;
+			do{
+				tmpobj = prevobj = obj;
+				this->findClosestConstrained(Z*V, X);
+				obj = (X-Z*V).squaredNorm();
+				if (obj > tmpobj){
+					throw MonotonicityViolationException(tmpobj, obj, "labelUpdate()");
+				}
+
+				tmpobj = obj;
+				this->findClosestRelaxed(Z, X, V); 
+				obj = (X-Z*V).squaredNorm();
+				if (obj > tmpobj){
+					throw MonotonicityViolationException(tmpobj, obj, "labelUpdate()");
+				}
+			} while( fabs(obj - prevobj)/obj > 1e-6);
+		}
 		//compute the normalized cuts objective
 		vector<int> tmplbls = this->getLblsFromIndicatorMat(X);
 		double nCutsObj = this->getNormalizedCutsObj(KUp, tmplbls);
@@ -103,11 +124,24 @@ double _Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vec
 			minLbls = tmplbls;
 		}
 	}
-
-	return;
+	//assign the data
+	int lblMax = std::max_element(minLbls.begin(), minLbls.end());
+	for (int i = 0; i < lblMax+1-clus.size(); i++){
+		Clus newclus;
+		clus.push_back(newclus);
+	}
+	for (int i = 0; i < obs.size(); i++){
+		clus[minLbls[i]].assignData(i, obs[i]);
+	}
+	//update the parameters
+	for (int i = 0; i < clus.size(); i++){
+		model.updatePrm(clus[i]);
+	}
+	return minNCutsObj;
 }
 
-MXd& _Spectral::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
+template<class Model, bool monoCheck>
+MXd& _Spectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
 	const int nA = obs.size();
 	const int nB = clus.size();
 	MXd KUp = MXd::Zeros(nA+nB, nA+nB);
@@ -115,7 +149,7 @@ MXd& _Spectral::getKernelMatUpper(const std::vector<typename Model::Data>& obs, 
 	//insert ATA matrix
 	for (int i = 0; i < nA; i++){
 		for (int j = i; j < nA; j++){
-			double sim = aff.simDD(i, j);
+			double sim = model.kernelDD(obs[i], obs[j]);
 			if (sim > 1e-16){
 				KUp(i, j) = sim;
 			}
@@ -124,24 +158,25 @@ MXd& _Spectral::getKernelMatUpper(const std::vector<typename Model::Data>& obs, 
 	//insert ATB
 	for (int i = 0; i < nA; i++){
 		for (int j = 0; j < nB; j++){
-			double sim = aff.simDP(i, j);
+			double sim = model.kernelDOP(obs[i], clus[j]);
 			if (sim > 1e-16){
-				KUp(i, j+nA) =  sqrt(this->gammas[j])*sim;
+				KUp(i, j+nA) =  sqrt(model.oldWeight(clus[j]))*sim;
 			}
 		}
 	}
 	//insert BTB
 	for (int i = 0; i < nB; i++){
-		double sim = aff.simPP(i);
-		KUp(i+nA, i+nA) = this->gammas[i]*sim+this->agecosts[i];
+		double sim = model.kernelPP(clus[i]);
+		KUp(i+nA, i+nA) = model.oldWeight(clus[i])*sim+this->agecosts[i];
 	}
 	return KUp;
 }
 
-void _Spectral::findClosestConstrained(const MXd& ZV, MXd& X) const{
+template<class Model, bool monoCheck>
+void _Spectral<Model, monoCheck>::findClosestConstrained(const MXd& ZV, MXd& X, const int nOld) const{
 	const int nRows = ZV.rows();
 	const int nCols = ZV.cols();
-	const int nB = this->ages.size();
+	const int nB = nOld;
 	const int nA = nRows-nB;
 
 	//initialize X to zero; it will be the indicator mat output
@@ -183,12 +218,14 @@ void _Spectral::findClosestConstrained(const MXd& ZV, MXd& X) const{
 
 }
 
-void _Spectral::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{
+template<class Model, bool monoCheck>
+void _Spectral<Model, monoCheck>::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{
 	V = X.transpose()*Z;
 	this->orthonormalize(V);
 }
 
-void _Spectral::orthonormalize(MXd& V) const{
+template<class Model, bool monoCheck>
+void _Spectral<Model, monoCheck>::orthonormalize(MXd& V) const{
 	//do a safe svd, with guaranteed orthonormal columns even in the event of numerically small singular values
 	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::HouseholderQRPreconditioner> svd(V, Eigen::ComputeFullU | Eigen::ComputeFullV); //slowest/safest preconditioning
 	MXd U = svd.matrixU();
@@ -245,11 +282,7 @@ void _Spectral::orthonormalize(MXd& V) const{
 				nGoodCols++;
 			}
 		}
-		if(nGoodCols != U.cols()){
-			cout << "libspecdynmeans: ERROR: GRAHAM SCHMIDT DID NOT ORTHONORMALIZE U!" << endl;
-			int ddd;
-			cin >> ddd;
-		}
+		assert(nGoodCols == U.cols());
 		//now W
 		nGoodCols = goodCols.size();
 		for (int i = 0; i < W.cols(); i++){
@@ -268,20 +301,15 @@ void _Spectral::orthonormalize(MXd& V) const{
 				nGoodCols++;
 			}
 		}
-		if(nGoodCols != W.cols()){
-			cout << "libspecdynmeans: ERROR: GRAHAM SCHMIDT DID NOT ORTHONORMALIZE W!" << endl;
-			int ddd;
-			cin >> ddd;
-		}
+		assert(nGoodCols == W.cols());
 	}
 	V  = W*U.transpose();
 
 	return; 
-
-
 }
 
-double _Spectral::getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const{
+template<class Model, bool monoCheck>
+double _Spectral<Model, monoCheck>::getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const{
 const int nA = lbls.size();
 	const int nB = this->ages.size();
 	map<int, double> nums, denoms;
@@ -320,7 +348,8 @@ const int nA = lbls.size();
 
 }
 
-vector<int> _Spectral::getLblsFromIndicatorMat(const MXd& X) const{
+template<class Model, bool monoCheck>
+vector<int> _Spectral<Model, monoCheck>::getLblsFromIndicatorMat(const MXd& X) const{
 const int nB = this->ages.size();
 	const int nA = X.rows()-nB;
 	const int nR = X.rows();

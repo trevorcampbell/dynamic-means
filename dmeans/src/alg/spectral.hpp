@@ -1,6 +1,8 @@
 #ifndef __SPECTRAL_HPP
 #include<Eigen/Dense>
 #include "../util/eigensolver.hpp"
+#include "../util/maxmatching.hpp"
+#include <cassert>
 
 
 namespace dmeans{
@@ -18,11 +20,17 @@ class _Spectral{
 		uint64_t nProjectionRestarts;
 
 		MXd& getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const;
-		void findClosestConstrained(const MXd& ZV, MXd& X) const;
+		void findClosestConstrained(const MXd& ZV, MXd& X, const int nOld) const;
 		void findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const; 
 		void orthonormalize(MXd& V) const; 
 		double getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const;
 		vector<int> getLblsFromIndicatorMat(const MXd& X) const;
+		class MonotonicityViolationException{
+			public:
+				MonotonicityViolationException(double prevobj, double obj, std::string funcname){
+					std::cout << "Monotonicity violated! Prevobj = " << prevobj << " obj = " << obj << " after calling " << funcname << std::endl;
+				}
+		};
 };
 
 template<class Model>
