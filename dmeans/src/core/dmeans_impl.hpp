@@ -5,12 +5,8 @@ DMeans<Model, Alg>::DMeans(Config cfg) : model(cfg){
 	this->verbose = cfg.get("verbose", Config::Type::OPTIONAL, false);
 	this->nRestarts = this->cfg.get("nRestarts", Config::Type::OPTIONAL, 1);
 	this->nextLabel = 0;
-	int seed = cfg.get("seed", Config::Type::OPTIONAL, -1);
-	if (seed < 0){
-		std::srand(this->timer.now_ms());
-	} else {
-		std::srand(seed);
-	}
+	int s = cfg.get("seed", Config::Type::OPTIONAL, -1);
+	if (s >= 0){ RNG::get().seed(s); }
 }
 
 template <class Model, template<typename> class Alg>
