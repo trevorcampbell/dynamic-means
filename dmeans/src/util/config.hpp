@@ -4,6 +4,7 @@
 #include<iostream>
 #include<sstream>
 
+namespace dmeans{
 class Config{
 	public:
 		enum Type{
@@ -59,5 +60,6 @@ class Config{
 		};
 };
 
+}
 #define __CONFIG_HPP
 #endif /* __CONFIG_HPP */

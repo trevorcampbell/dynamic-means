@@ -6,6 +6,7 @@
 //singletons ensure that all randomness in dynamic means
 //comes from a single source 
 //helps with repeatability during experiments
+namespace dmeans{
 class RNG{
 	public:
 		static std::mt19937& get(){
@@ -22,6 +23,6 @@ class RNG{
 		void operator=(const RNG&);
 };
 
-
+}
 #define __RANDOM_HPP
 #endif /* __RANDOM_HPP */

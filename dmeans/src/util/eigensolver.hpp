@@ -3,6 +3,8 @@
 #include<iostream>
 #include "random.hpp"
 
+
+namespace dmeans{
 typedef Eigen::MatrixXd MXd;
 typedef Eigen::VectorXd VXd;
 
@@ -32,6 +34,7 @@ class EigenSolver{
 };
 
 #include "eigensolver_impl.hpp"
+}
 
 #define __EIGENSOLVER_HPP
 #endif /* __EIGENSOLVER_HPP */
