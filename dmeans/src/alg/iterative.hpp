@@ -4,6 +4,7 @@
 #include<random>
 #include "../core/cluster.hpp"
 #include "../util/config.hpp"
+#include "../util/random.hpp"
 #include<string>
 
 namespace dmeans{

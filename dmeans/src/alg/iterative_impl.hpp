@@ -43,7 +43,7 @@ template <class Model, bool monoCheck>
 void _Iterative<Model, monoCheck>::initialLabelling(const std::vector< typename Model::Data>& obs, std::vector< Clus >& clus, const Model& model) const{
 	std::vector<uint64_t> shuffs(obs.size());
 	std::iota(shuffs.begin(), shuffs.end(), 0);
-	std::random_shuffle(shuffs.begin(), shuffs.end());
+	std::shuffle(shuffs.begin(), shuffs.end(), RNG::get());
 	for (uint64_t i = 0; i < shuffs.size(); i++){
 		int id = shuffs[i];
 		double minCost = std::numeric_limits<double>::infinity();
@@ -85,7 +85,7 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const 
 	}
 	std::vector<uint64_t> shuffs(ids.size());
 	std::iota(shuffs.begin(), shuffs.end(), 0);
-	std::random_shuffle(shuffs.begin(), shuffs.end());
+	std::shuffle(shuffs.begin(), shuffs.end(), RNG::get());
 	//do reassignment
 	for (uint64_t i = 0; i < shuffs.size(); i++){
 		uint64_t lbl = lbls[shuffs[i]];
