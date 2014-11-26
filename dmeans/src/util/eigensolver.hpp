@@ -1,7 +1,7 @@
 #ifndef __EIGENSOLVER_HPP
 #include<Eigen/Dense>
 #include<iostream>
-#include<random>
+#include "random.hpp"
 
 typedef Eigen::MatrixXd MXd;
 typedef Eigen::VectorXd VXd;
