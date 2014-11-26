@@ -8,11 +8,8 @@ _Iterative<Model, monoCheck>::_Iterative(const Config& cfg){
 
 template <class Model, bool monoCheck>
 double _Iterative<Model, monoCheck>::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
-	std::cout << "Clustering " << obs.size() << " datapoints" << std::endl;
-	std::cout << "Initial # clusters: " << clus.size() << std::endl;
 	//initial round of labelling data without deassigning it
 	this->initialLabelling(obs, clus, model);
-	std::cout  << "After initial labelling # clusters: " << clus.size() << std::endl;
 	//label/parameter update iteration
 	bool labellingChanged = true;
 	if (!monoCheck){
@@ -22,21 +19,16 @@ double _Iterative<Model, monoCheck>::cluster(const std::vector<typename Model::D
 		}
 	} else {
 		double obj = this->computeCost(clus, model);
-		std::cout << "Obj: " << obj << std::endl;
 		while(labellingChanged){
 			double prevobj = obj;
-			std::cout << "prmupdate" << std::endl;
 			this->parameterUpdate(clus, model);
 			obj = this->computeCost(clus, model);
-			std::cout << "Obj: " << obj << std::endl;
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "parameterUpdate()");
 			}
 			prevobj = obj;
-			std::cout << "lblupdate" << std::endl;
 			labellingChanged = this->labelUpdate(clus, model);
 			obj = this->computeCost(clus, model);
-			std::cout << "Obj: " << obj << std::endl;
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "labelUpdate()");
 			}
@@ -64,7 +56,6 @@ void _Iterative<Model, monoCheck>::initialLabelling(const std::vector< typename 
 			}
 		}
 		if (model.exceedsNewClusterCost(obs[id], minCost)){
-			std::cout << "Creating cluster in initial labelling step " << std::endl;
 			Clus newclus;
 			newclus.assignData(id, obs[id]);
 			model.updatePrm(newclus);
@@ -102,7 +93,6 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const 
 		uint64_t id = ids[shuffs[i]];
 		typename Model::Data obs = clus[cid].deassignData(id);
 		if (clus[cid].isNew() && clus[cid].isEmpty()){
-			std::cout << "Deleting cluster at idx " << cid << " in initial labelling step " << std::endl;
 			clus.erase(clus.begin()+cid);
 			lblToIdx.erase(lbl);
 			for(auto it = lblToIdx.begin(); it != lblToIdx.end(); ++it){
@@ -121,7 +111,6 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const 
 			}
 		}
 		if (model.exceedsNewClusterCost(obs, minCost)){
-			std::cout << "Creating cluster in initial labelling step " << std::endl;
 			Clus newclus;
 			newclus.assignData(id, obs);
 			model.updatePrm(newclus);

@@ -98,12 +98,11 @@ int main(int argc, char** argv){
 		vector<VSModel::Data> data;
 		vector<uint64_t> trueLabels;
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, data, trueLabels);
-		cout << "Clustering " << data.size() << " datapoints " << endl;
 
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
-		cout << "Step " << i << ": Clustering..." << endl;
+		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
 		dmeans::Results<VSModel> res = dynm.cluster(data);
 
 		//***************************************************
@@ -118,9 +117,6 @@ int main(int argc, char** argv){
 		//std::transform(res.lbls.begin(), res.lbls.end(), rlblint.begin(), [](uint64_t u) -> int { int ui = u; return ui;});
 		//std::transform(trueLabels.begin(), trueLabels.end(), tlblint.begin(), [](uint64_t u) -> int { int ui = u; return ui;});
 		matchings = maxm.getMaxConsistentMatching(rlblint, tlblint, std::vector<double>());
-		for(auto it = matchings.begin(); it != matchings.end(); ++it){
-			cout << "Matched " << it->first << " -- " << it->second << endl;
-		}
 		double acc = 100.0*(double)maxm.getObjective()/ (double)data.size();
 		//double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
 		cout << "Step " << i << ": Accuracy = " << acc <<  "\%" << endl;
