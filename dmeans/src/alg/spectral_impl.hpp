@@ -1,5 +1,5 @@
 #ifndef __SPECTRAL_IMPL_HPP
-Spectral::Spectral(const Config& cfg){
+_Spectral::_Spectral(const Config& cfg){
 	this->solverType = this->cfg.get("eigenSolverType", Config::Type::OPTIONAL, EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	if (this->solverType == EigenSolver::Type::EIGEN_SELF_ADJOINT){
 		this->nEigs = 0;
@@ -10,7 +10,7 @@ Spectral::Spectral(const Config& cfg){
 	this->nProjectionRestarts = this->cfg.get("nProjectionRestarts", Config::Type::OPTIONAL, 1);
 }
 
-double Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
+double _Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
 	if(obs.size() == 0){return 0.0;}
 
 	//compute the kernel matrix
@@ -26,6 +26,9 @@ double Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vect
 		Z = MXd::Ones(KUp.rows(), 1);
 		eigvals = VXd::Ones(1);
 	}
+
+	uint64_t nA = obs.size();
+	uint64_t nB = clus.size();
 
 	//premultiply Z with \hat{Gamma}^{-1/2}
 	for (int j = nA; j < nA+nB; j++){
@@ -61,10 +64,7 @@ double Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vect
 	double minNCutsObj = numeric_limits<double>::infinity();
 	vector<int> minLbls;
 
-	//propose nRestarts V trials
-	if (verbose){
-		cout << "libspecdynmeans: Finding discretized solution with " << nRestarts << " restarts" << endl;
-	}
+	//propose nProjectionRestarts V trials
 	for (int i = 0; i < nProjectionRestarts; i++){
 		V.setZero();
 		//initialize unitary V via ``most orthogonal rows'' method
@@ -97,7 +97,7 @@ double Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vect
 		} while( fabs(obj - prevobj)/obj > 1e-6);
 		//compute the normalized cuts objective
 		vector<int> tmplbls = this->getLblsFromIndicatorMat(X);
-		double nCutsObj = this->getNormalizedCutsObj(kUpper, tmplbls);
+		double nCutsObj = this->getNormalizedCutsObj(KUp, tmplbls);
 		if (nCutsObj < minNCutsObj){
 			minNCutsObj = nCutsObj;
 			minLbls = tmplbls;
@@ -107,7 +107,7 @@ double Spectral::cluster(const std::vector<typename Model::Data>& obs, std::vect
 	return;
 }
 
-MXd& Spectral::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
+MXd& _Spectral::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
 	const int nA = obs.size();
 	const int nB = clus.size();
 	MXd KUp = MXd::Zeros(nA+nB, nA+nB);
@@ -138,7 +138,7 @@ MXd& Spectral::getKernelMatUpper(const std::vector<typename Model::Data>& obs, c
 	return KUp;
 }
 
-void Spectral::findClosestConstrained(const MXd& ZV, MXd& X) const{
+void _Spectral::findClosestConstrained(const MXd& ZV, MXd& X) const{
 	const int nRows = ZV.rows();
 	const int nCols = ZV.cols();
 	const int nB = this->ages.size();
@@ -183,12 +183,12 @@ void Spectral::findClosestConstrained(const MXd& ZV, MXd& X) const{
 
 }
 
-void Spectral::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{
+void _Spectral::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{
 	V = X.transpose()*Z;
 	this->orthonormalize(V);
 }
 
-void Spectral::orthonormalize(MXd& V) const{
+void _Spectral::orthonormalize(MXd& V) const{
 	//do a safe svd, with guaranteed orthonormal columns even in the event of numerically small singular values
 	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::HouseholderQRPreconditioner> svd(V, Eigen::ComputeFullU | Eigen::ComputeFullV); //slowest/safest preconditioning
 	MXd U = svd.matrixU();
@@ -281,7 +281,7 @@ void Spectral::orthonormalize(MXd& V) const{
 
 }
 
-double Spectral::getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const{
+double _Spectral::getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const{
 const int nA = lbls.size();
 	const int nB = this->ages.size();
 	map<int, double> nums, denoms;
@@ -320,7 +320,7 @@ const int nA = lbls.size();
 
 }
 
-vector<int> Spectral::getLblsFromIndicatorMat(const MXd& X) const{
+vector<int> _Spectral::getLblsFromIndicatorMat(const MXd& X) const{
 const int nB = this->ages.size();
 	const int nA = X.rows()-nB;
 	const int nR = X.rows();

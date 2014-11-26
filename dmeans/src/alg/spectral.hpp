@@ -5,10 +5,10 @@
 
 namespace dmeans{
 template<class Model, bool monoCheck>
-class Spectral{
+class _Spectral{
 	using Clus = Cluster<typename Model::Data, typename Model::Parameter>;
 	public:
-		Spectral(const Config& cfg);
+		_Spectral(const Config& cfg);
 		double cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const;
 	private:
 		bool verbose;
@@ -24,6 +24,12 @@ class Spectral{
 		double getNormalizedCutsObj(const MXd& mUp, const vector<int>& lbls) const;
 		vector<int> getLblsFromIndicatorMat(const MXd& X) const;
 };
+
+template<class Model>
+using SpectralWithMonotonicityChecks = _Spectral<Model, true>; 
+
+template<class Model>
+using Spectral = _Spectral<Model, false>;
 
 #include "spectral_impl.hpp"
 #define __SPECTRAL_HPP
