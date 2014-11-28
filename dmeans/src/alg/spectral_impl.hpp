@@ -200,7 +200,7 @@ void _Spectral<Model, monoCheck>::findClosestConstrained(const MXd& ZV, MXd& X, 
 		for (int jj = 0; jj < nCols; jj++){
 			rows.push_back(kk+nA);
 			cols.push_back(jj);
-			wts.push_back(-(1.0-2.0*ZV(kk+nA, jj)));
+			wts.push_back(floor(-1.0e9*(1.0-2.0*ZV(kk+nA, jj))));
 		}
 	}
 	MaxMatching maxm;
