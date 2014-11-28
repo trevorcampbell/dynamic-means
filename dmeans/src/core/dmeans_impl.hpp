@@ -76,7 +76,7 @@ Results<Model> DMeans<Model, Alg>::cluster(const std::vector<typename Model::Dat
 	//output the results
 	Results<Model> bestResults = this->getResults();
 	bestResults.cost = minCost;
-	bestResults.tTaken = this->timer.elapsed_ms();
+	bestResults.tTaken = this->timer.elapsed_ms()/1.0e3;
 	this->finalize();
 	return bestResults;
 }

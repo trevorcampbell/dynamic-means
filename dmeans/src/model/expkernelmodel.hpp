@@ -170,7 +170,7 @@ class ExponentialKernelModel{
 		}
 
 };
-
+}
 
 #define __EXPKERNELMODEL_HPP
 #endif /* __EXPKERNELMODEL_HPP */

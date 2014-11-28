@@ -121,7 +121,7 @@ int main(int argc, char** argv){
 		matchings = maxm.getMaxConsistentMatching(rlblint, tlblint, std::vector<double>());
 		double acc = 100.0*(double)maxm.getObjective()/ (double)data.size();
 		//double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
-		cout << "Step " << i << ": Accuracy = " << acc <<  "\%" << endl;
+		cout << "Step " << i << ": Accuracy = " << acc <<  "\%" << " CPU Time = " << res.tTaken << "s" << endl;
 		cumulativeAccuracy += acc;
 	}
 	cout << "Average Accuracy: " << cumulativeAccuracy/(double)nSteps << "\%" << endl;

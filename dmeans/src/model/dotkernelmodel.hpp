@@ -169,6 +169,7 @@ class DotProductKernelModel{
 		}
 
 };
+}
 
 
 #define __DOTKERNELMODEL_HPP
