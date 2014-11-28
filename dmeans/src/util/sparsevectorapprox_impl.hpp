@@ -6,9 +6,9 @@ SparseVectorApproximation::SparseVectorApproximation(uint64_t K, double eps){
 }
 
 void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
-	std::cout << "SpVecApprox: Computing sparse linear combination approximation via Kernel Gram-Schmidt..." << std::endl;
-	std::cout << "SpVecApprox: Max basis size = " << this->K << std::endl;
-	std::cout << "SpVecApprox: Error threshold = " << this->eps << std::endl; 
+	//std::cout << "SpVecApprox: Computing sparse linear combination approximation via Kernel Gram-Schmidt..." << std::endl;
+	//std::cout << "SpVecApprox: Max basis size = " << this->K << std::endl;
+	//std::cout << "SpVecApprox: Relative error threshold = " << this->eps << std::endl; 
 	MXd msave = m;
 	//clear old results
 	this->bvecs.clear();
@@ -16,7 +16,7 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 
 	//jump out early if K is larger than the dimension of the matrix
 	if ((uint64_t)m.rows() < this->K){
-		std::cout << "SpVecApprox: Input vector size < K, returning the full set."<< std::endl;
+		//std::cout << "SpVecApprox: Input vector size < K, returning the full set."<< std::endl;
 		for(int i = 0; i < m.rows(); i++){
 			this->bvecs.push_back(i);
 			this->coeffs.push_back(acoeffs(i));
@@ -26,9 +26,9 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 
 	//find the alpha-weighted column sum for computing the cost reduction for each column
 	VXd acolsums = m*acoeffs;
-	//find the initial cost (norm of the linear combination)
-	double cost = acoeffs.transpose()*acolsums;
-	std::cout << "SpVecApprox: Initial cost = " << cost << std::endl;
+	//find the initial cost (sqnorm of the linear combination we're trying to approximate)
+	double vecSqNorm = acoeffs.transpose()*acolsums;
+	//std::cout << "SpVecApprox: Vector Square Norm = " << vecSqNorm << std::endl;
 
 	//store the current set of indices
 	std::vector<uint64_t> idcs(acoeffs.size()); //idcs stores the mapping from current matrix row/col to original matrix row/col
@@ -36,7 +36,8 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 	std::vector<uint64_t> srtidcs = idcs; //srtidcs stores a list of current matrix row/cols sorted by cost reduction (best is .back())
 
 	//gram schmidt loop 
-	while (cost > this->eps && this->bvecs.size() < this->K){
+	double errSqNorm = vecSqNorm;
+	while (sqrt(errSqNorm/vecSqNorm) > this->eps && this->bvecs.size() < this->K){
 		//sort to find the index with maximum cost reduction
 		VXd costreds = acolsums.array()*acolsums.array()/(m.diagonal().array());
 		std::sort(srtidcs.begin(), srtidcs.end(), 
@@ -44,10 +45,10 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 				{ return costreds(a) < costreds(b); });
 		//add the best vector to the basis; project everything onto orthogonal subspace and remove the vector from further consideration
 		uint64_t kMax = srtidcs.back();
-		cost -= costreds(kMax);
+		errSqNorm -= costreds(kMax);
 		this->bvecs.push_back(idcs[kMax]);
 		this->projectOntoOrthogonalSubspace(acolsums, m, idcs, srtidcs, kMax);
-		std::cout << "SpVecApprox: Basis size = " << this->bvecs.size() << " Cost = " << cost << std::endl;
+		//std::cout << "SpVecApprox: Basis size = " << this->bvecs.size() << " Relative Error = " << sqrt(errSqNorm/vecSqNorm) << std::endl;
 	}
 
 	//final computation of coefficients
@@ -68,12 +69,12 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 	//std::cout << "W: " << std::endl << W << std::endl;
 	//std::cout << "B: " << std::endl << B << std::endl;
 
-	std::cout << "SpVecApprox: Computing coefficients using LDLT decomposition" << std::endl;
+	//std::cout << "SpVecApprox: Computing coefficients using LDLT decomposition" << std::endl;
 	VXd finalcoeffs = W.ldlt().solve(B*acoeffs);
 	for(uint64_t i = 0; i < (uint64_t)finalcoeffs.size(); i++){
 		this->coeffs.push_back(finalcoeffs(i));
 	}
-	std::cout << "SpVecApprox: Done!"<< std::endl;
+	//std::cout << "SpVecApprox: Done!"<< std::endl;
 }
 
 

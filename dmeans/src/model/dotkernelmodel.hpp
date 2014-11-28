@@ -14,7 +14,7 @@ class DotProductKernelModel{
 			this->Q = cfg.get("Q", Config::REQUIRED, -1.0);
 			this->tau = cfg.get("tau", Config::REQUIRED, -1.0);
 			this->spK = cfg.get("sparseApproximationSize", Config::REQUIRED, -1);
-			this->spEps = cfg.get("sparseApproximationErrorThreshold", Config::OPTIONAL, 1.0e-4);
+			this->spEps = cfg.get("sparseApproximationErrorThreshold", Config::OPTIONAL, 1.0e-6);
 		}
 		class Data{
 			public:
