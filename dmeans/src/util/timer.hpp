@@ -4,16 +4,15 @@ namespace dmeans{
 class Timer{
 	public:
 		typedef std::chrono::high_resolution_clock hrc;
-		typedef std::chrono::milliseconds ms;
 		hrc::time_point t0;
-		double now_ms(){
-			return std::chrono::duration_cast<ms>(hrc::now().time_since_epoch()).count();
+		double now_s(){
+			return (std::chrono::duration_cast< std::chrono::duration<double> >(hrc::now().time_since_epoch())).count();
 		}
 		void start(){
 			t0 = hrc::now();
 		}
 		double elapsed_ms(){
-			return std::chrono::duration_cast<ms>(hrc::now()-t0).count();
+			return (std::chrono::duration_cast< std::chrono::duration<double> >(hrc::now()-t0)).count();
 		}
 };
 }

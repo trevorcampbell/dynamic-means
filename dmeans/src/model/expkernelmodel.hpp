@@ -24,7 +24,7 @@ class ExponentialKernelModel{
 		};
 		class Parameter{
 			public:
-				Parameter(){v.setZero(); w = 0;}
+				Parameter(){vs.clear(); w = 0;}
 				std::vector< Eigen::Matrix<double, n, 1> > vs;
 				std::vector< double > coeffs;
 				double w;
@@ -138,12 +138,14 @@ class ExponentialKernelModel{
 
 				SparseVectorApproximation spa(spK, spEps);
 				MXd kmat = MXd::Zero(fullvs.size(), fullvs.size());
+				VXd coeffvec = VXd::Zero(fullvs.size());
 				for (int i = 0; i < fullvs.size(); i++){
 					for (int j = 0; j <= i; j++){
 						kmat(i, j) = kmat(j, i) = exp( -(fullvs[i]-fullvs[j]).squaredNorm()/(2*omega*omega) );
 					}
+					coeffvec(i) = fullcoeffs[i];
 				}
-				spa.fromKernelMatrix(kmat, fullcoeffs);
+				spa.fromKernelMatrix(kmat, coeffvec);
 				std::vector<uint64_t> approxvecs;
 				std::vector<double> approxcoeffs;
 				spa.getApprox(approxvecs, approxcoeffs);
