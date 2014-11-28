@@ -22,7 +22,6 @@ typedef Eigen::Vector2d V2d;
 typedef dmeans::VectorSpaceModel<2> VSModel;
 
 //function declarations
-double computeAccuracy(vector<int> labels1, vector<int> labels2, map<int, int> matchings);
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
 void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<VSModel::Data>& data, vector<uint64_t>& trueLabels);
 
@@ -112,13 +111,11 @@ int main(int argc, char** argv){
 		//calculate the accuracy via linear programming
 		//including proper cluster label tracking (see above)
 		//***************************************************
-		vector<int> rlblint, tlblint;
+		vector<int> rlblint, tlblint; //just a not-so-clever way to convert vector<uint64_t> to vector<int>
 		for (uint64_t j = 0; j < trueLabels.size(); j++){
 			rlblint.push_back(res.lbls[j]);
 			tlblint.push_back(trueLabels[j]);
 		}
-		//std::transform(res.lbls.begin(), res.lbls.end(), rlblint.begin(), [](uint64_t u) -> int { int ui = u; return ui;});
-		//std::transform(trueLabels.begin(), trueLabels.end(), tlblint.begin(), [](uint64_t u) -> int { int ui = u; return ui;});
 		matchings = maxm.getMaxConsistentMatching(rlblint, tlblint, std::vector<double>());
 		double acc = 100.0*(double)maxm.getObjective()/ (double)data.size();
 		//double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
