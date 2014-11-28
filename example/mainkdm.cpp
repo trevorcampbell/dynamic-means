@@ -12,18 +12,18 @@
 #include <random>
 
 #include <dmeans/core>
-#include <dmeans/iterative>
+#include <dmeans/spectral>
 #include <dmeans/model>
 #include <dmeans/utils>
 
 using namespace std;
 
 typedef Eigen::Vector2d V2d;
-typedef dmeans::VectorSpaceModel<2> VSModel;
+typedef dmeans::ExponentialKernelModel<2> EModel;
 
 //function declarations
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<VSModel::Data>& data, vector<uint64_t>& trueLabels);
+void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<EModel::Data>& data, vector<uint64_t>& trueLabels);
 
 //random number generator
 mt19937 rng;//uses the same seed every time, 5489u
@@ -68,9 +68,10 @@ int main(int argc, char** argv){
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config cfg;
-	const double T_Q = 6.8;
-	const double K_tau = 1.01;
-	const double lambda = 0.05;
+	double kernelWidth = 0.07;
+	double lambda = 10;
+	double T_Q = 5;
+	double K_tau = 1.05;
 	const double Q = lambda/T_Q;
 	const double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 
@@ -79,7 +80,9 @@ int main(int argc, char** argv){
 	cfg.set("tau", tau);
 	cfg.set("nRestarts", 10);
 	cfg.set("verbose", true);
-	dmeans::DMeans<VSModel, dmeans::IterativeWithMonotonicityChecks> dynm(cfg);
+	cfg.set("kernelWidth", kernelWidth);
+	cfg.set("sparseApproximationSize", 15);
+	dmeans::DMeans<EModel, dmeans::IterativeWithMonotonicityChecks> dynm(cfg);
 
 	//run the experiment
 	double cumulativeAccuracy = 0.0;//stores the accuracy accumulated for each step
@@ -97,7 +100,7 @@ int main(int argc, char** argv){
 		//generate the data for the current timestep
 		//******************************************
 		cout << "Step " << i << ": Generating data from the clusters..." << endl;
-		vector<VSModel::Data> data;
+		vector<EModel::Data> data;
 		vector<uint64_t> trueLabels;
 		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, data, trueLabels);
 
@@ -105,7 +108,7 @@ int main(int argc, char** argv){
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
-		dmeans::Results<VSModel> res = dynm.cluster(data);
+		dmeans::Results<EModel> res = dynm.cluster(data);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
@@ -167,7 +170,7 @@ void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveC
 }
 
 //this function takes a set of cluster centers and generates data from them
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, vector<VSModel::Data>& data, vector<uint64_t>& trueLabels){
+void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, vector<EModel::Data>& data, vector<uint64_t>& trueLabels){
 
 	//distributions
 	uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
@@ -181,7 +184,7 @@ void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nD
 				double ang = uniformDistAng(rng);
 				newData(0) += len*cos(ang);
 				newData(1) += len*sin(ang);
-				VSModel::Data d;
+				EModel::Data d;
 				d.v = newData;
 				data.push_back(d);
 				trueLabels.push_back(j);
