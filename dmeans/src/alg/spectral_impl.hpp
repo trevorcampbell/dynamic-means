@@ -105,14 +105,14 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 				this->findClosestConstrained(Z*V, X, nB);
 				obj = (X-Z*V).squaredNorm();
 				if (obj > tmpobj){
-					throw MonotonicityViolationException(tmpobj, obj, "labelUpdate()");
+					throw MonotonicityViolationException(tmpobj, obj, "findClosestConstrained()");
 				}
 
 				tmpobj = obj;
 				this->findClosestRelaxed(Z, X, V); 
 				obj = (X-Z*V).squaredNorm();
 				if (obj > tmpobj){
-					throw MonotonicityViolationException(tmpobj, obj, "labelUpdate()");
+					throw MonotonicityViolationException(tmpobj, obj, "findClosestRelaxed()");
 				}
 			} while( fabs(obj - prevobj)/obj > 1e-6);
 		}
@@ -125,12 +125,12 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 		}
 	}
 	//assign the data
-	int lblMax = *std::max_element(minLbls.begin(), minLbls.end());
-	for (uint64_t i = 0; i < lblMax+1-clus.size(); i++){
+	uint64_t nToAdd = (*std::max_element(minLbls.begin(), minLbls.end()))+1-clus.size();
+	for (uint64_t i = 0; i < nToAdd; i++){
 		Clus newclus;
 		clus.push_back(newclus);
 	}
-	for (uint64_t i = 0; i < obs.size(); i++){
+	for (int i = 0; i < obs.size(); i++){
 		clus[minLbls[i]].assignData(i, obs[i]);
 	}
 	//update the parameters
@@ -365,12 +365,11 @@ double _Spectral<Model, monoCheck>::getNormalizedCutsObj(const MXd& KUp, const v
 
 template<class Model, bool monoCheck>
 vector<int> _Spectral<Model, monoCheck>::getLblsFromIndicatorMat(const MXd& X, const int nOld) const{
-	const int nB = nOld;
-	const int nA = X.rows()-nB;
+	const int nA = X.rows()-nOld;
 	const int nR = X.rows();
 	const int nC = X.cols();
 	vector<int> lbls;
-	int nextNewLbl = nOld+1;
+	int nextNewLbl = nOld;
 	//first find the correspondance between columns and labels
 	map<int, int> colToLbl;
 	for (int i = 0; i < nC; i++){
