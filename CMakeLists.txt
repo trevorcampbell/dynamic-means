@@ -42,8 +42,18 @@ link_directories(
   )
 
 add_executable(dmeans_example example/maindm.cpp)
+add_executable(sdmeans_example example/mainsdm.cpp)
+add_executable(kdmeans_example example/mainkdm.cpp)
 
 target_link_libraries(dmeans_example
+	cpplex-pilal
+	cpplex-simplex
+  )
+target_link_libraries(sdmeans_example
+	cpplex-pilal
+	cpplex-simplex
+  )
+target_link_libraries(kdmeans_example
 	cpplex-pilal
 	cpplex-simplex
   )
