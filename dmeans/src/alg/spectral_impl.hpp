@@ -125,12 +125,14 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 		}
 	}
 	//assign the data
-	uint64_t nToAdd = (*std::max_element(minLbls.begin(), minLbls.end()))+1-clus.size();
-	for (uint64_t i = 0; i < nToAdd; i++){
-		Clus newclus;
-		clus.push_back(newclus);
+	int nToAdd = (*std::max_element(minLbls.begin(), minLbls.end()))+1-clus.size();
+	if (nToAdd > 0){
+		for (int i = 0; i < nToAdd; i++){
+			Clus newclus;
+			clus.push_back(newclus);
+		}
 	}
-	for (int i = 0; i < obs.size(); i++){
+	for (uint64_t i = 0; i < obs.size(); i++){
 		clus[minLbls[i]].assignData(i, obs[i]);
 	}
 	//update the parameters
