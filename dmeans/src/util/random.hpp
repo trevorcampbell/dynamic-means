@@ -17,7 +17,7 @@ class RNG{
 		std::mt19937 rng_;
 		RNG(){
 			Timer ti;
-			rng_.seed(ti.now_ms());
+			rng_.seed( (uint64_t)(1.0e6*ti.now_s()) );
 		}
 		RNG(const RNG&);
 		void operator=(const RNG&);

@@ -83,7 +83,8 @@ int main(int argc, char** argv){
 	dmeans::DMeans<VSModel, dmeans::IterativeWithMonotonicityChecks> dynm(cfg);
 
 	//run the experiment
-	double cumulativeAccuracy = 0;//stores the accuracy accumulated for each step
+	double cumulativeAccuracy = 0.0;//stores the accuracy accumulated for each step
+	double cumulativeTime = 0.0; //store the cpu time accumulated at each step
 	map<int, int> matchings;//stores the saved matchings from previous timesteps
 							//enables proper label tracking (see note at line 27)
 	dmeans::MaxMatching maxm;
@@ -123,8 +124,9 @@ int main(int argc, char** argv){
 		//double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
 		cout << "Step " << i << ": Accuracy = " << acc <<  "\%" << " CPU Time = " << res.tTaken << "s" << endl;
 		cumulativeAccuracy += acc;
+		cumulativeTime += res.tTaken;
 	}
-	cout << "Average Accuracy: " << cumulativeAccuracy/(double)nSteps << "\%" << endl;
+	cout << "Average Accuracy: " << cumulativeAccuracy/(double)nSteps << "\% Total CPU Time = " << cumulativeTime << "s" << endl;
 	cout << "Done!" << endl;
 
 	return 0;
