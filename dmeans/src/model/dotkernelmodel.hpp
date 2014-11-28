@@ -53,7 +53,7 @@ class DotProductKernelModel{
 
 		double kernelDOldP(const Data& d, const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getOldPrm().vs.size(); i++){
+			for (uint64_t i = 0; i < c.getOldPrm().vs.size(); i++){
 				kern += c.getOldPrm().coeffs[i]*d.v.dot(c.getOldPrm().vs[i]);
 			}
 			return kern;
@@ -61,7 +61,7 @@ class DotProductKernelModel{
 
 		double kernelDP(const Data& d, const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getPrm().vs.size(); i++){
+			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
 				kern += c.getPrm().coeffs[i]*d.v.dot(c.getPrm().vs[i]);
 			}
 			return kern;
@@ -69,8 +69,8 @@ class DotProductKernelModel{
 
 		double kernelOldPOldP(const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getOldPrm().vs.size(); i++){
-				for (int j = 0; j < c.getOldPrm().vs.size(); j++){
+			for (uint64_t i = 0; i < c.getOldPrm().vs.size(); i++){
+				for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
 					kern += c.getOldPrm().coeffs[i]*c.getOldPrm().coeffs[j]*c.getOldPrm().vs[j].dot(c.getOldPrm().vs[i]);
 				}
 			}
@@ -79,8 +79,8 @@ class DotProductKernelModel{
 
 		double kernelPP(const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getPrm().vs.size(); i++){
-				for (int j = 0; j < c.getPrm().vs.size(); j++){
+			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
+				for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
 					kern += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*c.getPrm().vs[j].dot(c.getPrm().vs[i]);
 				}
 			}
@@ -89,8 +89,8 @@ class DotProductKernelModel{
 
 		double kernelPOldP(const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getPrm().vs.size(); i++){
-				for (int j = 0; j < c.getOldPrm().vs.size(); j++){
+			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
+				for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
 					kern += c.getPrm().coeffs[i]*c.getOldPrm().coeffs[j]*c.getPrm().vs[i].dot(c.getOldPrm().vs[j]);
 				}
 			}
@@ -126,7 +126,7 @@ class DotProductKernelModel{
 
 				std::vector< Eigen::Matrix<double, n, 1> > fullvs;
 				std::vector< double > fullcoeffs;
-				for (int i=0; i < c.getOldPrm().vs.size(); i++) {
+				for (uint64_t i=0; i < c.getOldPrm().vs.size(); i++) {
 					fullvs.push_back( c.getOldPrm().vs[i] );
 					fullcoeffs.push_back( c.getOldPrm().coeffs[i]*gamma/(gamma+N) );
 				}
@@ -138,8 +138,8 @@ class DotProductKernelModel{
 				SparseVectorApproximation spa(spK, spEps);
 				MXd kmat = MXd::Zero(fullvs.size(), fullvs.size());
 				VXd coeffvec = VXd::Zero(fullvs.size());
-				for (int i = 0; i < fullvs.size(); i++){
-					for (int j = 0; j <= i; j++){
+				for (uint64_t i = 0; i < fullvs.size(); i++){
+					for (uint64_t j = 0; j <= i; j++){
 						kmat(i, j) = kmat(j, i) = fullvs[i].dot(fullvs[j]);
 					}
 					coeffvec(i) = fullcoeffs[i];
@@ -150,8 +150,8 @@ class DotProductKernelModel{
 				spa.getApprox(approxvecs, approxcoeffs);
 
 				c.getPrmRef().vs.clear();
-				c.getPrmREf().coeffs.clear();
-				for(int i = 0; i < approxvecs.size(); i++){
+				c.getPrmRef().coeffs.clear();
+				for(uint64_t i = 0; i < approxvecs.size(); i++){
 					c.getPrmRef().vs.push_back(fullvs[approxvecs[i]]);
 					c.getPrmRef().coeffs.push_back(approxcoeffs[i]);
 				}

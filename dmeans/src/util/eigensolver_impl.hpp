@@ -21,7 +21,7 @@ EigenSolver::EigenSolver(MXd& A_UpperTriangle, Type t, uint64_t nEigs, double lo
 void EigenSolver::redsvdSolver(MXd& AUp, uint64_t r){
 	r = (r < (uint64_t)AUp.cols()) ? r : (uint64_t)AUp.cols();
 	//compute gaussian matrix
-	normal_distribution<> nrm(0, 1);
+	std::normal_distribution<> nrm(0, 1);
 	MXd M(AUp.rows(), r);
 	for (uint64_t i = 0; i < (uint64_t)AUp.rows(); i++){
 		for (uint64_t j =0 ; j < r; j++){

@@ -33,13 +33,13 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 	uint64_t nB = clus.size();
 
 	//premultiply Z with \hat{Gamma}^{-1/2}
-	for (int j = nA; j < nA+nB; j++){
+	for (uint64_t j = nA; j < nA+nB; j++){
 		Z.row(j) *= 1.0/sqrt(model.oldWeight(clus[j-nA])); 
 	}
 	const int nZCols = Z.cols(); //number of clusters currently instantiated
 
 	//normalize the new rows of Z
-	for (int j = 0; j < nA; j++){
+	for (uint64_t j = 0; j < nA; j++){
 		double rownorm = sqrt(Z.row(j).squaredNorm());
 		if (rownorm == 0){ //if rownorm is a hard zero, just set the row to ones -- it's the only thing we can do, lambda was set too high
 			Z.row(j) = MXd::Ones(1, nZCols);
@@ -49,7 +49,7 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 	}
 
 	//for the old rows, decide whether the sq norm is too small to be considered instantiated
-	for (int j = nA; j < nA+nB; j++){
+	for (uint64_t j = nA; j < nA+nB; j++){
 		double rowsqnorm = Z.row(j).squaredNorm();
 		if (0.5/(nA+model.oldWeight(clus[j-nA])) <= rowsqnorm){
 			//it's a non-degenerate row, normalize it
@@ -67,7 +67,7 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 	vector<int> minLbls;
 
 	//propose nProjectionRestarts V trials
-	for (int i = 0; i < nProjectionRestarts; i++){
+	for (uint64_t i = 0; i < nProjectionRestarts; i++){
 		V.setZero();
 		//initialize unitary V via ``most orthogonal rows'' method
 		int rndRow = (RNG::get())()%(nA+nB);
@@ -92,7 +92,7 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 			do{
 				prevobj = obj;
 
-				this->findClosestConstrained(Z*V, X);
+				this->findClosestConstrained(Z*V, X, nB);
 
 				this->findClosestRelaxed(Z, X, V); 
 
@@ -102,7 +102,7 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 			double tmpobj;
 			do{
 				tmpobj = prevobj = obj;
-				this->findClosestConstrained(Z*V, X);
+				this->findClosestConstrained(Z*V, X, nB);
 				obj = (X-Z*V).squaredNorm();
 				if (obj > tmpobj){
 					throw MonotonicityViolationException(tmpobj, obj, "labelUpdate()");
@@ -117,8 +117,8 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 			} while( fabs(obj - prevobj)/obj > 1e-6);
 		}
 		//compute the normalized cuts objective
-		vector<int> tmplbls = this->getLblsFromIndicatorMat(X);
-		double nCutsObj = this->getNormalizedCutsObj(KUp, tmplbls);
+		vector<int> tmplbls = this->getLblsFromIndicatorMat(X, nB);
+		double nCutsObj = this->getNormalizedCutsObj(KUp, tmplbls, nB);
 		if (nCutsObj < minNCutsObj){
 			minNCutsObj = nCutsObj;
 			minLbls = tmplbls;
@@ -126,25 +126,25 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 	}
 	//assign the data
 	int lblMax = std::max_element(minLbls.begin(), minLbls.end());
-	for (int i = 0; i < lblMax+1-clus.size(); i++){
+	for (uint64_t i = 0; i < lblMax+1-clus.size(); i++){
 		Clus newclus;
 		clus.push_back(newclus);
 	}
-	for (int i = 0; i < obs.size(); i++){
+	for (uint64_t i = 0; i < obs.size(); i++){
 		clus[minLbls[i]].assignData(i, obs[i]);
 	}
 	//update the parameters
-	for (int i = 0; i < clus.size(); i++){
+	for (uint64_t i = 0; i < clus.size(); i++){
 		model.updatePrm(clus[i]);
 	}
 	return minNCutsObj;
 }
 
 template<class Model, bool monoCheck>
-MXd& _Spectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
+MXd _Spectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
 	const int nA = obs.size();
 	const int nB = clus.size();
-	MXd KUp = MXd::Zeros(nA+nB, nA+nB);
+	MXd KUp = MXd::Zero(nA+nB, nA+nB);
 
 	//insert ATA matrix
 	for (int i = 0; i < nA; i++){
@@ -166,8 +166,8 @@ MXd& _Spectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename M
 	}
 	//insert BTB
 	for (int i = 0; i < nB; i++){
-		double sim = model.kernelOldPSelf(clus[i]);
-		KUp(i+nA, i+nA) = model.oldWeight(clus[i])*sim+this->agecosts[i];
+		double sim = model.kernelOldPOldP(clus[i]);
+		KUp(i+nA, i+nA) = model.oldWeight(clus[i])*sim+model.getAgePenalty(clus[i]);
 	}
 	return KUp;
 }
@@ -201,7 +201,7 @@ void _Spectral<Model, monoCheck>::findClosestConstrained(const MXd& ZV, MXd& X, 
 		double rsqnorm = ZV.row(kk+nA).squaredNorm();
 		rows.push_back(kk+nA);
 		cols.push_back(nCols+kk);
-		wts.push_Back(rsqnorm);
+		wts.push_back(rsqnorm);
 		rsqnorm += 1.0;
 		for (int jj = 0; jj < nCols; jj++){
 			rows.push_back(kk+nA);
@@ -262,18 +262,18 @@ void _Spectral<Model, monoCheck>::orthonormalize(MXd& V) const{
 			}
 		}
 		//shift them up -- aliasing doesn't occur since goodcols increases by at least 1 each time
-		for (int i = 0; i < goodCols.size(); i++){
+		for (uint64_t i = 0; i < goodCols.size(); i++){
 			U.col(i) = U.col(goodCols[i]);
 			W.col(i) = W.col(goodCols[i]);
 		}
 		//gram schmidt them just to be sure
-		for (int i = 0; i < goodCols.size(); i++){
-			for (int j = 0; j < i; j++){
+		for (uint64_t i = 0; i < goodCols.size(); i++){
+			for (uint64_t j = 0; j < i; j++){
 				double dd = U.col(i).transpose()*U.col(j);
 				U.col(i) -= U.col(j)*dd;
 			}
 			U.col(i) /= U.col(i).norm();
-			for (int j = 0; j < i; j++){
+			for (uint64_t j = 0; j < i; j++){
 				double dd = W.col(i).transpose()*W.col(j);
 				W.col(i) -= W.col(j)*dd;
 			}

@@ -12,7 +12,7 @@
 #include <random>
 
 #include <dmeans/core>
-#include <dmeans/spectral>
+#include <dmeans/iterative>
 #include <dmeans/model>
 #include <dmeans/utils>
 

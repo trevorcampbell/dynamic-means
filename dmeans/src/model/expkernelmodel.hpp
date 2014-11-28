@@ -44,6 +44,10 @@ class ExponentialKernelModel{
 			return lambda;
 		}
 
+		double getAgePenalty(const Cluster<Data, Parameter>& c) const {
+			return Q*c.getAge();
+		}
+
 		double oldWeight(const Cluster<Data, Parameter>& c) const {
 			return 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
 		}
@@ -54,7 +58,7 @@ class ExponentialKernelModel{
 
 		double kernelDOldP(const Data& d, const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getOldPrm().vs.size(); i++){
+			for (uint64_t i = 0; i < c.getOldPrm().vs.size(); i++){
 				kern += c.getOldPrm().coeffs[i]*exp(-(d.v-c.getOldPrm().vs[i]).squaredNorm()/(2*omega*omega) );
 			}
 			return kern;
@@ -62,7 +66,7 @@ class ExponentialKernelModel{
 
 		double kernelDP(const Data& d, const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getPrm().vs.size(); i++){
+			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
 				kern += c.getPrm().coeffs[i]*exp(-(d.v-c.getPrm().vs[i]).squaredNorm()/(2*omega*omega) );
 			}
 			return kern;
@@ -70,8 +74,8 @@ class ExponentialKernelModel{
 
 		double kernelOldPOldP(const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getOldPrm().vs.size(); i++){
-				for (int j = 0; j < c.getOldPrm().vs.size(); j++){
+			for (uint64_t i = 0; i < c.getOldPrm().vs.size(); i++){
+				for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
 					kern += c.getOldPrm().coeffs[i]*c.getOldPrm().coeffs[j]*exp(-(c.getOldPrm().vs[j]-c.getOldPrm().vs[i]).squaredNorm()/(2*omega*omega) );
 				}
 			}
@@ -80,8 +84,8 @@ class ExponentialKernelModel{
 
 		double kernelPP(const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getPrm().vs.size(); i++){
-				for (int j = 0; j < c.getPrm().vs.size(); j++){
+			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
+				for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
 					kern += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-(c.getPrm().vs[j]-c.getPrm().vs[i]).squaredNorm()/(2*omega*omega) );
 				}
 			}
@@ -90,8 +94,8 @@ class ExponentialKernelModel{
 
 		double kernelPOldP(const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
-			for (int i = 0; i < c.getPrm().vs.size(); i++){
-				for (int j = 0; j < c.getOldPrm().vs.size(); j++){
+			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
+				for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
 					kern += c.getPrm().coeffs[i]*c.getOldPrm().coeffs[j]*exp(-(c.getPrm().vs[i]-c.getOldPrm().vs[j]).squaredNorm()/(2*omega*omega) );
 				}
 			}
@@ -121,13 +125,12 @@ class ExponentialKernelModel{
 				c.getPrmRef() = c.getOldPrmRef();
 				return;
 			} else {
-				double age = c.getAge();
 				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
 				uint64_t N = c.getAssignedIds().size();
 
 				std::vector< Eigen::Matrix<double, n, 1> > fullvs;
 				std::vector< double > fullcoeffs;
-				for (int i=0; i < c.getOldPrm().vs.size(); i++) {
+				for (uint64_t i=0; i < c.getOldPrm().vs.size(); i++) {
 					fullvs.push_back( c.getOldPrm().vs[i] );
 					fullcoeffs.push_back( c.getOldPrm().coeffs[i]*gamma/(gamma+N) );
 				}
@@ -139,8 +142,8 @@ class ExponentialKernelModel{
 				SparseVectorApproximation spa(spK, spEps);
 				MXd kmat = MXd::Zero(fullvs.size(), fullvs.size());
 				VXd coeffvec = VXd::Zero(fullvs.size());
-				for (int i = 0; i < fullvs.size(); i++){
-					for (int j = 0; j <= i; j++){
+				for (uint64_t i = 0; i < fullvs.size(); i++){
+					for (uint64_t j = 0; j <= i; j++){
 						kmat(i, j) = kmat(j, i) = exp( -(fullvs[i]-fullvs[j]).squaredNorm()/(2*omega*omega) );
 					}
 					coeffvec(i) = fullcoeffs[i];
@@ -151,8 +154,8 @@ class ExponentialKernelModel{
 				spa.getApprox(approxvecs, approxcoeffs);
 
 				c.getPrmRef().vs.clear();
-				c.getPrmREf().coeffs.clear();
-				for(int i = 0; i < approxvecs.size(); i++){
+				c.getPrmRef().coeffs.clear();
+				for(uint64_t i = 0; i < approxvecs.size(); i++){
 					c.getPrmRef().vs.push_back(fullvs[approxvecs[i]]);
 					c.getPrmRef().coeffs.push_back(approxcoeffs[i]);
 				}
