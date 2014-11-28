@@ -5,8 +5,8 @@ project(dmeans)
 set(CMAKE_COLOR_MAKEFILE ON)
 
 #set build type
-#set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_BUILD_TYPE Debug) 
+#set(CMAKE_BUILD_TYPE Debug) 
+set(CMAKE_BUILD_TYPE Release)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

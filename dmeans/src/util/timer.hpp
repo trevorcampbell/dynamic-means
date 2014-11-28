@@ -11,7 +11,7 @@ class Timer{
 		void start(){
 			t0 = hrc::now();
 		}
-		double elapsed_ms(){
+		double elapsed_s(){
 			return (std::chrono::duration_cast< std::chrono::duration<double> >(hrc::now()-t0)).count();
 		}
 };
