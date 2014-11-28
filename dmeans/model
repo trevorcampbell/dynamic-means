@@ -1,1 +1,3 @@
 #include "src/model/vectorspacemodel.hpp"
+#include "src/model/expkernelmodel.hpp"
+#include "src/model/dotkernelmodel.hpp"
