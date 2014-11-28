@@ -2,6 +2,9 @@
 
 #include<Eigen/Dense>
 #include<vector>
+#include <iostream>
+#include <numeric>
+
 
 typedef Eigen::MatrixXd MXd;
 typedef Eigen::VectorXd VXd;

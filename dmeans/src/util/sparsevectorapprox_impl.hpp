@@ -1,8 +1,5 @@
 #ifndef __SPARSEVECTORAPPROX_IMPL_HPP
 
-#include <iostream>
-#include <numeric>
-
 SparseVectorApproximation::SparseVectorApproximation(uint64_t K, double eps){
 	this->K = K;
 	this->eps = eps;
@@ -16,6 +13,16 @@ void SparseVectorApproximation::fromKernelMatrix(MXd m, VXd acoeffs){
 	//clear old results
 	this->bvecs.clear();
 	this->coeffs.clear();
+
+	//jump out early if K is larger than the dimension of the matrix
+	if ((uint64_t)m.rows() < this->K){
+		std::cout << "SpVecApprox: Input vector size < K, returning the full set."<< std::endl;
+		for(int i = 0; i < m.rows(); i++){
+			this->bvecs.push_back(i);
+			this->coeffs.push_back(acoeffs(i));
+		}
+		return;
+	}
 
 	//find the alpha-weighted column sum for computing the cost reduction for each column
 	VXd acolsums = m*acoeffs;
