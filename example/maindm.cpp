@@ -64,7 +64,6 @@ int main(int argc, char** argv){
 			clusterCenters.push_back(newCenter);
 			aliveClusters.push_back(true);
 	}
-
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config cfg;
