@@ -82,6 +82,8 @@ int main(int argc, char** argv){
 	cfg.set("verbose", true);
 	cfg.set("kernelWidth", kernelWidth);
 	cfg.set("sparseApproximationSize", 15);
+	cfg.set("eigenSolverType", dmeans::EigenSolver::Type::REDSVD);
+	cfg.set("eigenSolverDimension", 40);
 	dmeans::DMeans<EModel, dmeans::SpectralWithMonotonicityChecks> dynm(cfg);
 
 	//run the experiment

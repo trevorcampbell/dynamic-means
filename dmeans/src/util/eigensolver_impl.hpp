@@ -88,5 +88,37 @@ void EigenSolver::getResults(VXd& eigvals, MXd& eigvecs){
 	eigvecs = this->eigvecs;
 }
 
+
+std::ostream& operator<<(std::ostream& out, EigenSolver::Type& t){
+	switch(t){
+		case EigenSolver::Type::EIGEN_SELF_ADJOINT:
+			out << "0 ";
+			break;
+		case EigenSolver::Type::REDSVD:
+			out << "1 ";
+			break;
+		default:
+			break;
+	}
+	return out;
+}
+
+std::istream& operator>>(std::istream& in, EigenSolver::Type& t){
+	int id;
+	in  >> id;
+	switch(id){
+		case 0: 
+			t = EigenSolver::Type::EIGEN_SELF_ADJOINT;
+			break;
+		case 1:
+			t = EigenSolver::Type::REDSVD;
+			break;
+		default:
+			throw EigenSolver::EigenSolverTypeNotFoundException(id);
+			break;
+	}
+	return in;
+}
+
 #define __EIGENSOLVER_IMPL_HPP
 #endif /* __EIGENSOLVER_IMPL_HPP */

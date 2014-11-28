@@ -14,6 +14,12 @@ class EigenSolver{
 			EIGEN_SELF_ADJOINT,
 			REDSVD
 		};
+		class EigenSolverTypeNotFoundException{
+			public:
+				EigenSolverTypeNotFoundException(int id){
+					std::cout << "No Eigensolver type for id = " << id << std::endl;
+				}
+		};
 
 		EigenSolver(MXd& A_UpperTriangle, Type t, uint64_t nEigs = 0, double lowerThresh=-1);
 		void redsvdSolver(MXd& AUp, uint64_t r);

@@ -5,7 +5,7 @@ _Spectral<Model, monoCheck>::_Spectral(const Config& cfg){
 	if (this->solverType == EigenSolver::Type::EIGEN_SELF_ADJOINT){
 		this->nEigs = 0;
 	} else {
-		this->nEigs = this->cfg.get("eigenDimension", Config::Type::REQUIRED, 0);
+		this->nEigs = this->cfg.get("eigenSolverDimension", Config::Type::REQUIRED, 0);
 	}
 	this->verbose = cfg.get("verbose", Config::Type::OPTIONAL, false);
 	this->nProjectionRestarts = this->cfg.get("nProjectionRestarts", Config::Type::OPTIONAL, 1);
@@ -118,14 +118,14 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 		}
 		//compute the normalized cuts objective
 		vector<int> tmplbls = this->getLblsFromIndicatorMat(X, nB);
-		double nCutsObj = this->getNormalizedCutsObj(KUp, tmplbls, nB);
+		double nCutsObj = this->getNormalizedCutsObj(KUp, tmplbls);
 		if (nCutsObj < minNCutsObj){
 			minNCutsObj = nCutsObj;
 			minLbls = tmplbls;
 		}
 	}
 	//assign the data
-	int lblMax = std::max_element(minLbls.begin(), minLbls.end());
+	int lblMax = *std::max_element(minLbls.begin(), minLbls.end());
 	for (uint64_t i = 0; i < lblMax+1-clus.size(); i++){
 		Clus newclus;
 		clus.push_back(newclus);
@@ -326,9 +326,8 @@ void _Spectral<Model, monoCheck>::orthonormalize(MXd& V) const{
 }
 
 template<class Model, bool monoCheck>
-double _Spectral<Model, monoCheck>::getNormalizedCutsObj(const MXd& KUp, const vector<int>& lbls, const int nOld) const{
+double _Spectral<Model, monoCheck>::getNormalizedCutsObj(const MXd& KUp, const vector<int>& lbls) const{
 	const int nA = lbls.size();
-	const int nB = nOld;
 	map<int, double> nums, denoms;
 	for (int i = 0; i < KUp.rows(); ++i){
 		for (int j = 0; j < KUp.cols(); j++){
