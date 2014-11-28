@@ -16,14 +16,14 @@ the computationally expensive step of computing eigenvectors that the spectral c
 Efficient C++ implementations of all algorithms are provided in this repository.
 
 <p align="center">
-<img src="https://github.com/tc4mp/dynamic-means/blob/master/imgs/clustermotion.png?raw=true"/>
+<img src="https://github.com/trevorcampbell/dynamic-means/blob/master/imgs/clustermotion.png?raw=true"/>
 </p>
 
 
 ####Usage
 1. Clone this repository:
 	<pre>
-    git clone http://github.com/tc4mp/dynamic-means
+    git clone https://github.com/trevorcampbell/dynamic-means.git
     </pre>
 
 2. Navigate to the directory and run the install script:
