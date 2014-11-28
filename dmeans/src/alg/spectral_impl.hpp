@@ -197,40 +197,17 @@ void _Spectral<Model, monoCheck>::findClosestConstrained(const MXd& ZV, MXd& X, 
 	vector<int> rows, cols;
 	vector<double> wts;
 	for (int kk = 0; kk < nB; kk++){
-		//push back the null cost
-		double rsqnorm = ZV.row(kk+nA).squaredNorm();
-		rows.push_back(kk+nA);
-		cols.push_back(nCols+kk);
-		wts.push_back(rsqnorm);
-		rsqnorm += 1.0;
 		for (int jj = 0; jj < nCols; jj++){
 			rows.push_back(kk+nA);
 			cols.push_back(jj);
-			wts.push_back(rsqnorm-2.0*ZV(kk+nA, jj));
+			wts.push_back(-(1.0-2.0*ZV(kk+nA, jj)));
 		}
 	}
 	MaxMatching maxm;
 	map<int, int> constrainedSoln = maxm.getMaxMatching(rows, cols, wts);
 
-	////otherwise, create the LP and solve it
-	//vector< pair<int, int> > nodePairs;
-	//vector<double> edgeWeights;
-	//for (int kk = 0; kk < nB; kk++){
-	//	//push back the null cost
-	//	double rsqnorm = ZV.row(kk+nA).squaredNorm();
-	//	nodePairs.push_back( pair<int, int>(kk+nA, nCols+kk) ); //nCols+kk is the unique ID for this row's null choice
-	//	edgeWeights.push_back(rsqnorm); //nCols+kk is the unique ID for this row's null choice
-	//	rsqnorm += 1.0;
-	//	for (int jj = 0; jj < nCols; jj++){
-	//		nodePairs.push_back(pair<int,int>(kk+nA, jj));
-	//		edgeWeights.push_back(rsqnorm-2.0*ZV(kk+nA,jj));
-	//	}
-	//}
-	//map<int, int> constrainedSoln = getOldNewMatching(nodePairs, edgeWeights);
 	for (auto it = constrainedSoln.begin(); it != constrainedSoln.end(); it++){
-		if (it->second < nCols){ //if it's >= then it's a null row so do nothing since X was already set to zero earlier
 			X(it->first, it->second) = 1;
-		}
 	}
 	return;
 }

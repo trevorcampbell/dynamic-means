@@ -78,7 +78,8 @@ int main(int argc, char** argv){
 	cfg.set("lambda", lambda);
 	cfg.set("Q", Q);
 	cfg.set("tau", tau);
-	cfg.set("nRestarts", 10);
+	cfg.set("nRestarts", 1);
+	cfg.set("nProjectionRestarts", 10);
 	cfg.set("verbose", true);
 	cfg.set("kernelWidth", kernelWidth);
 	cfg.set("sparseApproximationSize", 15);
