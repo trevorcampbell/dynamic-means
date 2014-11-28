@@ -158,7 +158,7 @@ MXd& _Spectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename M
 	//insert ATB
 	for (int i = 0; i < nA; i++){
 		for (int j = 0; j < nB; j++){
-			double sim = model.kernelDOP(obs[i], clus[j]);
+			double sim = model.kernelDOldP(obs[i], clus[j]);
 			if (sim > 1e-16){
 				KUp(i, j+nA) =  sqrt(model.oldWeight(clus[j]))*sim;
 			}
@@ -166,7 +166,7 @@ MXd& _Spectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename M
 	}
 	//insert BTB
 	for (int i = 0; i < nB; i++){
-		double sim = model.kernelPP(clus[i]);
+		double sim = model.kernelOldPSelf(clus[i]);
 		KUp(i+nA, i+nA) = model.oldWeight(clus[i])*sim+this->agecosts[i];
 	}
 	return KUp;
