@@ -68,10 +68,14 @@ int main(int argc, char** argv){
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config cfg;
-	double kernelWidth = 0.07;
-	double lambda = 10;
-	double T_Q = 5;
-	double K_tau = 1.05;
+	const double T_Q = 6.8;
+	const double K_tau = 1.01;
+	const double lambda = 0.05;
+
+	//double kernelWidth = 0.07;
+	//double lambda = 10;
+	//double T_Q = 5;
+	//double K_tau = 1.05;
 	const double Q = lambda/T_Q;
 	const double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 
@@ -80,7 +84,7 @@ int main(int argc, char** argv){
 	cfg.set("tau", tau);
 	cfg.set("nRestarts", 10);
 	cfg.set("verbose", true);
-	cfg.set("kernelWidth", kernelWidth);
+	//cfg.set("kernelWidth", kernelWidth);
 	cfg.set("sparseApproximationSize", 15);
 	dmeans::DMeans<EModel, dmeans::IterativeWithMonotonicityChecks> dynm(cfg);
 
