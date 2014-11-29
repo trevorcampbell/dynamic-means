@@ -19,7 +19,7 @@
 using namespace std;
 
 typedef Eigen::Vector2d V2d;
-typedef dmeans::ExponentialKernelModel<2> EModel;
+typedef dmeans::DotProductKernelModel<2> EModel;
 
 //function declarations
 void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);

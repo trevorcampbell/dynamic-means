@@ -120,7 +120,6 @@ class DotProductKernelModel{
 				c.getPrmRef() = c.getOldPrmRef();
 				return;
 			} else {
-				double age = c.getAge();
 				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
 				uint64_t N = c.getAssignedIds().size();
 
