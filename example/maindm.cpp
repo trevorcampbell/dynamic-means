@@ -82,7 +82,7 @@ int main(int argc, char** argv){
 		vector<uint64_t> trueLabels;
 		vector<VSModel::Data> data;
 		datagen.get(vdata, trueLabels);
-		for(int i = 0; i < vdata.size(); i++){
+		for(uint64_t i = 0; i < vdata.size(); i++){
 			VSModel::Data d;
 			d.v = vdata[i];
 			data.push_back(d);

@@ -144,10 +144,10 @@ class DotProductKernelModel{
 				double kp2p = 0.0, kp2op = 0.0;
 				for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
 					for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
-						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-(c.getPrm().vs[j]-c.getPrm().vs[i]).squaredNorm()/(2*omega*omega) );
+						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*c.getPrm().vs[j].dot(c.getPrm().vs[i]);
 					}
 					for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
-						kp2op += c.getPrm().coeffs[i]*c.getOldPrm().coeffs[j]*exp(-(c.getPrm().vs[i]-c.getOldPrm().vs[j]).squaredNorm()/(2*omega*omega) );
+						kp2op += c.getPrm().coeffs[i]*c.getOldPrm().coeffs[j]*c.getPrm().vs[i].dot(c.getOldPrm().vs[j]);
 					}
 				}
 				c.getPrmRef().kp2p = kp2p;

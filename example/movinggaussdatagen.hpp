@@ -65,7 +65,7 @@ class MovingGaussianDataGenerator{
 				cout << "Cluster " << centers.size()-1 << " was created at " << centers.back().transpose() << endl;
 			}
 		}
-		void get(std::vector<Eigen::Matrix<double, n, 1> >& vdata, std::vector<uint64_t>& trueLabels) const{
+		void get(std::vector<V2d >& vdata, std::vector<uint64_t>& trueLabels) const{
 			vdata.clear(); trueLabels.clear();
 			//distributions
 			uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);

@@ -12,7 +12,7 @@
 #include <random>
 
 #include <dmeans/core>
-#include <dmeans/iterative>
+#include <dmeans/spectral>
 #include <dmeans/model>
 #include <dmeans/utils>
 
@@ -86,10 +86,10 @@ int main(int argc, char** argv){
 		cout << "Step " << i << ": Generating data from the clusters..." << endl;
 		vector<V2d> vdata;
 		vector<uint64_t> trueLabels;
-		vector<VSModel::Data> data;
+		vector<ESModel::Data> data;
 		datagen.get(vdata, trueLabels);
-		for(int i = 0; i < vdata.size(); i++){
-			VSModel::Data d;
+		for(uint64_t i = 0; i < vdata.size(); i++){
+			ESModel::Data d;
 			d.v = vdata[i];
 			data.push_back(d);
 		}
@@ -98,7 +98,7 @@ int main(int argc, char** argv){
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
-		dmeans::Results<VSModel> res = dynm.cluster(data);
+		dmeans::Results<ESModel> res = dynm.cluster(data);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
