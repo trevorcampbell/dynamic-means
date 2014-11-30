@@ -8,12 +8,13 @@ class MovingRingDataGenerator{
 	private:
 	std::vector<V2d> centers;
 	std::vector<bool> alive;
-	double birthProbability, deathProbability, motionStdDev, clusterStdDev;
+	double birthProbability, deathProbability, motionStdDev, clusterStdDev, radius;
 	int initialClusters, nDataPerClusterPerStep;
 	bool verbose;
 
 	public:
-		MovingGaussianDataGenerator(dmeans::Config cfg){
+		MovingRingDataGenerator(dmeans::Config cfg){
+			radius = cfg.get("radius", dmeans::Config::OPTIONAL, 0.1);
 			birthProbability = cfg.get("birthProbability", dmeans::Config::OPTIONAL, 0.10);
 			deathProbability = cfg.get("deathProbability", dmeans::Config::OPTIONAL, 0.05);
 			motionStdDev = cfg.get("motionStdDev", dmeans::Config::OPTIONAL, 0.05);
@@ -65,7 +66,7 @@ class MovingRingDataGenerator{
 				cout << "Cluster " << centers.size()-1 << " was created at " << centers.back().transpose() << endl;
 			}
 		}
-		void get(std::vector<Eigen::Matrix<double, n, 1> >& vdata, std::vector<uint64_t>& trueLabels) const{
+		void get(std::vector<V2d >& vdata, std::vector<uint64_t>& trueLabels) const{
 			vdata.clear(); trueLabels.clear();
 			//distributions
 			uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
@@ -75,7 +76,7 @@ class MovingRingDataGenerator{
 				if (alive[j]){
 					for (int k = 0; k < nDataPerClusterPerStep; k++){
 						V2d newData = centers[j];
-						double len = likelihoodDistRadial(dmeans::RNG::get());
+						double len = radius+likelihoodDistRadial(dmeans::RNG::get());
 						double ang = uniformDistAng(dmeans::RNG::get());
 						newData(0) += len*cos(ang);
 						newData(1) += len*sin(ang);
