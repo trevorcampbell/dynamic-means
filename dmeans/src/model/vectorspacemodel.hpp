@@ -54,7 +54,6 @@ class VectorSpaceModel{
 		void updatePrm(Cluster<Data, Parameter>& c) const{
 			if (c.isEmpty()){
 				c.getPrmRef() = c.getOldPrmRef();
-				return;
 			} else {
 				double age = c.getAge();
 				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*age); //cluster old penalty

@@ -47,7 +47,7 @@ void _Iterative<Model, monoCheck>::initialLabelling(const std::vector< typename 
 	for (uint64_t i = 0; i < shuffs.size(); i++){
 		int id = shuffs[i];
 		double minCost = std::numeric_limits<double>::infinity();
-		uint64_t minInd = -1;
+		uint64_t minInd = 0;
 		for(uint64_t k = 0; k < clus.size(); k++){
 			double d = model.compare(clus[k], obs[id]);
 			if (d < minCost){
@@ -64,7 +64,6 @@ void _Iterative<Model, monoCheck>::initialLabelling(const std::vector< typename 
 			clus[minInd].assignData(id, obs[id]);
 		}
 	}
-	
 }
 
 template <class Model, bool monoCheck>
@@ -83,6 +82,7 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const 
 		ids.insert(ids.end(), clusids.begin(), clusids.end());
 		lbls.insert(lbls.end(), clusids.size(), k);
 	}
+
 	std::vector<uint64_t> shuffs(ids.size());
 	std::iota(shuffs.begin(), shuffs.end(), 0);
 	std::shuffle(shuffs.begin(), shuffs.end(), RNG::get());
@@ -92,7 +92,9 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const 
 		uint64_t cid = lblToIdx[lbl];
 		uint64_t id = ids[shuffs[i]];
 		typename Model::Data obs = clus[cid].deassignData(id);
+		bool deletedNew = false; //used to stop an infinite delete/create loop with labelchanged
 		if (clus[cid].isNew() && clus[cid].isEmpty()){
+			deletedNew = true;
 			clus.erase(clus.begin()+cid);
 			lblToIdx.erase(lbl);
 			for(auto it = lblToIdx.begin(); it != lblToIdx.end(); ++it){
@@ -102,7 +104,7 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const 
 			}
 		}
 		double minCost = std::numeric_limits<double>::infinity();
-		uint64_t minInd = -1;
+		uint64_t minInd = 0;
 		for(uint64_t k = 0; k < clus.size(); k++){
 			double d = model.compare(clus[k], obs);
 			if (d < minCost){
@@ -115,11 +117,18 @@ bool _Iterative<Model, monoCheck>::labelUpdate(std::vector< Clus >& clus, const 
 			newclus.assignData(id, obs);
 			model.updatePrm(newclus);
 			clus.push_back(newclus);
-			labellingChanged = true;
+			if (!deletedNew){
+				labellingChanged = true;
+			}
 		} else {
-			clus[minInd].assignData(id, obs);
 			if (cid != minInd){
 				labellingChanged = true;
+			}
+			if (!clus[minInd].isNew() && clus[minInd].isEmpty()){
+				clus[minInd].assignData(id, obs);
+				model.updatePrm(clus[minInd]);
+			} else {
+				clus[minInd].assignData(id, obs);
 			}
 		}
 	}
