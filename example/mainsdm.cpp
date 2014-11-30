@@ -12,21 +12,16 @@
 #include <random>
 
 #include <dmeans/core>
-#include <dmeans/spectral>
+#include <dmeans/iterative>
 #include <dmeans/model>
 #include <dmeans/utils>
+
+#include "movinggaussdatagen.hpp"
 
 using namespace std;
 
 typedef Eigen::Vector2d V2d;
-typedef dmeans::ExponentialKernelModel<2> EModel;
-
-//function declarations
-void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev);
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double likelihoodstd, vector<EModel::Data>& data, vector<uint64_t>& trueLabels);
-
-//random number generator
-mt19937 rng;//uses the same seed every time, 5489u
+typedef dmeans::ExponentialKernelModel<2> ESModel;
 
 int main(int argc, char** argv){
 	//generates clusters that jump around on the domain R^2
@@ -41,51 +36,37 @@ int main(int argc, char** argv){
 	
 
 	//constants
-	//play with these to change the data generation process
-	double birthProbability = 0.10;
-	double deathProbability = 0.05;
-	double motionStdDev = 0.05;
-	double clusterStdDev = 0.05;
-	int nDataPerClusterPerStep = 15; // datapoints generated for each cluster per timestep
 	int nSteps = 100;//run the experiment for nSteps steps
-	int initialClusters = 4; //the number of clusters to start with
-
-	
-	//data structures for the cluster centers
-	vector<V2d> clusterCenters;
-	vector<bool> aliveClusters;
-
-	//start with some number of initial clusters
-	uniform_real_distribution<double> uniformDist01(0, 1);
-	for (int i = 0; i < initialClusters; i++){
-			V2d newCenter;
-			newCenter(0) = uniformDist01(rng);
-			newCenter(1) = uniformDist01(rng);
-			clusterCenters.push_back(newCenter);
-			aliveClusters.push_back(true);
-	}
+	//play with the below constants to change the data generation process
+	dmeans::Config data_cfg;
+	data_cfg.set("birthProbability", 0.10);
+	data_cfg.set("deathProbability", 0.05);
+	data_cfg.set("motionStdDev", 0.05);
+	data_cfg.set("clusterStdDev", 0.05);
+	data_cfg.set("nDataPerClusterPerStep", 15);
+	data_cfg.set("initialClusters", 4);
+	MovingGaussianDataGenerator datagen(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
-	dmeans::Config cfg;
+	dmeans::Config dynm_cfg, specdynm_cfg, kerndynm_cfg;
 	double kernelWidth = 0.07;
 	double lambda = 10;
 	double T_Q = 5;
 	double K_tau = 1.05;
-	const double Q = lambda/T_Q;
-	const double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-
-	cfg.set("lambda", lambda);
-	cfg.set("Q", Q);
-	cfg.set("tau", tau);
-	cfg.set("nRestarts", 1);
-	cfg.set("nProjectionRestarts", 10);
-	cfg.set("verbose", true);
-	cfg.set("kernelWidth", kernelWidth);
-	cfg.set("sparseApproximationSize", 15);
-	cfg.set("eigenSolverType", dmeans::EigenSolver::Type::REDSVD);
-	cfg.set("eigenSolverDimension", 40);
-	dmeans::DMeans<EModel, dmeans::SpectralWithMonotonicityChecks> dynm(cfg);
+	double Q = lambda/T_Q;
+	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
+	dynm_cfg.set("lambda", lambda);
+	dynm_cfg.set("Q", Q);
+	dynm_cfg.set("tau", tau);
+	dynm_cfg.set("nRestarts", 1);
+	dynm_cfg.set("nProjectionRestarts", 10);
+	dynm_cfg.set("verbose", true);
+	dynm_cfg.set("kernelWidth", kernelWidth);
+	dynm_cfg.set("sparseApproximationSize", 15);
+	dynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::REDSVD);
+	dynm_cfg.set("eigenSolverDimension", 40);
+	dmeans::DMeans<ESModel, dmeans::SpectralWithMonotonicityChecks> dynm(dynm_cfg);
 
 	//run the experiment
 	double cumulativeAccuracy = 0.0;//stores the accuracy accumulated for each step
@@ -98,20 +79,26 @@ int main(int argc, char** argv){
 		//birth/death/motion processes
 		//****************************
 		cout << "Step " << i << ": Clusters undergoing birth/death/motion..." << endl;
-		birthDeathMotionProcesses(clusterCenters, aliveClusters, birthProbability, deathProbability, motionStdDev);
+		datagen.step();
 		//******************************************
 		//generate the data for the current timestep
 		//******************************************
 		cout << "Step " << i << ": Generating data from the clusters..." << endl;
-		vector<EModel::Data> data;
+		vector<V2d> vdata;
 		vector<uint64_t> trueLabels;
-		generateData(clusterCenters, aliveClusters, nDataPerClusterPerStep, clusterStdDev, data, trueLabels);
+		vector<VSModel::Data> data;
+		datagen.get(vdata, trueLabels);
+		for(int i = 0; i < vdata.size(); i++){
+			VSModel::Data d;
+			d.v = vdata[i];
+			data.push_back(d);
+		}
 
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
-		dmeans::Results<EModel> res = dynm.cluster(data);
+		dmeans::Results<VSModel> res = dynm.cluster(data);
 
 		//***************************************************
 		//calculate the accuracy via linear programming
@@ -135,66 +122,6 @@ int main(int argc, char** argv){
 	return 0;
 }
 
-
-//this function takes a set of cluster centers and runs them through a birth/death/motion model
-void birthDeathMotionProcesses(vector<V2d>& clusterCenters, vector<bool>& aliveClusters, double birthProbability, double deathProbability, double motionStdDev){
-
-	//distributions
-	uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
-	uniform_real_distribution<double> uniformDist01(0, 1);
-	normal_distribution<double> transitionDistRadial(0, motionStdDev);
-
-
-	for (uint64_t j = 0; j < clusterCenters.size(); j++){
-		//for each cluster center, decide whether it dies
-		if (aliveClusters[j] && uniformDist01(rng) < deathProbability){
-			cout << "Cluster " << j << " died." << endl;
-			aliveClusters[j] = false;
-		} else if (aliveClusters[j]) {
-			//if it survived, move it stochastically
-			//radius sampled from normal
-			double steplen = transitionDistRadial(rng);
-			//angle sampled from uniform
-			double stepang = uniformDistAng(rng);
-			clusterCenters[j](0) += steplen*cos(stepang);
-			clusterCenters[j](1) += steplen*sin(stepang);
-			cout << "Cluster " << j << " moved to " << clusterCenters[j].transpose() << endl;
-		}
-	}
-	//decide whether to create a new cluster
-	if (uniformDist01(rng) < birthProbability || all_of(aliveClusters.begin(), aliveClusters.end(), [](bool b){return !b;}) ) {
-		V2d newCenter;
-		newCenter(0) = uniformDist01(rng);
-		newCenter(1) = uniformDist01(rng);
-		clusterCenters.push_back(newCenter);
-		aliveClusters.push_back(true);
-		cout << "Cluster " << clusterCenters.size()-1 << " was created at " << clusterCenters.back().transpose() << endl;
-	}
-}
-
-//this function takes a set of cluster centers and generates data from them
-void generateData(vector<V2d> clusterCenters, vector<bool> aliveClusters, int nDataPerClusterPerStep, double clusterStdDev, vector<EModel::Data>& data, vector<uint64_t>& trueLabels){
-
-	//distributions
-	uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
-	normal_distribution<double> likelihoodDistRadial(0, clusterStdDev);
-	//loop through alive centers, generate nDataPerClusterPerStep datapoints for each
-	for (uint64_t j = 0; j < clusterCenters.size(); j++){
-		if (aliveClusters[j]){
-			for (int k = 0; k < nDataPerClusterPerStep; k++){
-				V2d newData = clusterCenters[j];
-				double len = likelihoodDistRadial(rng);
-				double ang = uniformDistAng(rng);
-				newData(0) += len*cos(ang);
-				newData(1) += len*sin(ang);
-				EModel::Data d;
-				d.v = newData;
-				data.push_back(d);
-				trueLabels.push_back(j);
-			}
-		}
-	}
-}
 
 
 
