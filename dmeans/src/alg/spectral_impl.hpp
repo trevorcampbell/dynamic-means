@@ -104,14 +104,14 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 				tmpobj = prevobj = obj;
 				this->findClosestConstrained(Z*V, X, nB);
 				obj = (X-Z*V).squaredNorm();
-				if (obj > tmpobj){
+				if (obj > (1.0+1e-6)*tmpobj){
 					throw MonotonicityViolationException(tmpobj, obj, "findClosestConstrained()");
 				}
 
 				tmpobj = obj;
 				this->findClosestRelaxed(Z, X, V); 
 				obj = (X-Z*V).squaredNorm();
-				if (obj > tmpobj){
+				if (obj > (1.0+1e-6)*tmpobj){
 					throw MonotonicityViolationException(tmpobj, obj, "findClosestRelaxed()");
 				}
 			} while( fabs(obj - prevobj)/obj > 1e-6);

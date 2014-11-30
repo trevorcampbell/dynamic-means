@@ -71,8 +71,8 @@ void EigenSolver::columnGramSchmidt(MXd& m){
 void EigenSolver::pruneSmallEigs(double thresh){
 	//assumes the eigenvalues are sorted in increasing order
 	if (eigvals(eigvals.size()-1) < thresh){
-		this->eigvecs = VXd();
-		this->eigvals = MXd();
+		this->eigvecs = MXd();
+		this->eigvals = VXd();
 		return;
 	}
 	int chopIdx = 0;
