@@ -23,10 +23,10 @@ class DotProductKernelModel{
 		};
 		class Parameter{
 			public:
-				Parameter(){vs.clear(); w = 0;}
+				Parameter(){vs.clear(); w = kp2p = kp2op= 0;}
 				std::vector< Eigen::Matrix<double, n, 1> > vs;
 				std::vector< double > coeffs;
-				double w;
+				double w, kp2p, kp2op;
 		};
 
 		bool isClusterDead(double age) const{
@@ -68,33 +68,15 @@ class DotProductKernelModel{
 		}
 
 		double kernelOldPOldP(const Cluster<Data, Parameter>& c) const{
-			double kern = 0.0;
-			for (uint64_t i = 0; i < c.getOldPrm().vs.size(); i++){
-				for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
-					kern += c.getOldPrm().coeffs[i]*c.getOldPrm().coeffs[j]*c.getOldPrm().vs[j].dot(c.getOldPrm().vs[i]);
-				}
-			}
-			return kern;
+			return c.getOldPrm().kp2p;
 		}
 
 		double kernelPP(const Cluster<Data, Parameter>& c) const{
-			double kern = 0.0;
-			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
-				for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
-					kern += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*c.getPrm().vs[j].dot(c.getPrm().vs[i]);
-				}
-			}
-			return kern;
+			return c.getPrm().kp2p;
 		}
 
 		double kernelPOldP(const Cluster<Data, Parameter>& c) const{
-			double kern = 0.0;
-			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
-				for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
-					kern += c.getPrm().coeffs[i]*c.getOldPrm().coeffs[j]*c.getPrm().vs[i].dot(c.getOldPrm().vs[j]);
-				}
-			}
-			return kern;
+			return c.getPrm().kp2op;
 		}
 
 		double clusterCost(const Cluster<Data, Parameter>& c) const{
@@ -156,6 +138,20 @@ class DotProductKernelModel{
 				}
 
 				c.getPrmRef().w = gamma+N;
+
+
+				//now cache the kernel from prm->prm and prm->oldprm
+				double kp2p = 0.0, kp2op = 0.0;
+				for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
+					for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
+						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-(c.getPrm().vs[j]-c.getPrm().vs[i]).squaredNorm()/(2*omega*omega) );
+					}
+					for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
+						kp2op += c.getPrm().coeffs[i]*c.getOldPrm().coeffs[j]*exp(-(c.getPrm().vs[i]-c.getOldPrm().vs[j]).squaredNorm()/(2*omega*omega) );
+					}
+				}
+				c.getPrmRef().kp2p = kp2p;
+				c.getPrmRef().kp2op = kp2op;
 			}
 		}
 
