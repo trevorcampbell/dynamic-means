@@ -59,5 +59,5 @@ target_link_libraries(kdmeans_example
   )
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/dmeans
-	DESTINATION include/dmeans)
+	DESTINATION include)
 
