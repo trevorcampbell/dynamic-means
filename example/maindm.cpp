@@ -46,6 +46,7 @@ int main(int argc, char** argv){
 	data_cfg.set("nDataPerClusterPerStep", 15);
 	data_cfg.set("initialClusters", 4);
 	MovingGaussianDataGenerator datagen(data_cfg);
+	MovingRingDataGenerator datagen(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance

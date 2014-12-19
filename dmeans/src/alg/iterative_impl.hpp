@@ -9,31 +9,42 @@ template <class Model, bool monoCheck>
 double _Iterative<Model, monoCheck>::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
 	if(obs.size() == 0){return 0.0;}
 	//initial round of labelling data without deassigning it
+	if(verbose){ std::cout << "Clustering step in iterative mode" << std::endl;}
+	if(verbose){ std::cout << "Monotonicity checking: " << monoCheck << std::endl;}
+	if(verbose){ std::cout << "Initial labelling..." << std::endl;}
 	this->initialLabelling(obs, clus, model);
 	//label/parameter update iteration
 	bool labellingChanged = true;
 	if (!monoCheck){
 		while(labellingChanged){
+			if(verbose){ std::cout << "Parameter update..." << std::endl;}
 			this->parameterUpdate(clus, model);
+			if(verbose){ std::cout << "Label update..." << std::endl;}
 			labellingChanged = this->labelUpdate(clus, model);
 		}
 	} else {
 		double obj = this->computeCost(clus, model);
+		if(verbose){ std::cout << "Objective: " << obj << std::endl;}
 		while(labellingChanged){
 			double prevobj = obj;
+			if(verbose){ std::cout << "Parameter update..." << std::endl;}
 			this->parameterUpdate(clus, model);
 			obj = this->computeCost(clus, model);
+			if(verbose){ std::cout << "Objective: " << obj << std::endl;}
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "parameterUpdate()");
 			}
 			prevobj = obj;
+			if(verbose){ std::cout << "Label update..." << std::endl;}
 			labellingChanged = this->labelUpdate(clus, model);
 			obj = this->computeCost(clus, model);
+			if(verbose){ std::cout << "Objective: " << obj << std::endl;}
 			if (obj > prevobj){
 				throw MonotonicityViolationException(prevobj, obj, "labelUpdate()");
 			}
 		}
 	}
+	if(verbose){ std::cout << "Done iterative clustering step" << std::endl;}
 	return this->computeCost(clus, model);
 }
 
