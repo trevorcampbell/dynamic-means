@@ -17,7 +17,7 @@ class MovingRingDataGenerator : public MovingDataGenerator{
 			clusterStdDev = cfg.get("clusterStdDev", dmeans::Config::OPTIONAL, 0.05);
 
 			std::uniform_real_distribution<double> uniformDist01(0, 1);
-			for (int i = 0; i < this->alive.size(); i++){
+			for (uint32_t i = 0; i < this->alive.size(); i++){
 					V2d newCenter;
 					newCenter(0) = uniformDist01(dmeans::RNG::get());
 					newCenter(1) = uniformDist01(dmeans::RNG::get());
@@ -46,7 +46,7 @@ class MovingRingDataGenerator : public MovingDataGenerator{
 				cout << "Cluster " << centers.size()-1 << " was created at " << centers.back().transpose() << endl;
 		}
 
-		std::vector<V2d> ndata genData(int j, int n) const{
+		std::vector<V2d> genData(int j, int n) const{
 			uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
 			normal_distribution<double> likelihoodDistRadial(0, clusterStdDev);
 			std::vector<V2d> out;

@@ -1,5 +1,6 @@
 #ifndef __MOVINGDATAGEN_HPP
 class MovingDataGenerator{
+	typedef Eigen::Vector2d V2d;
 	protected:
 	std::vector<bool> alive;
 	double birthProbability, deathProbability;
@@ -18,6 +19,7 @@ class MovingDataGenerator{
 		}
 
 		void step(){
+			std::uniform_real_distribution<double> uniformDist01(0, 1);
 			for (uint64_t j = 0; j < alive.size(); j++){
 				//for each cluster center, decide whether it dies
 				if (alive[j] && uniformDist01(dmeans::RNG::get()) < deathProbability){
@@ -39,12 +41,16 @@ class MovingDataGenerator{
 			//loop through alive centers, generate nDataPerClusterPerStep datapoints for each
 			for (uint64_t j = 0; j < alive.size(); j++){
 				if (alive[j]){
-					std::vector<V2d>& ndata = this->genData(j, nDataPerClusterPerStep);
+					std::vector<V2d> ndata = this->genData(j, nDataPerClusterPerStep);
 					vdata.insert(vdata.end(), ndata.begin(), ndata.end());
 					trueLabels.insert(trueLabels.end(), ndata.size(), j);
 				}
 			}
 		}
+
+		virtual void transitionCluster(int j) = 0;
+		virtual void createCluster() = 0;
+		virtual std::vector<V2d> genData(int j, int n) const = 0;
 };
 #define __MOVINGDATAGEN_HPP
 #endif /* __MOVINGDATAGEN_HPP */

@@ -46,7 +46,7 @@ int main(int argc, char** argv){
 	data_cfg.set("clusterStdDev", 0.05);
 	data_cfg.set("nDataPerClusterPerStep", 15);
 	data_cfg.set("initialClusters", 4);
-	MovingDataGenerator* datagen = new MovingGaussianGenerator(data_cfg);
+	MovingDataGenerator* datagen = new MovingGaussianDataGenerator(data_cfg);
 	//MovingDataGenerator* datagen = new MovingRingGenerator(data_cfg);
 
 	//the Dynamic Means object
