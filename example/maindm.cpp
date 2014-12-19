@@ -17,6 +17,7 @@
 #include <dmeans/utils>
 
 #include "movinggaussdatagen.hpp"
+#include "movingringdatagen.hpp"
 
 using namespace std;
 
@@ -45,12 +46,12 @@ int main(int argc, char** argv){
 	data_cfg.set("clusterStdDev", 0.05);
 	data_cfg.set("nDataPerClusterPerStep", 15);
 	data_cfg.set("initialClusters", 4);
-	MovingGaussianDataGenerator datagen(data_cfg);
-	MovingRingDataGenerator datagen(data_cfg);
+	MovingDataGenerator* datagen = new MovingGaussianGenerator(data_cfg);
+	//MovingDataGenerator* datagen = new MovingRingGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
-	dmeans::Config dynm_cfg, specdynm_cfg, kerndynm_cfg;
+	dmeans::Config dynm_cfg;
 	double T_Q = 6.8;
 	double K_tau = 1.05;
 	double lambda = 0.05;
@@ -74,7 +75,7 @@ int main(int argc, char** argv){
 		//birth/death/motion processes
 		//****************************
 		cout << "Step " << i << ": Clusters undergoing birth/death/motion..." << endl;
-		datagen.step();
+		datagen->step();
 		//******************************************
 		//generate the data for the current timestep
 		//******************************************
@@ -82,7 +83,7 @@ int main(int argc, char** argv){
 		vector<V2d> vdata;
 		vector<uint64_t> trueLabels;
 		vector<VSModel::Data> data;
-		datagen.get(vdata, trueLabels);
+		datagen->get(vdata, trueLabels);
 		for(uint64_t i = 0; i < vdata.size(); i++){
 			VSModel::Data d;
 			d.v = vdata[i];
