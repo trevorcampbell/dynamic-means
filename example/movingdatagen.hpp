@@ -18,6 +18,9 @@ class MovingDataGenerator{
 			for (int i = 0; i < initialClusters; i++) alive.push_back(true);
 		}
 
+		virtual ~MovingDataGenerator(){
+		}
+
 		void step(){
 			std::uniform_real_distribution<double> uniformDist01(0, 1);
 			for (uint64_t j = 0; j < alive.size(); j++){

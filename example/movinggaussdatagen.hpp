@@ -25,6 +25,9 @@ class MovingGaussianDataGenerator : public MovingDataGenerator{
 			}
 		}
 
+		virtual ~MovingGaussianDataGenerator(){
+		}
+
 		void transitionCluster(int k){
 			std::uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
 			std::normal_distribution<double> transitionDistRadial(0, motionStdDev);
