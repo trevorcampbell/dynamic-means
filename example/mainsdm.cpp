@@ -119,6 +119,7 @@ int main(int argc, char** argv){
 	}
 	cout << "Average Accuracy: " << cumulativeAccuracy/(double)nSteps << "\% Total CPU Time = " << cumulativeTime << "s" << endl;
 	cout << "Done!" << endl;
+	delete datagen;
 
 	return 0;
 }
