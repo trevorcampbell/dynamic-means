@@ -1,4 +1,4 @@
-#ifndef __ITERATIVE_HPP
+#ifndef __KERNELIZED_HPP
 #include<vector>
 #include<iostream>
 #include<random>
@@ -9,10 +9,10 @@
 
 namespace dmeans{
 template<class Model, bool monoCheck>
-class _Iterative{
+class _Kernelized{
 	using Clus = Cluster<typename Model::Data, typename Model::Parameter>;
 	public:
-		_Iterative(const Config& cfg);
+		_Kernelized(const Config& cfg);
 		double cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const;
 	private:
 		bool verbose;
@@ -30,13 +30,13 @@ class _Iterative{
 };
 
 template<class Model>
-using IterativeWithMonotonicityChecks = _Iterative<Model, true>; 
+using KernelizedWithMonotonicityChecks = _Kernelized<Model, true>; 
 
 template<class Model>
-using Iterative = _Iterative<Model, false>;
+using Kernelized = _Kernelized<Model, false>;
 
 #include "iterative_impl.hpp"
 
 }
-#define __ITERATIVE_HPP
+#define __KERNELIZED_HPP
 #endif 

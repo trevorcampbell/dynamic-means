@@ -23,10 +23,10 @@ class DotProductKernelModel{
 		};
 		class Parameter{
 			public:
-				Parameter(){vs.clear(); w = kp2p = kp2op= 0;}
+				Parameter(){vs.clear(); w = kp2p = 0;}
 				std::vector< Eigen::Matrix<double, n, 1> > vs;
 				std::vector< double > coeffs;
-				double w, kp2p, kp2op;
+				double w, kp2p;
 		};
 
 		bool isClusterDead(double age) const{
@@ -44,6 +44,7 @@ class DotProductKernelModel{
 		}
 
 		double oldWeight(const Cluster<Data, Parameter>& c) const {
+			if (c.getAge() == 0){ return 0.0;}
 			return 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
 		}
 
@@ -59,14 +60,6 @@ class DotProductKernelModel{
 			return kern;
 		}
 
-		double kernelDP(const Data& d, const Cluster<Data, Parameter>& c) const{
-			double kern = 0.0;
-			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
-				kern += c.getPrm().coeffs[i]*d.v.dot(c.getPrm().vs[i]);
-			}
-			return kern;
-		}
-
 		double kernelOldPOldP(const Cluster<Data, Parameter>& c) const{
 			return c.getOldPrm().kp2p;
 		}
@@ -75,24 +68,22 @@ class DotProductKernelModel{
 			return c.getPrm().kp2p;
 		}
 
-		double kernelPOldP(const Cluster<Data, Parameter>& c) const{
-			return c.getPrm().kp2op;
-		}
-
 		double clusterCost(const Cluster<Data, Parameter>& c) const{
 			if (c.isEmpty()){
 				return 0.0;
 			}
 			double cost = 0.0;
+			double age = c.getAge();
+			double gamma = oldWeight(c);
+			uint64_t N = c.getAssignedIds().size();
 			if (c.isNew()){
 				cost += lambda;
 			} else {
-				double age = c.getAge();
-				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*age); //cluster old penalty
-				cost += Q*age+gamma*(kernelPP(c) -2*kernelPOldP(c) +kernelOldPOldP(c));
+				cost += Q*age;
 			}
+			cost += -(gamma+N)*kernelPP(c) +gamma*kernelOldPOldp(c);
 			for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
-				cost += kernelDD(it->second, it->second) -2*kernelDP(it->second, c) + kernelPP(c);
+				cost += kernelDD(it->second, it->second);
 			}
 			return cost;
 		}
@@ -102,7 +93,7 @@ class DotProductKernelModel{
 				c.getPrmRef() = c.getOldPrmRef();
 				return;
 			} else {
-				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
+				double gamma = oldWeight(c);
 				uint64_t N = c.getAssignedIds().size();
 
 				std::vector< Eigen::Matrix<double, n, 1> > fullvs;
@@ -141,27 +132,65 @@ class DotProductKernelModel{
 
 
 				//now cache the kernel from prm->prm and prm->oldprm
-				double kp2p = 0.0, kp2op = 0.0;
+				double kp2p = 0.0;
 				for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
 					for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
 						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*c.getPrm().vs[j].dot(c.getPrm().vs[i]);
 					}
-					for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
-						kp2op += c.getPrm().coeffs[i]*c.getOldPrm().coeffs[j]*c.getPrm().vs[i].dot(c.getOldPrm().vs[j]);
-					}
 				}
 				c.getPrmRef().kp2p = kp2p;
-				c.getPrmRef().kp2op = kp2op;
 			}
+		}
+
+		void kernelAdd(const Cluster<Data, Parameter>& c, const Data& d) const {
+			double age = c.getAge();
+			double gamma = oldWeight(c);
+
+			if (c.isEmpty()){
+				c.getPrmRef().kp2p = kernelOldPOldP(c);
+			}
+			uint64_t N = c.getAssignedIds().size();
+			double kp2p = c.getPrmRef().kp2p;
+			kp2p *= (gamma+N)*(gamma+N);
+			kp2p += kernelDD(d, d) + 2*gamma*kernelDOldP(d, c);
+			for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
+				kp2p += 2*kernelDD(d, it->second);
+			}
+			c.getPrmRef().kp2p = kp2p/((gamma+N+1)*(gamma+N+1));
+		}
+
+		void kernelSubtract(const Cluster<Data, Parameter>& c, const Data& d) const {
+			if (c.isEmpty()){
+				c.getPrmRef().kp2p = 0.0;
+				return;
+			}
+			double age = c.getAge();
+			double gamma = oldWeight(c);
+			uint64_t N = c.getAssignedIds().size() + 1;
+			double kp2p = c.getPrmRef().kp2p;
+			kp2p *= (gamma+N)*(gamma+N);
+			kp2p -= kernelDD(d, d) + 2*gamma*kernelDOldP(d, c);
+			for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
+				kp2p -= 2*kernelDD(d, it->second);
+			}
+			c.getPrmRef().kp2p = kp2p/((gamma+N-1)*(gamma+N-1));
 		}
 
 		double compare(const Cluster<Data, Parameter>& c, const Data& d) const{
 			if (c.isEmpty()){
 				double age = c.getAge();
-				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*age);
+				double gamma = oldWeight(c);
 				return Q*age+gamma/(gamma+1.0)*(kernelDD(d, d) - 2*kernelDOldP(d, c) + kernelOldPOldP(c));
 			} else {
-				return kernelDD(d, d) - 2*kernelDP(d, c) + kernelPP(c);
+				double age = c.getAge();
+				double gamma = oldWeight(c);
+				uint64_t N = c.getAssignedIds().size();
+				double ret = kernelDD(d, d) - 2*gamma*kernelDOldP(d, c)/(gamma+N);
+				for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
+					ret += 2*kernelDD(d, it->second)/(gamma+N);
+				}
+				ret += kernelPP(c);
+				return (gamma+N)/(gamma+N+1)*ret;
 			}
 		}
 

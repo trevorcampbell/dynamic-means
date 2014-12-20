@@ -13,7 +13,7 @@ class ExponentialKernelModel{
 			this->lambda = cfg.get("lambda", Config::REQUIRED, -1.0);
 			this->Q = cfg.get("Q", Config::REQUIRED, -1.0);
 			this->tau = cfg.get("tau", Config::REQUIRED, -1.0);
-			this->omega = cfg.get("kernelWidth", Config::REQUIRED, -1.0);
+			this->omega = cfg.get("omega", Config::REQUIRED, -1.0);
 			this->spK = cfg.get("sparseApproximationSize", Config::REQUIRED, -1);
 			this->spEps = cfg.get("sparseApproximationErrorThreshold", Config::OPTIONAL, 1.0e-6);
 		}
@@ -24,10 +24,10 @@ class ExponentialKernelModel{
 		};
 		class Parameter{
 			public:
-				Parameter(){vs.clear(); w = kp2p = kp2op = 0;}
+				Parameter(){vs.clear(); w = kp2p = 0;}
 				std::vector< Eigen::Matrix<double, n, 1> > vs;
 				std::vector< double > coeffs;
-				double w, kp2p, kp2op;
+				double w, kp2p;
 		};
 
 		bool isClusterDead(double age) const{
@@ -44,30 +44,19 @@ class ExponentialKernelModel{
 			return lambda;
 		}
 
-		double getAgePenalty(const Cluster<Data, Parameter>& c) const {
-			return Q*c.getAge();
-		}
-
 		double oldWeight(const Cluster<Data, Parameter>& c) const {
+			if (c.getAge() == 0){ return 0.0;}
 			return 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
 		}
 
 		double kernelDD(const Data& d1, const Data& d2) const{
-			return exp( -(d1.v-d2.v).squaredNorm()/(2*omega*omega) );
+			return exp(-(d1.v - d2.v).squaredNorm()/(2*omega*omega));
 		}
 
 		double kernelDOldP(const Data& d, const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
 			for (uint64_t i = 0; i < c.getOldPrm().vs.size(); i++){
-				kern += c.getOldPrm().coeffs[i]*exp(-(d.v-c.getOldPrm().vs[i]).squaredNorm()/(2*omega*omega) );
-			}
-			return kern;
-		}
-
-		double kernelDP(const Data& d, const Cluster<Data, Parameter>& c) const{
-			double kern = 0.0;
-			for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
-				kern += c.getPrm().coeffs[i]*exp(-(d.v-c.getPrm().vs[i]).squaredNorm()/(2*omega*omega) );
+				kern += c.getOldPrm().coeffs[i]*exp(-(d.v - c.getOldPrm().vs[i])/(2*omega*omega));
 			}
 			return kern;
 		}
@@ -80,24 +69,22 @@ class ExponentialKernelModel{
 			return c.getPrm().kp2p;
 		}
 
-		double kernelPOldP(const Cluster<Data, Parameter>& c) const{
-			return c.getPrm().kp2op;
-		}
-
 		double clusterCost(const Cluster<Data, Parameter>& c) const{
 			if (c.isEmpty()){
 				return 0.0;
 			}
 			double cost = 0.0;
+			double age = c.getAge();
+			double gamma = oldWeight(c);
+			uint64_t N = c.getAssignedIds().size();
 			if (c.isNew()){
 				cost += lambda;
 			} else {
-				double age = c.getAge();
-				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*age); //cluster old penalty
-				cost += Q*age+gamma*(kernelPP(c) -2*kernelPOldP(c) +kernelOldPOldP(c));
+				cost += Q*age;
 			}
+			cost += -(gamma+N)*kernelPP(c) +gamma*kernelOldPOldp(c);
 			for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
-				cost += kernelDD(it->second, it->second) -2*kernelDP(it->second, c) + kernelPP(c);
+				cost += kernelDD(it->second, it->second);
 			}
 			return cost;
 		}
@@ -107,7 +94,7 @@ class ExponentialKernelModel{
 				c.getPrmRef() = c.getOldPrmRef();
 				return;
 			} else {
-				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
+				double gamma = oldWeight(c);
 				uint64_t N = c.getAssignedIds().size();
 
 				std::vector< Eigen::Matrix<double, n, 1> > fullvs;
@@ -126,7 +113,7 @@ class ExponentialKernelModel{
 				VXd coeffvec = VXd::Zero(fullvs.size());
 				for (uint64_t i = 0; i < fullvs.size(); i++){
 					for (uint64_t j = 0; j <= i; j++){
-						kmat(i, j) = kmat(j, i) = exp( -(fullvs[i]-fullvs[j]).squaredNorm()/(2*omega*omega) );
+						kmat(i, j) = kmat(j, i) = exp(-(fullvs[i] - fullvs[j])/(2*omega*omega));
 					}
 					coeffvec(i) = fullcoeffs[i];
 				}
@@ -144,28 +131,67 @@ class ExponentialKernelModel{
 
 				c.getPrmRef().w = gamma+N;
 
+
 				//now cache the kernel from prm->prm and prm->oldprm
-				double kp2p = 0.0, kp2op = 0.0;
+				double kp2p = 0.0;
 				for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
 					for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
-						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-(c.getPrm().vs[j]-c.getPrm().vs[i]).squaredNorm()/(2*omega*omega) );
-					}
-					for (uint64_t j = 0; j < c.getOldPrm().vs.size(); j++){
-						kp2op += c.getPrm().coeffs[i]*c.getOldPrm().coeffs[j]*exp(-(c.getPrm().vs[i]-c.getOldPrm().vs[j]).squaredNorm()/(2*omega*omega) );
+						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-(c.getPrm().vs[j] - c.getPrm().vs[i])/(2*omega*omega));
 					}
 				}
 				c.getPrmRef().kp2p = kp2p;
-				c.getPrmRef().kp2op = kp2op;
 			}
+		}
+
+		void kernelAdd(const Cluster<Data, Parameter>& c, const Data& d) const {
+			double age = c.getAge();
+			double gamma = oldWeight(c);
+
+			if (c.isEmpty()){
+				c.getPrmRef().kp2p = kernelOldPOldP(c);
+			}
+			uint64_t N = c.getAssignedIds().size();
+			double kp2p = c.getPrmRef().kp2p;
+			kp2p *= (gamma+N)*(gamma+N);
+			kp2p += kernelDD(d, d) + 2*gamma*kernelDOldP(d, c);
+			for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
+				kp2p += 2*kernelDD(d, it->second);
+			}
+			c.getPrmRef().kp2p = kp2p/((gamma+N+1)*(gamma+N+1));
+		}
+
+		void kernelSubtract(const Cluster<Data, Parameter>& c, const Data& d) const {
+			if (c.isEmpty()){
+				c.getPrmRef().kp2p = 0.0;
+				return;
+			}
+			double age = c.getAge();
+			double gamma = oldWeight(c);
+			uint64_t N = c.getAssignedIds().size() + 1;
+			double kp2p = c.getPrmRef().kp2p;
+			kp2p *= (gamma+N)*(gamma+N);
+			kp2p -= kernelDD(d, d) + 2*gamma*kernelDOldP(d, c);
+			for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
+				kp2p -= 2*kernelDD(d, it->second);
+			}
+			c.getPrmRef().kp2p = kp2p/((gamma+N-1)*(gamma+N-1));
 		}
 
 		double compare(const Cluster<Data, Parameter>& c, const Data& d) const{
 			if (c.isEmpty()){
 				double age = c.getAge();
-				double gamma = 1.0/(1.0/c.getOldPrm().w +tau*age);
+				double gamma = oldWeight(c);
 				return Q*age+gamma/(gamma+1.0)*(kernelDD(d, d) - 2*kernelDOldP(d, c) + kernelOldPOldP(c));
 			} else {
-				return kernelDD(d, d) - 2*kernelDP(d, c) + kernelPP(c);
+				double age = c.getAge();
+				double gamma = oldWeight(c);
+				uint64_t N = c.getAssignedIds().size();
+				double ret = kernelDD(d, d) - 2*gamma*kernelDOldP(d, c)/(gamma+N);
+				for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
+					ret += 2*kernelDD(d, it->second)/(gamma+N);
+				}
+				ret += kernelPP(c);
+				return (gamma+N)/(gamma+N+1)*ret;
 			}
 		}
 
