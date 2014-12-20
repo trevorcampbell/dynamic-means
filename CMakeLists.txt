@@ -44,6 +44,7 @@ link_directories(
 add_executable(dmeans_example example/maindm.cpp)
 add_executable(sdmeans_example example/mainsdm.cpp)
 add_executable(kdmeans_example example/mainkdm.cpp)
+add_executable(all_example example/mainall.cpp)
 
 target_link_libraries(dmeans_example
 	cpplex-pilal
@@ -57,6 +58,10 @@ target_link_libraries(kdmeans_example
 	cpplex-pilal
 	cpplex-simplex
   )
+target_link_libraries(all_example
+   cpplex-pilal
+   cpplex-simplex
+)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/dmeans
 	DESTINATION include)

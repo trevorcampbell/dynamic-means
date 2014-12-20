@@ -13,6 +13,7 @@
 
 #include <dmeans/core>
 #include <dmeans/iterative>
+#include <dmeans/spectral>
 #include <dmeans/model>
 #include <dmeans/utils>
 
@@ -69,39 +70,37 @@ int main(int argc, char** argv){
 	dmeans::DMeans<VSModel, dmeans::IterativeWithMonotonicityChecks> dynm(dynm_cfg);
 
 	dmeans::Config kdynm_cfg;
-	kernelWidth = 0.07;
 	lambda = 10;
 	T_Q = 5;
 	K_tau = 1.05;
 	Q = lambda/T_Q;
 	tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-	dynm_cfg.set("lambda", lambda);
-	dynm_cfg.set("Q", Q);
-	dynm_cfg.set("tau", tau);
-	dynm_cfg.set("nRestarts", 10);
-	dynm_cfg.set("kernelWidth", kernelWidth);
-	dynm_cfg.set("sparseApproximationSize", 15);
-	dynm_cfg.set("verbose", true);
-	dmeans::DMeans<ESModel, dmeans::IterativeWithMonotonicityChecks> kdynm(kdynm_cfg);
+	kdynm_cfg.set("lambda", lambda);
+	kdynm_cfg.set("Q", Q);
+	kdynm_cfg.set("tau", tau);
+	kdynm_cfg.set("nRestarts", 10);
+	kdynm_cfg.set("kernelWidth", 0.07);
+	kdynm_cfg.set("sparseApproximationSize", 15);
+	kdynm_cfg.set("verbose", true);
+	dmeans::DMeans<EKModel, dmeans::IterativeWithMonotonicityChecks> kdynm(kdynm_cfg);
 
 	dmeans::Config sdynm_cfg;
-	kernelWidth = 0.07;
 	lambda = 10;
 	T_Q = 5;
 	K_tau = 1.05;
 	Q = lambda/T_Q;
 	tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-	dynm_cfg.set("lambda", lambda);
-	dynm_cfg.set("Q", Q);
-	dynm_cfg.set("tau", tau);
-	dynm_cfg.set("nRestarts", 1);
-	dynm_cfg.set("nProjectionRestarts", 10);
-	dynm_cfg.set("verbose", true);
-	dynm_cfg.set("kernelWidth", kernelWidth);
-	dynm_cfg.set("sparseApproximationSize", 15);
-	dynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::REDSVD);
-	dynm_cfg.set("eigenSolverDimension", 40);
-	dmeans::DMeans<ESModel, dmeans::SpectralWithMonotonicityChecks> sdynm(sdynm_cfg);
+	sdynm_cfg.set("lambda", lambda);
+	sdynm_cfg.set("Q", Q);
+	sdynm_cfg.set("tau", tau);
+	sdynm_cfg.set("nRestarts", 1);
+	sdynm_cfg.set("nProjectionRestarts", 10);
+	sdynm_cfg.set("verbose", true);
+	sdynm_cfg.set("kernelWidth", 0.07);
+	sdynm_cfg.set("sparseApproximationSize", 15);
+	sdynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::REDSVD);
+	sdynm_cfg.set("eigenSolverDimension", 40);
+	dmeans::DMeans<EKModel, dmeans::SpectralWithMonotonicityChecks> sdynm(sdynm_cfg);
 
 	//run the experiment
 	double cumulativeAccuracyD = 0.0;//stores the accuracy accumulated for each step
@@ -112,7 +111,7 @@ int main(int argc, char** argv){
 	double cumulativeTimeK = 0.0; //store the cpu time accumulated at each step
 	map<int, int> matchingsD, matchingsS, matchingsK;//stores the saved matchings from previous timesteps
 							//enables proper label tracking (see note at line 27)
-	dmeans::MaxMatching maxm;
+	dmeans::MaxMatching maxmD, maxmS, maxmK;
 	for (int i = 0; i < nSteps; i++){
 		//****************************
 		//birth/death/motion processes
@@ -144,7 +143,7 @@ int main(int argc, char** argv){
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
-		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
+		cout << "Step " << i << ": Clustering " << dataVS.size() << " datapoints..." << endl;
 		dmeans::Results<VSModel> resD = dynm.cluster(dataVS);
 		dmeans::Results<EKModel> resS = sdynm.cluster(dataEK);
 		dmeans::Results<EKModel> resK = kdynm.cluster(dataEK);
@@ -158,7 +157,7 @@ int main(int argc, char** argv){
 			rlblintD.push_back(resD.lbls[j]);
 			tlblintD.push_back(trueLabels[j]);
 		}
-		matchingsD = maxm.getMaxConsistentMatching(rlblintD, tlblintD, std::vector<double>());
+		matchingsD = maxmD.getMaxConsistentMatching(rlblintD, tlblintD, std::vector<double>());
 		double accD = 100.0*(double)maxmD.getObjective()/ (double)dataVS.size();
 
 		vector<int> rlblintS, tlblintS; //just a not-so-clever way to convert vector<uint64_t> to vector<int>
@@ -166,7 +165,7 @@ int main(int argc, char** argv){
 			rlblintS.push_back(resS.lbls[j]);
 			tlblintS.push_back(trueLabels[j]);
 		}
-		matchingsS = maxm.getMaxConsistentMatching(rlblintS, tlblintS, std::vector<double>());
+		matchingsS = maxmS.getMaxConsistentMatching(rlblintS, tlblintS, std::vector<double>());
 		double accS = 100.0*(double)maxmS.getObjective()/ (double)dataEK.size();
 
 		vector<int> rlblintK, tlblintK; //just a not-so-clever way to convert vector<uint64_t> to vector<int>
@@ -174,7 +173,7 @@ int main(int argc, char** argv){
 			rlblintK.push_back(resK.lbls[j]);
 			tlblintK.push_back(trueLabels[j]);
 		}
-		matchingsK = maxm.getMaxConsistentMatching(rlblintK, tlblintK, std::vector<double>());
+		matchingsK = maxmK.getMaxConsistentMatching(rlblintK, tlblintK, std::vector<double>());
 		double accK = 100.0*(double)maxmK.getObjective()/ (double)dataEK.size();
 
 		//double acc = computeAccuracy(learnedLabels, trueLabels, matchings);
