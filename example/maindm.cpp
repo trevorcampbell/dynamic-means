@@ -18,6 +18,7 @@
 
 #include "movinggaussdatagen.hpp"
 #include "movingringdatagen.hpp"
+#include "movingshapedatagen.hpp"
 
 using namespace std;
 
@@ -43,11 +44,13 @@ int main(int argc, char** argv){
 	data_cfg.set("birthProbability", 0.10);
 	data_cfg.set("deathProbability", 0.05);
 	data_cfg.set("motionStdDev", 0.05);
-	data_cfg.set("clusterStdDev", 0.05);
+	data_cfg.set("clusterStdDev", 0.0);
 	data_cfg.set("nDataPerClusterPerStep", 15);
 	data_cfg.set("initialClusters", 4);
-	MovingDataGenerator* datagen = new MovingGaussianDataGenerator(data_cfg);
-	//MovingDataGenerator* datagen = new MovingRingGenerator(data_cfg);
+	//MovingDataGenerator* datagen = new MovingGaussianDataGenerator(data_cfg);
+	//MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
+	data_cfg.set("radius", 0.05);
+	MovingDataGenerator* datagen = new MovingShapeDataGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
@@ -84,11 +87,15 @@ int main(int argc, char** argv){
 		vector<uint64_t> trueLabels;
 		vector<VSModel::Data> data;
 		datagen->get(vdata, trueLabels);
+		ofstream dataout("data.log", ios_base::app);
+		dataout << vdata.size() << endl;
 		for(uint64_t i = 0; i < vdata.size(); i++){
 			VSModel::Data d;
 			d.v = vdata[i];
 			data.push_back(d);
+			dataout << vdata[i].transpose() << endl;
 		}
+		dataout.close();
 
 		//***************************
 		//cluster using Dynamic Means
