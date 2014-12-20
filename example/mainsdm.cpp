@@ -89,11 +89,15 @@ int main(int argc, char** argv){
 		vector<uint64_t> trueLabels;
 		vector<ESModel::Data> data;
 		datagen->get(vdata, trueLabels);
+		ofstream dataout("data.log", ios_base::app);
+		dataout << vdata.size() << endl;
 		for(uint64_t i = 0; i < vdata.size(); i++){
 			ESModel::Data d;
 			d.v = vdata[i];
 			data.push_back(d);
+			dataout << vdata[i].transpose() << endl;
 		}
+		dataout.close();
 
 		//***************************
 		//cluster using Dynamic Means
