@@ -12,7 +12,7 @@
 #include <random>
 
 #include <dmeans/core>
-#include <dmeans/iterative>
+#include <dmeans/kernelized>
 #include <dmeans/model>
 #include <dmeans/utils>
 
@@ -21,7 +21,7 @@
 using namespace std;
 
 typedef Eigen::Vector2d V2d;
-typedef dmeans::ExponentialKernelModel<2> ESModel;
+typedef dmeans::DotProductKernelModel<2> ESModel;
 
 int main(int argc, char** argv){
 	//generates clusters that jump around on the domain R^2
@@ -51,8 +51,8 @@ int main(int argc, char** argv){
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double kernelWidth = 0.07;
-	double lambda = 10;
+	double kernelWidth = 0.1;
+	double lambda = .05;
 	double T_Q = 5;
 	double K_tau = 1.05;
 	double Q = lambda/T_Q;
@@ -64,7 +64,7 @@ int main(int argc, char** argv){
 	dynm_cfg.set("kernelWidth", kernelWidth);
 	dynm_cfg.set("sparseApproximationSize", 15);
 	dynm_cfg.set("verbose", true);
-	dmeans::DMeans<ESModel, dmeans::IterativeWithMonotonicityChecks> dynm(dynm_cfg);
+	dmeans::DMeans<ESModel, dmeans::KernelizedWithMonotonicityChecks> dynm(dynm_cfg);
 
 	//run the experiment
 	double cumulativeAccuracy = 0.0;//stores the accuracy accumulated for each step

@@ -29,7 +29,7 @@ double _Kernelized<Model, monoCheck>::cluster(const std::vector<typename Model::
 			labellingChanged = this->labelUpdate(clus, model);
 			obj = this->computeCost(clus, model);
 			if(verbose){ std::cout << "Objective: " << obj << std::endl;}
-			if (obj > prevobj){
+			if (obj - prevobj > 1e-9){
 				throw MonotonicityViolationException(prevobj, obj, "labelUpdate()");
 			}
 		}

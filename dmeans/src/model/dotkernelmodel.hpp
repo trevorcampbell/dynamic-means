@@ -147,8 +147,7 @@ class DotProductKernelModel{
 			}
 		}
 
-		void kernelAdd(const Cluster<Data, Parameter>& c, const Data& d) const {
-			double age = c.getAge();
+		void kernelAdd(Cluster<Data, Parameter>& c, const Data& d) const {
 			double gamma = oldWeight(c);
 
 			if (c.isEmpty()){
@@ -164,12 +163,11 @@ class DotProductKernelModel{
 			c.getPrmRef().kp2p = kp2p/((gamma+N+1)*(gamma+N+1));
 		}
 
-		void kernelSubtract(const Cluster<Data, Parameter>& c, const Data& d) const {
+		void kernelSubtract(Cluster<Data, Parameter>& c, const Data& d) const {
 			if (c.isEmpty()){
 				c.getPrmRef().kp2p = 0.0;
 				return;
 			}
-			double age = c.getAge();
 			double gamma = oldWeight(c);
 			uint64_t N = c.getAssignedIds().size() + 1;
 			double kp2p = c.getPrmRef().kp2p;
@@ -191,7 +189,7 @@ class DotProductKernelModel{
 				uint64_t N = c.getAssignedIds().size();
 				double ret = kernelDD(d, d) - 2*gamma*kernelDOldP(d, c)/(gamma+N);
 				for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
-					ret += 2*kernelDD(d, it->second)/(gamma+N);
+					ret -= 2*kernelDD(d, it->second)/(gamma+N);
 				}
 				ret += kernelPP(c);
 				return (gamma+N)/(gamma+N+1)*ret;

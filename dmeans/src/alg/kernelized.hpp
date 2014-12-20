@@ -25,6 +25,7 @@ class _Kernelized{
 			public:
 				MonotonicityViolationException(double prevobj, double obj, std::string funcname){
 					std::cout << "Monotonicity violated! Prevobj = " << prevobj << " obj = " << obj << " after calling " << funcname << std::endl;
+					std::cout << "Diff: " << obj-prevobj << std::endl;
 				}
 		};
 };
@@ -35,7 +36,7 @@ using KernelizedWithMonotonicityChecks = _Kernelized<Model, true>;
 template<class Model>
 using Kernelized = _Kernelized<Model, false>;
 
-#include "iterative_impl.hpp"
+#include "kernelized_impl.hpp"
 
 }
 #define __KERNELIZED_HPP
