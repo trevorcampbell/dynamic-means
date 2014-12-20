@@ -64,7 +64,7 @@ int main(int argc, char** argv){
 	dynm_cfg.set("kernelWidth", kernelWidth);
 	dynm_cfg.set("sparseApproximationSize", 15);
 	dynm_cfg.set("verbose", true);
-	dmeans::DMeans<ESModel, dmeans::KernelizedWithMonotonicityChecks> dynm(dynm_cfg);
+	dmeans::DMeans<ESModel, dmeans::IterativeWithMonotonicityChecks> dynm(dynm_cfg);
 
 	//run the experiment
 	double cumulativeAccuracy = 0.0;//stores the accuracy accumulated for each step
