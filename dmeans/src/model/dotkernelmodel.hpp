@@ -43,6 +43,11 @@ class DotProductKernelModel{
 			return lambda;
 		}
 
+		double getAgePenalty(const Cluster<Data, Parameter>& c) const {
+			return Q*c.getAge();
+		}
+
+
 		double oldWeight(const Cluster<Data, Parameter>& c) const {
 			if (c.getAge() == 0){ return 0.0;}
 			return 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
@@ -81,7 +86,7 @@ class DotProductKernelModel{
 			} else {
 				cost += Q*age;
 			}
-			cost += -(gamma+N)*kernelPP(c) +gamma*kernelOldPOldp(c);
+			cost += -(gamma+N)*kernelPP(c) +gamma*kernelOldPOldP(c);
 			for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
 				cost += kernelDD(it->second, it->second);
 			}
@@ -182,7 +187,6 @@ class DotProductKernelModel{
 				double gamma = oldWeight(c);
 				return Q*age+gamma/(gamma+1.0)*(kernelDD(d, d) - 2*kernelDOldP(d, c) + kernelOldPOldP(c));
 			} else {
-				double age = c.getAge();
 				double gamma = oldWeight(c);
 				uint64_t N = c.getAssignedIds().size();
 				double ret = kernelDD(d, d) - 2*gamma*kernelDOldP(d, c)/(gamma+N);

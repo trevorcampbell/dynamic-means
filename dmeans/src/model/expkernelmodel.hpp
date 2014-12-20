@@ -44,6 +44,10 @@ class ExponentialKernelModel{
 			return lambda;
 		}
 
+		double getAgePenalty(const Cluster<Data, Parameter>& c) const {
+			return Q*c.getAge();
+		}
+
 		double oldWeight(const Cluster<Data, Parameter>& c) const {
 			if (c.getAge() == 0){ return 0.0;}
 			return 1.0/(1.0/c.getOldPrm().w +tau*c.getAge()); 
@@ -56,7 +60,7 @@ class ExponentialKernelModel{
 		double kernelDOldP(const Data& d, const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
 			for (uint64_t i = 0; i < c.getOldPrm().vs.size(); i++){
-				kern += c.getOldPrm().coeffs[i]*exp(-(d.v - c.getOldPrm().vs[i])/(2*omega*omega));
+				kern += c.getOldPrm().coeffs[i]*exp(-(d.v - c.getOldPrm().vs[i]).squaredNorm()/(2*omega*omega));
 			}
 			return kern;
 		}
@@ -82,7 +86,7 @@ class ExponentialKernelModel{
 			} else {
 				cost += Q*age;
 			}
-			cost += -(gamma+N)*kernelPP(c) +gamma*kernelOldPOldp(c);
+			cost += -(gamma+N)*kernelPP(c) +gamma*kernelOldPOldP(c);
 			for(auto it = c.data_cbegin(); it != c.data_cend(); ++it){
 				cost += kernelDD(it->second, it->second);
 			}
@@ -113,7 +117,7 @@ class ExponentialKernelModel{
 				VXd coeffvec = VXd::Zero(fullvs.size());
 				for (uint64_t i = 0; i < fullvs.size(); i++){
 					for (uint64_t j = 0; j <= i; j++){
-						kmat(i, j) = kmat(j, i) = exp(-(fullvs[i] - fullvs[j])/(2*omega*omega));
+						kmat(i, j) = kmat(j, i) = exp(-(fullvs[i] - fullvs[j]).squaredNorm()/(2*omega*omega));
 					}
 					coeffvec(i) = fullcoeffs[i];
 				}
@@ -136,7 +140,7 @@ class ExponentialKernelModel{
 				double kp2p = 0.0;
 				for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
 					for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
-						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-(c.getPrm().vs[j] - c.getPrm().vs[i])/(2*omega*omega));
+						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-(c.getPrm().vs[j] - c.getPrm().vs[i]).squaredNorm()/(2*omega*omega));
 					}
 				}
 				c.getPrmRef().kp2p = kp2p;
@@ -183,7 +187,6 @@ class ExponentialKernelModel{
 				double gamma = oldWeight(c);
 				return Q*age+gamma/(gamma+1.0)*(kernelDD(d, d) - 2*kernelDOldP(d, c) + kernelOldPOldP(c));
 			} else {
-				double age = c.getAge();
 				double gamma = oldWeight(c);
 				uint64_t N = c.getAssignedIds().size();
 				double ret = kernelDD(d, d) - 2*gamma*kernelDOldP(d, c)/(gamma+N);
