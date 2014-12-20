@@ -82,7 +82,7 @@ int main(int argc, char** argv){
 	kdynm_cfg.set("kernelWidth", 0.07);
 	kdynm_cfg.set("sparseApproximationSize", 15);
 	kdynm_cfg.set("verbose", true);
-	dmeans::DMeans<EKModel, dmeans::IterativeWithMonotonicityChecks> kdynm(kdynm_cfg);
+	dmeans::DMeans<EKModel, dmeans::KernelizedWithMonotonicityChecks> kdynm(kdynm_cfg);
 
 	dmeans::Config sdynm_cfg;
 	lambda = 10;
