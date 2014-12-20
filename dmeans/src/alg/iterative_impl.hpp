@@ -58,10 +58,12 @@ template <class Model, bool monoCheck, bool kernelized>
 void _Iterative<Model, monoCheck>::initialLabelling(const std::vector< typename Model::Data>& obs, std::vector< Clus >& clus, const Model& model) const{
 
 	//TODO: if kernelized
+	//create a vector of "best similarities to assigned" for each datapoint
 	//1. take random obs
-	//2. push all krns onto priority queue
-	//3. pop the front, check if already assigned, push all krns to that obs except for already assigned obs
-	//4. repeat
+	//2. for every obs, compute kernel, store in the vec, and along the way find the max
+	//3. assign the max obs, iterate along vec, storing kernel, etc find the max
+	//only visit unassigned items
+	//yields N(N+1)/2 operations (best possible I think...)
 
 	std::vector<uint64_t> shuffs(obs.size());
 	std::iota(shuffs.begin(), shuffs.end(), 0);
