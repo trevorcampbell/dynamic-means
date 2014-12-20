@@ -8,7 +8,7 @@
 #include<string>
 
 namespace dmeans{
-template<class Model, bool monoCheck>
+template<class Model, bool monoCheck, bool kernelized>
 class _Iterative{
 	using Clus = Cluster<typename Model::Data, typename Model::Parameter>;
 	public:
@@ -30,10 +30,16 @@ class _Iterative{
 };
 
 template<class Model>
-using IterativeWithMonotonicityChecks = _Iterative<Model, true>; 
+using IterativeWithMonotonicityChecks = _Iterative<Model, true, true>; 
 
 template<class Model>
-using Iterative = _Iterative<Model, false>;
+using Iterative = _Iterative<Model, false, true>;
+
+template<class Model>
+using KernelizedWithMonotonicityChecks = _Iterative<Model, true, false>; 
+
+template<class Model>
+using Kernelized = _Iterative<Model, false, false>;
 
 #include "iterative_impl.hpp"
 
