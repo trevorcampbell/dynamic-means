@@ -19,8 +19,8 @@ class MovingRingDataGenerator : public MovingDataGenerator{
 			std::uniform_real_distribution<double> uniformDist01(0, 1);
 			for (uint32_t i = 0; i < this->alive.size(); i++){
 					V2d newCenter;
-					newCenter(0) = uniformDist01(dmeans::RNG::get());
-					newCenter(1) = uniformDist01(dmeans::RNG::get());
+					newCenter(0) = 0.5;
+					newCenter(1) = 0.5;
 					centers.push_back(newCenter);
 			}
 		}
@@ -37,6 +37,11 @@ class MovingRingDataGenerator : public MovingDataGenerator{
 			double stepang = uniformDistAng(dmeans::RNG::get());
 			centers[k](0) += steplen*cos(stepang);
 			centers[k](1) += steplen*sin(stepang);
+			if ( k >= 1){
+				while ((centers[k] - centers[k-1]).norm() > (1.0-1.0/sqrt(2.0))*radius*pow(1.0/sqrt(2.0), k-1)){
+					centers[k] = (centers[k-1]+centers[k])/2.0;
+				}
+			}
 			cout << "Cluster " << k << " moved to " << centers[k].transpose() << endl;
 		}
 
@@ -55,7 +60,7 @@ class MovingRingDataGenerator : public MovingDataGenerator{
 			std::vector<V2d> out;
 			for (int k = 0; k < n; k++){
 				V2d newData = centers[j];
-				double len = radius+likelihoodDistRadial(dmeans::RNG::get());
+				double len = radius*pow(1.0/sqrt(2.0), j)+likelihoodDistRadial(dmeans::RNG::get());
 				double ang = uniformDistAng(dmeans::RNG::get());
 				newData(0) += len*cos(ang);
 				newData(1) += len*sin(ang);

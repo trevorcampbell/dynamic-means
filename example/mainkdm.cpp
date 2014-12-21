@@ -21,7 +21,7 @@
 using namespace std;
 
 typedef Eigen::Vector2d V2d;
-typedef dmeans::DotProductKernelModel<2> ESModel;
+typedef dmeans::ExponentialKernelModel<2> ESModel;
 
 int main(int argc, char** argv){
 	//generates clusters that jump around on the domain R^2
@@ -51,8 +51,8 @@ int main(int argc, char** argv){
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double kernelWidth = 0.1;
-	double lambda = .05;
+	double kernelWidth = 0.07;
+	double lambda = 1.1;
 	double T_Q = 5;
 	double K_tau = 1.05;
 	double Q = lambda/T_Q;

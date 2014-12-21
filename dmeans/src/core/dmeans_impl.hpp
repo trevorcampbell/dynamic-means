@@ -77,6 +77,26 @@ Results<Model> DMeans<Model, Alg>::cluster(const std::vector<typename Model::Dat
 	Results<Model> bestResults = this->getResults();
 	bestResults.cost = minCost;
 	bestResults.tTaken = this->timer.elapsed_s();
+	if(verbose){
+		std::cout << "Final D-Means Step Results:" << std::endl;
+		int nNew = 0;
+		int nOld = 0;
+		int nOldUninst = 0;
+		for(auto it = this->clusters.begin(); it != this->clusters.end(); ++it){
+			if (it->isNew()){
+				nNew++;
+			} else {
+				nOld++;
+			}
+			if (it->isEmpty()){
+				nOldUninst++;
+			}
+		}
+		std::cout << "# Total Clusters: " << nNew+nOld << std::endl;
+	    std::cout << "# New Clusters: " << nNew << std::endl;
+	    std::cout << "# Reinstantiated: " << nOld-nOldUninst << std::endl;
+	    std::cout << "# Uninstantiated: " << nOldUninst << std::endl;
+	}
 	this->finalize();
 	return bestResults;
 }
