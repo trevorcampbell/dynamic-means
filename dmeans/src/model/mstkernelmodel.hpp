@@ -1,5 +1,6 @@
 #ifndef __MSTKERNELMODEL_HPP
 #include <Eigen/Dense>
+#include <algorithm>
 #include "../core/cluster.hpp"
 #include "../util/sparsevectorapprox.hpp"
 namespace dmeans{
@@ -67,7 +68,7 @@ class MSTKernelModel{
 					pasV.push_back(paV);
 					//find the first index where the two lists differ
 					int firstDifferId = -1;
-					for(uint64_t i =0 ; i < min(pasU.size(), pasV.size()); i++){
+					for(uint64_t i =0 ; i < std::min(pasU.size(), pasV.size()); i++){
 						if (pasU[i] != pasV[i]){
 							firstDifferId = i;
 							break;
