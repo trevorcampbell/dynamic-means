@@ -92,7 +92,6 @@ class MSTKernelModel{
 						}
 					} else {
 						//it isn't a subset
-						double di = thresh(minU, jth)*thresh(minU, jth)+thresh(minV, jth)*thresh(minV, jth);
 						for(uint64_t i = pasU.size()-1; i > (uint32_t)firstDifferId; i--){ //the cast is safe because we already know firstDifferId >= 0
 							double tmp = thresh( (nodes[pasU[i-1]] - nodes[pasU[i]]).norm() , jth);
 							di += tmp*tmp;
@@ -105,14 +104,14 @@ class MSTKernelModel{
 					return sqrt(di);
 				}
 
-				void write(std::string fname){
+				void write(std::string fname, double jth){
 					std::ofstream treeout(fname.c_str(), ios_base::trunc);
 					treeout << nodes.size() << endl;
 					for (uint64_t i = 0; i < nodes.size(); i++){
 						if (parentLists[i].size() == 0){
-							treeout << -1 << " " << nodes[i].transpose() << endl;
+							treeout << -1 << " " << dist(nodes[i], nodes[0], jth) << " " <<  nodes[i].transpose() << endl;
 						} else {
-							treeout << parentLists[i].back() << " " << nodes[i].transpose() << endl;
+							treeout << parentLists[i].back() << " " <<  dist(nodes[i], nodes[0], jth) << " " << nodes[i].transpose() << endl;
 						}
 					}
 					treeout.close();

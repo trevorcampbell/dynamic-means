@@ -38,7 +38,7 @@ class MovingRingDataGenerator : public MovingDataGenerator{
 			centers[k](0) += steplen*cos(stepang);
 			centers[k](1) += steplen*sin(stepang);
 			if ( k >= 1){
-				while ((centers[k] - centers[k-1]).norm() > ((1.0-1.0/sqrt(4.0))*radius*pow(1.0/sqrt(4.0), k-1))/2.0){
+				while ((centers[k] - centers[k-1]).norm() > radius/(alive.size()*2.0)){
 					centers[k] = (centers[k-1]+centers[k])/2.0;
 				}
 			}
@@ -60,7 +60,7 @@ class MovingRingDataGenerator : public MovingDataGenerator{
 			std::vector<V2d> out;
 			for (int k = 0; k < n; k++){
 				V2d newData = centers[j];
-				double len = radius*pow(1.0/sqrt(4.0), j)+likelihoodDistRadial(dmeans::RNG::get());
+				double len = radius*(1.0-j/(alive.size()-1.0))+likelihoodDistRadial(dmeans::RNG::get());
 				double ang = uniformDistAng(dmeans::RNG::get());
 				newData(0) += len*cos(ang);
 				newData(1) += len*sin(ang);

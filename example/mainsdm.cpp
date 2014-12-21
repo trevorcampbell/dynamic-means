@@ -42,27 +42,28 @@ int main(int argc, char** argv){
 	data_cfg.set("birthProbability", 0.0);
 	data_cfg.set("deathProbability", 0.0);
 	data_cfg.set("radius", 0.4);
-	data_cfg.set("motionStdDev", 0.00);
+	data_cfg.set("motionStdDev", 0.02);
 	data_cfg.set("clusterStdDev", 0.01);
-	data_cfg.set("nDataPerClusterPerStep", 200);
+	data_cfg.set("nDataPerClusterPerStep", 100);
 	data_cfg.set("initialClusters", 3);
 	MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double lambda = 1;
+	double lambda = 5;
 	double T_Q = 10;
 	double K_tau = 1.05;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
+	double jumpThresh = 0.08;
 	dynm_cfg.set("lambda", lambda);
 	dynm_cfg.set("Q", Q);
 	dynm_cfg.set("tau", tau);
 	dynm_cfg.set("nRestarts", 1);
 	dynm_cfg.set("nProjectionRestarts", 10);
 	dynm_cfg.set("verbose", true);
-	dynm_cfg.set("jumpThreshold", .07);
+	dynm_cfg.set("jumpThreshold", jumpThresh);
 	dynm_cfg.set("sparseApproximationSize", 100);
 	dynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	dynm_cfg.set("eigenSolverDimension", 100);
@@ -110,11 +111,6 @@ int main(int argc, char** argv){
 			lblout << res.lbls[i] << endl;
 		}
 
-		MSTModel::MST treetest;
-		treetest.construct(vdata);
-		treetest.write("tree.log");
-		return 0;
-
 		//***************************************************
 		//calculate the accuracy via linear programming
 		//including proper cluster label tracking (see above)
@@ -130,6 +126,11 @@ int main(int argc, char** argv){
 		cout << "Step " << i << ": Accuracy = " << acc <<  "\%" << " CPU Time = " << res.tTaken << "s" << endl;
 		cumulativeAccuracy += acc;
 		cumulativeTime += res.tTaken;
+
+		//MSTModel::MST treetest;
+		//treetest.construct(vdata);
+		//treetest.write("tree.log", jumpThresh);
+		//return 0;
 	}
 	cout << "Average Accuracy: " << cumulativeAccuracy/(double)nSteps << "\% Total CPU Time = " << cumulativeTime << "s" << endl;
 	cout << "Done!" << endl;
