@@ -79,8 +79,9 @@ void EigenSolver::pruneSmallEigs(double thresh){
 	while (chopIdx < eigvals.size() && eigvals(chopIdx) < thresh) chopIdx++; 
 
 	int nLeftOver = eigvals.size()-chopIdx;
-	this->eigvecs = eigvecs.topRightCorner(eigvecs.rows(), nLeftOver);
-	this->eigvals = eigvals.tail(nLeftOver);
+
+	this->eigvecs = (eigvecs.topRightCorner(eigvecs.rows(), nLeftOver)).eval(); // for aliasing, need to eval
+	this->eigvals = (eigvals.tail(nLeftOver)).eval();// for aliasing, need to eval
 }
 
 void EigenSolver::getResults(VXd& eigvals, MXd& eigvecs){

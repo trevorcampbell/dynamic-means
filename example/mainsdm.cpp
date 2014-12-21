@@ -39,14 +39,14 @@ int main(int argc, char** argv){
 	int nSteps = 100;//run the experiment for nSteps steps
 	//play with the below constants to change the data generation process
 	dmeans::Config data_cfg;
-	data_cfg.set("birthProbability", 0.10);
-	data_cfg.set("deathProbability", 0.05);
-	data_cfg.set("motionStdDev", 0.05);
-	data_cfg.set("clusterStdDev", 0.05);
-	data_cfg.set("nDataPerClusterPerStep", 15);
-	data_cfg.set("initialClusters", 4);
-	MovingDataGenerator* datagen = new MovingGaussianDataGenerator(data_cfg);
-	//MovingDataGenerator* datagen = new MovingRingGenerator(data_cfg);
+	data_cfg.set("birthProbability", 0.0);
+	data_cfg.set("deathProbability", 0.0);
+	data_cfg.set("radius", 0.4);
+	data_cfg.set("motionStdDev", 0.04);
+	data_cfg.set("clusterStdDev", 0.01);
+	data_cfg.set("nDataPerClusterPerStep", 75);
+	data_cfg.set("initialClusters", 2);
+	MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
