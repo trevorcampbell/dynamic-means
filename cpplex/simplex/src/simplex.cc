@@ -745,7 +745,7 @@ namespace optimization {
         
         has_to_be_fixed = false;
                             
-        log();
+        if (VERBOSE) log();
         
         // Preprocessing
         std::cout << "Generating problem in standard form ...";

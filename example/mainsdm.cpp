@@ -42,17 +42,17 @@ int main(int argc, char** argv){
 	data_cfg.set("birthProbability", 0.0);
 	data_cfg.set("deathProbability", 0.0);
 	data_cfg.set("radius", 0.4);
-	data_cfg.set("motionStdDev", 0.04);
+	data_cfg.set("motionStdDev", 0.03);
 	data_cfg.set("clusterStdDev", 0.01);
-	data_cfg.set("nDataPerClusterPerStep", 75);
-	data_cfg.set("initialClusters", 2);
+	data_cfg.set("nDataPerClusterPerStep", 100);
+	data_cfg.set("initialClusters", 1);
 	MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double kernelWidth = 0.07;
-	double lambda = 10;
+	double kernelWidth = 0.1;
+	double lambda = 20;
 	double T_Q = 5;
 	double K_tau = 1.05;
 	double Q = lambda/T_Q;
@@ -65,8 +65,8 @@ int main(int argc, char** argv){
 	dynm_cfg.set("verbose", true);
 	dynm_cfg.set("kernelWidth", kernelWidth);
 	dynm_cfg.set("sparseApproximationSize", 15);
-	dynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::REDSVD);
-	dynm_cfg.set("eigenSolverDimension", 40);
+	dynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::EIGEN_SELF_ADJOINT);
+	dynm_cfg.set("eigenSolverDimension", 100);
 	dmeans::DMeans<ESModel, dmeans::SpectralWithMonotonicityChecks> dynm(dynm_cfg);
 
 	//run the experiment
@@ -104,6 +104,12 @@ int main(int argc, char** argv){
 		//***************************
 		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
 		dmeans::Results<ESModel> res = dynm.cluster(data);
+		ofstream lblout("lbls.log", ios_base::app);
+		lblout << vdata.size() << endl;
+		for (uint64_t i = 0; i < vdata.size(); i++){
+			lblout << res.lbls[i] << endl;
+		}
+		lblout.close();
 
 		//***************************************************
 		//calculate the accuracy via linear programming
