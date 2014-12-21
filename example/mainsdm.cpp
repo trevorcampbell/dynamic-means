@@ -21,7 +21,7 @@
 using namespace std;
 
 typedef Eigen::Vector2d V2d;
-typedef dmeans::ExponentialKernelModel<2> ESModel;
+typedef dmeans::MSTKernelModel<2> MSTModel;
 
 int main(int argc, char** argv){
 	//generates clusters that jump around on the domain R^2
@@ -51,7 +51,6 @@ int main(int argc, char** argv){
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double kernelWidth = 0.08;
 	double lambda = 12;
 	double T_Q = 10;
 	double K_tau = 1.05;
@@ -63,11 +62,11 @@ int main(int argc, char** argv){
 	dynm_cfg.set("nRestarts", 1);
 	dynm_cfg.set("nProjectionRestarts", 10);
 	dynm_cfg.set("verbose", true);
-	dynm_cfg.set("kernelWidth", kernelWidth);
+	dynm_cfg.set("jumpThreshold", .07);
 	dynm_cfg.set("sparseApproximationSize", 100);
 	dynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	dynm_cfg.set("eigenSolverDimension", 100);
-	dmeans::DMeans<ESModel, dmeans::SpectralWithMonotonicityChecks> dynm(dynm_cfg);
+	dmeans::DMeans<MSTModel, dmeans::SpectralWithMonotonicityChecks> dynm(dynm_cfg);
 
 	//run the experiment
 	double cumulativeAccuracy = 0.0;//stores the accuracy accumulated for each step
@@ -89,11 +88,11 @@ int main(int argc, char** argv){
 		cout << "Step " << i << ": Generating data from the clusters..." << endl;
 		vector<V2d> vdata;
 		vector<uint64_t> trueLabels;
-		vector<ESModel::Data> data;
+		vector<MSTModel::Data> data;
 		datagen->get(vdata, trueLabels);
 		dataout << vdata.size() << endl;
 		for(uint64_t i = 0; i < vdata.size(); i++){
-			ESModel::Data d;
+			MSTModel::Data d;
 			d.v = vdata[i];
 			data.push_back(d);
 			dataout << vdata[i].transpose() << endl;
@@ -103,7 +102,7 @@ int main(int argc, char** argv){
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
-		dmeans::Results<ESModel> res = dynm.cluster(data);
+		dmeans::Results<MSTModel> res = dynm.cluster(data);
 		lblout << vdata.size() << endl;
 		for (uint64_t i = 0; i < vdata.size(); i++){
 			lblout << res.lbls[i] << endl;

@@ -25,6 +25,10 @@ class VectorSpaceModel{
 
 		typedef typename std::map<uint64_t, Data>::const_iterator dmap_iterator; 
 
+		void update(const std::vector<Data>& obs) {
+			//nothing to do here, vector space model doesn't depend on current dataset
+		}
+
 		bool isClusterDead(double age) const{
 			return Q*age > lambda;
 		}

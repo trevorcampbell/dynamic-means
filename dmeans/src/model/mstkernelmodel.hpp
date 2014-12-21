@@ -23,11 +23,11 @@ class MSTKernelModel{
 						double minCost = std::numeric_limits<double>::infinity();
 						int minInd = -1;
 						int minParent = -1;
-						for(int i = 0; i < toAsgn.size(); i++){
-							for (int j = 0; j < nodes.size(); j++){
-								double d = (nodes[j] - data[toAsgn[i]]).norm();
-								if (d < minCost){
-									minCost = d;
+						for(uint64_t i = 0; i < toAsgn.size(); i++){
+							for (uint64_t j = 0; j < nodes.size(); j++){
+								double di = (nodes[j] - data[toAsgn[i]]).norm();
+								if (di < minCost){
+									minCost = di;
 									minInd = i;
 									minParent = j;
 								}
@@ -40,17 +40,17 @@ class MSTKernelModel{
 					}
 				}
 
-				double thresh(double d){
-					if (d < jth){ return 0.0; }
-					else { return d; }
+				double thresh(double di, double jth) const{
+					if (di < jth){ return 0.0; }
+					else { return di; }
 				}
-				double dist(Eigen::Matrix<double, n, 1> u, Eigen::Matrix<double, n, 1> v){
+				double dist(Eigen::Matrix<double, n, 1> u, Eigen::Matrix<double, n, 1> v, double jth) const{
 					//get the closest node to u, v
 					if ( (u-v).norm() < jth){return 0.0;}
 					double minU, minV;
 					int paU, paV;
 					minU = minV = std::numeric_limits<double>::infinity();
-					for(int i = 0; i < nodes.size(); i++){
+					for(uint64_t i = 0; i < nodes.size(); i++){
 						if ( (nodes[i]-u).norm() < minU){
 							minU = (nodes[i]-u).norm();
 							paU = i;
@@ -67,35 +67,35 @@ class MSTKernelModel{
 					pasV.push_back(paV);
 					//find the first index where the two lists differ
 					int firstDifferId = -1;
-					for(int i =0 ; i < min(pasU.size(), pasV.size()); i++){
+					for(uint64_t i =0 ; i < min(pasU.size(), pasV.size()); i++){
 						if (pasU[i] != pasV[i]){
 							firstDifferId = i;
 							break;
 						}
 					}
-					double d = thresh(minU)+thresh(minV);
+					double di = thresh(minU, jth)+thresh(minV, jth);
 					if (firstDifferId == -1){
 						//the shorter list is a subset of the longer list
 						if (pasU.size() < pasV.size()){
-							for (int i = pasU.size(); i < pasV.size(); i++){
-								d += thresh((nodes[pasV[i]] - nodes[pasV[i-1]]).norm());
+							for (uint64_t i = pasU.size(); i < pasV.size(); i++){
+								di += thresh((nodes[pasV[i]] - nodes[pasV[i-1]]).norm(), jth);
 							}
 						} else {
-							for (int i = pasV.size(); i < pasU.size(); i++){
-								d += thresh((nodes[pasU[i]] - nodes[pasU[i-1]]).norm());
+							for (uint64_t i = pasV.size(); i < pasU.size(); i++){
+								di += thresh((nodes[pasU[i]] - nodes[pasU[i-1]]).norm(), jth);
 							}
 						}
 					} else {
 						//it isn't a subset
-						double d = thresh(minU)+thresh(minV);
-						for(int i = pasU.size()-1; i > firstDifferId; i--){
-							d += thresh( (nodes[pasU[i-1]] - nodes[pasU[i]]).norm() );
+						double di = thresh(minU, jth)+thresh(minV, jth);
+						for(uint64_t i = pasU.size()-1; i > (uint32_t)firstDifferId; i--){ //the cast is safe because we already know firstDifferId >= 0
+							di += thresh( (nodes[pasU[i-1]] - nodes[pasU[i]]).norm() , jth);
 						}
-						for(int i = pasV.size()-1; i > firstDifferId; i--){
-							d += thresh( (nodes[pasV[i-1]] - nodes[pasV[i]]).norm() );
+						for(uint64_t i = pasV.size()-1; i > (uint32_t)firstDifferId; i--){
+							di += thresh( (nodes[pasV[i-1]] - nodes[pasV[i]]).norm() , jth);
 						}
 					}
-					return d;
+					return di;
 				}
 		} datatree;
 
@@ -124,7 +124,7 @@ class MSTKernelModel{
 			//MST model does depend on the current data (it computes 
 			//distances using the MST created by the current dataset)
 			std::vector< Eigen::Matrix<double, n, 1> > obsd;
-			for (int i = 0; i < obs.size(); i++){
+			for (uint64_t i = 0; i < obs.size(); i++){
 				obsd.push_back(obs[i].v);
 			}
 			datatree.construct(obsd);
@@ -154,15 +154,15 @@ class MSTKernelModel{
 		}
 
 		double kernelDD(const Data& d1, const Data& d2) const{
-			double d = datatree.dist(d1.v, d2.v);
-			return exp(-d*d/(2*jth*jth));
+			double di = datatree.dist(d1.v, d2.v, jth);
+			return exp(-di*di/(2*jth*jth));
 		}
 
 		double kernelDOldP(const Data& d, const Cluster<Data, Parameter>& c) const{
 			double kern = 0.0;
 			for (uint64_t i = 0; i < c.getOldPrm().vs.size(); i++){
-				double d = datatree.dist(d.v, c.getOldPrm().vs[i]);
-				kern += c.getOldPrm().coeffs[i]*exp(-d*d/(2*jth*jth));
+				double di = datatree.dist(d.v, c.getOldPrm().vs[i], jth);
+				kern += c.getOldPrm().coeffs[i]*exp(-di*di/(2*jth*jth));
 			}
 			return kern;
 		}
@@ -219,8 +219,8 @@ class MSTKernelModel{
 				VXd coeffvec = VXd::Zero(fullvs.size());
 				for (uint64_t i = 0; i < fullvs.size(); i++){
 					for (uint64_t j = 0; j <= i; j++){
-						double d = datatree.dist(fullvs[i], fullvs[j]);
-						kmat(i, j) = kmat(j, i) = exp(-d*d/(2*jth*jth));
+						double di = datatree.dist(fullvs[i], fullvs[j], jth);
+						kmat(i, j) = kmat(j, i) = exp(-di*di/(2*jth*jth));
 					}
 					coeffvec(i) = fullcoeffs[i];
 				}
@@ -243,8 +243,8 @@ class MSTKernelModel{
 				double kp2p = 0.0;
 				for (uint64_t i = 0; i < c.getPrm().vs.size(); i++){
 					for (uint64_t j = 0; j < c.getPrm().vs.size(); j++){
-						double d = datatree.dist(c.getPrm().vs[j], c.getPrm().vs[i]);
-						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-d*d/(2*jth*jth));
+						double di = datatree.dist(c.getPrm().vs[j], c.getPrm().vs[i], jth);
+						kp2p += c.getPrm().coeffs[i]*c.getPrm().coeffs[j]*exp(-di*di/(2*jth*jth));
 					}
 				}
 				c.getPrmRef().kp2p = kp2p;
@@ -301,8 +301,6 @@ class MSTKernelModel{
 		}
 
 };
-
-MSTKernelModel::MST MSTKernelModel::datatree;
 
 }
 
