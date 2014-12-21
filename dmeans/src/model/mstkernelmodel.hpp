@@ -1,6 +1,8 @@
 #ifndef __MSTKERNELMODEL_HPP
 #include <Eigen/Dense>
 #include <algorithm>
+#include <fstream>
+#include <string>
 #include "../core/cluster.hpp"
 #include "../util/sparsevectorapprox.hpp"
 namespace dmeans{
@@ -74,29 +76,46 @@ class MSTKernelModel{
 							break;
 						}
 					}
-					double di = thresh(minU, jth)+thresh(minV, jth);
+					double di = thresh(minU, jth)*thresh(minU, jth)+thresh(minV, jth)*thresh(minV, jth);
 					if (firstDifferId == -1){
 						//the shorter list is a subset of the longer list
 						if (pasU.size() < pasV.size()){
 							for (uint64_t i = pasU.size(); i < pasV.size(); i++){
-								di += thresh((nodes[pasV[i]] - nodes[pasV[i-1]]).norm(), jth);
+								double tmp = thresh((nodes[pasV[i]] - nodes[pasV[i-1]]).norm(), jth);
+								di += tmp*tmp;
 							}
 						} else {
 							for (uint64_t i = pasV.size(); i < pasU.size(); i++){
-								di += thresh((nodes[pasU[i]] - nodes[pasU[i-1]]).norm(), jth);
+								double tmp = thresh((nodes[pasU[i]] - nodes[pasU[i-1]]).norm(), jth);
+								di +=tmp*tmp;
 							}
 						}
 					} else {
 						//it isn't a subset
-						double di = thresh(minU, jth)+thresh(minV, jth);
+						double di = thresh(minU, jth)*thresh(minU, jth)+thresh(minV, jth)*thresh(minV, jth);
 						for(uint64_t i = pasU.size()-1; i > (uint32_t)firstDifferId; i--){ //the cast is safe because we already know firstDifferId >= 0
-							di += thresh( (nodes[pasU[i-1]] - nodes[pasU[i]]).norm() , jth);
+							double tmp = thresh( (nodes[pasU[i-1]] - nodes[pasU[i]]).norm() , jth);
+							di += tmp*tmp;
 						}
 						for(uint64_t i = pasV.size()-1; i > (uint32_t)firstDifferId; i--){
-							di += thresh( (nodes[pasV[i-1]] - nodes[pasV[i]]).norm() , jth);
+							double tmp = thresh( (nodes[pasV[i-1]] - nodes[pasV[i]]).norm() , jth);
+							di += tmp*tmp;
 						}
 					}
-					return di;
+					return sqrt(di);
+				}
+
+				void write(std::string fname){
+					std::ofstream treeout(fname.c_str(), ios_base::trunc);
+					treeout << nodes.size() << endl;
+					for (uint64_t i = 0; i < nodes.size(); i++){
+						if (parentLists[i].size() == 0){
+							treeout << -1 << " " << nodes[i].transpose() << endl;
+						} else {
+							treeout << parentLists[i].back() << " " << nodes[i].transpose() << endl;
+						}
+					}
+					treeout.close();
 				}
 		} datatree;
 

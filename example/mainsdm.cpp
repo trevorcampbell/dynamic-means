@@ -44,14 +44,14 @@ int main(int argc, char** argv){
 	data_cfg.set("radius", 0.4);
 	data_cfg.set("motionStdDev", 0.00);
 	data_cfg.set("clusterStdDev", 0.01);
-	data_cfg.set("nDataPerClusterPerStep", 100);
-	data_cfg.set("initialClusters", 2);
+	data_cfg.set("nDataPerClusterPerStep", 200);
+	data_cfg.set("initialClusters", 3);
 	MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double lambda = 12;
+	double lambda = 1;
 	double T_Q = 10;
 	double K_tau = 1.05;
 	double Q = lambda/T_Q;
@@ -98,6 +98,8 @@ int main(int argc, char** argv){
 			dataout << vdata[i].transpose() << endl;
 		}
 
+		
+
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
@@ -107,6 +109,11 @@ int main(int argc, char** argv){
 		for (uint64_t i = 0; i < vdata.size(); i++){
 			lblout << res.lbls[i] << endl;
 		}
+
+		MSTModel::MST treetest;
+		treetest.construct(vdata);
+		treetest.write("tree.log");
+		return 0;
 
 		//***************************************************
 		//calculate the accuracy via linear programming
