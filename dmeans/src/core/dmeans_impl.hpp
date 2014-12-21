@@ -54,6 +54,8 @@ void DMeans<Model, Alg>::labelNewClusters(){
 template <class Model, template<typename> class Alg>
 Results<Model> DMeans<Model, Alg>::cluster(const std::vector<typename Model::Data>& obs){
 	this->timer.start();//start the timer
+	//update the model given the data if required
+	this->model.update(obs);
 	//these store the best cost/clustering over nRestarts restarts
 	double minCost = std::numeric_limits<double>::infinity();
 	std::vector<Cluster<typename Model::Data, typename Model::Parameter> > minClusters;

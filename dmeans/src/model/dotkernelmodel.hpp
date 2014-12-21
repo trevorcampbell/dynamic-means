@@ -16,6 +16,8 @@ class DotProductKernelModel{
 			this->spK = cfg.get("sparseApproximationSize", Config::REQUIRED, -1);
 			this->spEps = cfg.get("sparseApproximationErrorThreshold", Config::OPTIONAL, 1.0e-6);
 		}
+	
+
 		class Data{
 			public:
 				Data(){v.setZero();}
@@ -28,6 +30,11 @@ class DotProductKernelModel{
 				std::vector< double > coeffs;
 				double w, kp2p;
 		};
+
+
+		void update(const std::vector<Data>& obs){
+			//nothing to update, dot product model doesn't depend on current data
+		}
 
 		bool isClusterDead(double age) const{
 			return Q*age > lambda;

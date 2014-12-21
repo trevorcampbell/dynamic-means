@@ -42,18 +42,18 @@ int main(int argc, char** argv){
 	data_cfg.set("birthProbability", 0.0);
 	data_cfg.set("deathProbability", 0.0);
 	data_cfg.set("radius", 0.4);
-	data_cfg.set("motionStdDev", 0.03);
+	data_cfg.set("motionStdDev", 0.00);
 	data_cfg.set("clusterStdDev", 0.01);
 	data_cfg.set("nDataPerClusterPerStep", 100);
-	data_cfg.set("initialClusters", 1);
+	data_cfg.set("initialClusters", 2);
 	MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double kernelWidth = 0.1;
-	double lambda = 20;
-	double T_Q = 5;
+	double kernelWidth = 0.08;
+	double lambda = 12;
+	double T_Q = 10;
 	double K_tau = 1.05;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
@@ -64,7 +64,7 @@ int main(int argc, char** argv){
 	dynm_cfg.set("nProjectionRestarts", 10);
 	dynm_cfg.set("verbose", true);
 	dynm_cfg.set("kernelWidth", kernelWidth);
-	dynm_cfg.set("sparseApproximationSize", 15);
+	dynm_cfg.set("sparseApproximationSize", 100);
 	dynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	dynm_cfg.set("eigenSolverDimension", 100);
 	dmeans::DMeans<ESModel, dmeans::SpectralWithMonotonicityChecks> dynm(dynm_cfg);
@@ -75,6 +75,8 @@ int main(int argc, char** argv){
 	map<int, int> matchings;//stores the saved matchings from previous timesteps
 							//enables proper label tracking (see note at line 27)
 	dmeans::MaxMatching maxm;
+	ofstream dataout("data.log", ios_base::trunc);
+	ofstream lblout("lbls.log", ios_base::trunc);
 	for (int i = 0; i < nSteps; i++){
 		//****************************
 		//birth/death/motion processes
@@ -89,7 +91,6 @@ int main(int argc, char** argv){
 		vector<uint64_t> trueLabels;
 		vector<ESModel::Data> data;
 		datagen->get(vdata, trueLabels);
-		ofstream dataout("data.log", ios_base::app);
 		dataout << vdata.size() << endl;
 		for(uint64_t i = 0; i < vdata.size(); i++){
 			ESModel::Data d;
@@ -97,19 +98,16 @@ int main(int argc, char** argv){
 			data.push_back(d);
 			dataout << vdata[i].transpose() << endl;
 		}
-		dataout.close();
 
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
 		dmeans::Results<ESModel> res = dynm.cluster(data);
-		ofstream lblout("lbls.log", ios_base::app);
 		lblout << vdata.size() << endl;
 		for (uint64_t i = 0; i < vdata.size(); i++){
 			lblout << res.lbls[i] << endl;
 		}
-		lblout.close();
 
 		//***************************************************
 		//calculate the accuracy via linear programming
@@ -129,6 +127,8 @@ int main(int argc, char** argv){
 	}
 	cout << "Average Accuracy: " << cumulativeAccuracy/(double)nSteps << "\% Total CPU Time = " << cumulativeTime << "s" << endl;
 	cout << "Done!" << endl;
+	dataout.close();
+	lblout.close();
 	delete datagen;
 
 	return 0;

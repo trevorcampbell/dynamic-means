@@ -30,6 +30,10 @@ class ExponentialKernelModel{
 				double w, kp2p;
 		};
 
+		void update(const std::vector<Data>& obs){
+			//nothing to update, exp kernel model doesn't depend on current data
+		}
+
 		bool isClusterDead(double age) const{
 			return Q*age > lambda;
 		}
