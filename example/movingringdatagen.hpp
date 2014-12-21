@@ -58,7 +58,7 @@ class MovingRingDataGenerator : public MovingDataGenerator{
 			uniform_real_distribution<double> uniformDistAng(0, 2*M_PI);
 			normal_distribution<double> likelihoodDistRadial(0, clusterStdDev);
 			std::vector<V2d> out;
-			for (int k = 0; k < n; k++){
+			for (int k = 0; k < n/(j+1.0); k++){
 				V2d newData = centers[j];
 				double len = radius*(1.0-j/(alive.size()-1.0))+likelihoodDistRadial(dmeans::RNG::get());
 				double ang = uniformDistAng(dmeans::RNG::get());
