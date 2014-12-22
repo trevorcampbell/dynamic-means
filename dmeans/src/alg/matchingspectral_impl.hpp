@@ -1,6 +1,6 @@
-#ifndef __SPECTRAL_IMPL_HPP
+#ifndef __MATCHINGSPECTRAL_IMPL_HPP
 template<class Model, bool monoCheck>
-_Spectral<Model, monoCheck>::_Spectral(const Config& cfg){
+_MatchingSpectral<Model, monoCheck>::_MatchingSpectral(const Config& cfg){
 	this->solverType = this->cfg.get("eigenSolverType", Config::Type::OPTIONAL, EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	if (this->solverType == EigenSolver::Type::EIGEN_SELF_ADJOINT){
 		this->nEigs = 0;
@@ -12,7 +12,7 @@ _Spectral<Model, monoCheck>::_Spectral(const Config& cfg){
 }
 
 template<class Model, bool monoCheck>
-double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
+double _MatchingSpectral<Model, monoCheck>::cluster(const std::vector<typename Model::Data>& obs, std::vector<Clus>& clus, const Model& model) const{
 	if(obs.size() == 0){return 0.0;}
 
 	//compute the kernel matrix
@@ -32,11 +32,10 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 	uint64_t nA = obs.size();
 	uint64_t nB = clus.size();
 
-	//premultiply Z with \hat{Gamma}^{-1/2}
-	for (uint64_t j = nA; j < nA+nB; j++){
-		Z.row(j) *= 1.0/sqrt(model.oldWeight(clus[j-nA])); 
-	}
-	const int nZCols = Z.cols(); //number of clusters currently instantiated
+	const uint64_t nZCols = Z.cols(); //number of clusters currently instantiated
+
+	//conservative resize Z
+	Z.conservativeResize(nA, Z.cols());
 
 	//normalize the new rows of Z
 	for (uint64_t j = 0; j < nA; j++){
@@ -48,33 +47,24 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 		Z.row(j) *= (1.0/rownorm);
 	}
 
-	//for the old rows, decide whether the sq norm is too small to be considered instantiated
-	for (uint64_t j = nA; j < nA+nB; j++){
-		double rowsqnorm = Z.row(j).squaredNorm();
-		if (0.5/(nA+model.oldWeight(clus[j-nA])) <= rowsqnorm){
-			//it's a non-degenerate row, normalize it
-			Z.row(j) *= (1.0/sqrt(rowsqnorm));
-		}
-	}
-
 	//initialize X (constrained version of Z) 
-	MXd X(nA+nB, nZCols);
+	MXd X(nA, nZCols);
 	//initialize V (rotation matrix on Z to make Z*V close to X)
 	MXd V(nZCols, nZCols);
 
 	//stuff for storing best clustering (best clustering is determined by normalized cuts objective)
-	double minNCutsObj = numeric_limits<double>::infinity();
-	vector<int> minLbls;
+	double minObj = numeric_limits<double>::infinity();
+	vector<uint64_t> minLbls;
 
 	//propose nProjectionRestarts V trials
 	for (uint64_t i = 0; i < nProjectionRestarts; i++){
 		V.setZero();
 		//initialize unitary V via ``most orthogonal rows'' method
-		int rndRow = (RNG::get())()%(nA+nB);
+		int rndRow = (RNG::get())()%nA;
 		V.col(0) = Z.row(rndRow).transpose();
-		MXd c(nA+nB, 1);
+		MXd c(nA, 1);
 		c.setZero();
-		for (int j = 1; j < nZCols; j++){
+		for (uint64_t j = 1; j < nZCols; j++){
 			c += (Z*V.col(j-1)).cwiseAbs();
 			int unused, nxtRow;
 			c.minCoeff(&nxtRow, &unused);
@@ -83,7 +73,7 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 		this->orthonormalize(V);
 
 		//initialize X
-		X.setZero();
+		X.setZero(); //need this because after each projection restart X has some value
 
 		//solve the alternating minimization for X
 		double obj, prevobj;
@@ -92,7 +82,7 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 			do{
 				prevobj = obj;
 
-				this->findClosestConstrained(Z*V, X, nB);
+				this->findClosestConstrained(Z*V, X);
 
 				this->findClosestRelaxed(Z, X, V); 
 
@@ -116,34 +106,36 @@ double _Spectral<Model, monoCheck>::cluster(const std::vector<typename Model::Da
 				}
 			} while( fabs(obj - prevobj)/obj > 1e-6);
 		}
-		//compute the normalized cuts objective
-		vector<int> tmplbls = this->getLblsFromIndicatorMat(X, nB);
-		double nCutsObj = this->getNormalizedCutsObj(KUp, tmplbls);
-		if (nCutsObj < minNCutsObj){
-			minNCutsObj = nCutsObj;
-			minLbls = tmplbls;
+		//compute the labels for the data
+		if (obj < minObj){
+			minObj = obj;
+			minLbls = this->getLblsFromIndicatorMat(X);
+			//there may be missing labels now (if a column was empty)
+			//but getOldNewMatching below handles that case
 		}
 	}
+
+	std::map<uint64_t, uint64_t> lblmap;
+	double clusterCost = this->getOldNewMatching(minLbls, obs, clus, model, lblmap);
+
 	//assign the data
-	int nToAdd = (*std::max_element(minLbls.begin(), minLbls.end()))+1-clus.size();
-	if (nToAdd > 0){
-		for (int i = 0; i < nToAdd; i++){
+	for (uint64_t i = 0; i < obs.size(); i++){
+		if ( lblmap[minLbls[i]] >= clus.size()){
 			Clus newclus;
 			clus.push_back(newclus);
 		}
+		clus[lblmap[minLbls[i]]].assignData(i, obs[i]);
 	}
-	for (uint64_t i = 0; i < obs.size(); i++){
-		clus[minLbls[i]].assignData(i, obs[i]);
-	}
+
 	//update the parameters
 	for (uint64_t i = 0; i < clus.size(); i++){
 		model.updatePrm(clus[i]);
 	}
-	return minNCutsObj;
+	return minObj;
 }
 
 template<class Model, bool monoCheck>
-MXd _Spectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
+MXd _MatchingSpectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename Model::Data>& obs, const std::vector<Clus>& clus, const Model& model) const{
 	const int nA = obs.size();
 	const int nB = clus.size();
 	MXd KUp = MXd::Zero(nA+nB, nA+nB);
@@ -175,53 +167,28 @@ MXd _Spectral<Model, monoCheck>::getKernelMatUpper(const std::vector<typename Mo
 }
 
 template<class Model, bool monoCheck>
-void _Spectral<Model, monoCheck>::findClosestConstrained(const MXd& ZV, MXd& X, const int nOld) const{
+void _MatchingSpectral<Model, monoCheck>::findClosestConstrained(const MXd& ZV, MXd& X) const{
 	const int nRows = ZV.rows();
-	const int nCols = ZV.cols();
-	const int nB = nOld;
-	const int nA = nRows-nB;
 
 	//initialize X to zero; it will be the indicator mat output
 	X.setZero();
-
 	//nonmaximum suppression
-	for (int i = 0; i < nA; i++){
+	for (int i = 0; i < nRows; i++){
 		int unused, maxCol;
 		ZV.row(i).maxCoeff(&unused, &maxCol);
 		X(i, maxCol) = 1;
-	}
-
-	//if there are no old rows, we're done
-	if (nB == 0){
-		return;
-	}
-
-	vector<int> rows, cols;
-	vector<double> wts;
-	for (int kk = 0; kk < nB; kk++){
-		for (int jj = 0; jj < nCols; jj++){
-			rows.push_back(kk+nA);
-			cols.push_back(jj);
-			wts.push_back(-(1.0-2.0*ZV(kk+nA, jj)));
-		}
-	}
-	MaxMatching maxm;
-	map<int, int> constrainedSoln = maxm.getMaxMatching(rows, cols, wts);
-
-	for (auto it = constrainedSoln.begin(); it != constrainedSoln.end(); it++){
-			X(it->first, it->second) = 1;
 	}
 	return;
 }
 
 template<class Model, bool monoCheck>
-void _Spectral<Model, monoCheck>::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{
+void _MatchingSpectral<Model, monoCheck>::findClosestRelaxed(const MXd& Z, const MXd& X, MXd& V) const{
 	V = X.transpose()*Z;
 	this->orthonormalize(V);
 }
 
 template<class Model, bool monoCheck>
-void _Spectral<Model, monoCheck>::orthonormalize(MXd& V) const{
+void _MatchingSpectral<Model, monoCheck>::orthonormalize(MXd& V) const{
 	//do a safe svd, with guaranteed orthonormal columns even in the event of numerically small singular values
 	Eigen::JacobiSVD<Eigen::MatrixXd, Eigen::HouseholderQRPreconditioner> svd(V, Eigen::ComputeFullU | Eigen::ComputeFullV); //slowest/safest preconditioning
 	MXd U = svd.matrixU();
@@ -305,91 +272,96 @@ void _Spectral<Model, monoCheck>::orthonormalize(MXd& V) const{
 }
 
 template<class Model, bool monoCheck>
-double _Spectral<Model, monoCheck>::getNormalizedCutsObj(const MXd& KUp, const vector<int>& lbls) const{
-	const int nA = lbls.size();
-	map<int, double> nums, denoms;
-	for (int i = 0; i < KUp.rows(); ++i){
-		for (int j = 0; j < KUp.cols(); j++){
-			int l1, l2;
-			//decide whether the row corresponds to an old cluster or a new datapt
-			if (i >= nA){
-				//the label is determined by the row
-				l1 = i-nA;
-			} else {
-				l1 = lbls[i];
-			}
-			//decide whether the col corresponds to an old cluster or a new datapt
-			if (j >= nA){
-				//the label is determined by the col
-				l2 = j-nA;
-			} else {
-				l2 = lbls[j];
-			}
-			//accumulate the numerator/denominator
-			double value = i < j ? KUp(i, j) : KUp(j, i); //account for KUp being uppertri
-			if (l1 != l2) {
-				nums[l1] += value;//this relies on nums[] default value constructor setting to 0
-			}
-			denoms[l1] += value;//this relies on denoms[] default value constructor setting to 0
-		}
-	}
-	double obj = 0;
-	for (auto it = denoms.begin(); it != denoms.end(); ++it){
-		if (it->second > 0){
-			obj += nums[it->first]/it->second;//this relies on nums[] default value constructor setting to 0
-		}
-	}
-	return obj;
-}
-
-template<class Model, bool monoCheck>
-vector<int> _Spectral<Model, monoCheck>::getLblsFromIndicatorMat(const MXd& X, const int nOld) const{
-	const int nA = X.rows()-nOld;
-	const int nR = X.rows();
-	const int nC = X.cols();
-	vector<int> lbls;
-	int nextNewLbl = nOld;
-	//first find the correspondance between columns and labels
-	map<int, int> colToLbl;
-	for (int i = 0; i < nC; i++){
-		//search for a "1" in the old entries for this column
-		int oneRow = -1;
-		for(int j = nA; j < nR; j++){
-			if (fabs(X(j, i)-1.0) < 1.0e-6){
-				oneRow = j-nA;//old cluster index
-				break;
-			}
-		}
-		if (oneRow == -1){ //if no one was found, search to make sure this column is actually instantiated at all
-			bool foundOne = false;
-			for (int j = 0; j <	nA; j++){
-				if (fabs(X(j, i)-1.0) < 1.0e-6){
-					foundOne = true;
-					break;
-				}
-			}
-			if (foundOne){
-				//this is a new cluster, since no 1 was found in the old set and the new set instantiated it
-				colToLbl[i] = nextNewLbl;
-				nextNewLbl++;
-			}
-		} else { //old cluster
-			colToLbl[i] = oneRow;
-		}
-	}
-	//now push back the labels
-	lbls.clear();
-	for (int i = 0; i < nA; i++){
+vector<uint64_t> _MatchingSpectral<Model, monoCheck>::getLblsFromIndicatorMat(const MXd& X) const{
+	vector<uint64_t> lbls;
+	const uint64_t nR = X.rows();
+	const uint64_t nC = X.cols();
+	for (int i = 0; i < nR; i++){
 		for (int j = 0; j < nC; j++){
-			if (fabs(X(i, j)-1.0) < 1e-6){
-				lbls.push_back(colToLbl[j]);
+			if (fabs(X(i, j)-1.0) < 1.0e-6){
+				lbls.push_back(j);
 				break;
 			}
 		}
-	}
+	} 
 	return lbls;
 }
 
 
-#define __SPECTRAL_IMPL_HPP
-#endif /* __SPECTRAL_IMPL_HPP */
+template<class Model, bool monoCheck>
+double _MatchingSpectral<Model, monoCheck>::getOldNewMatching(const std::vector<uint64_t>& lbls, const std::vector<typename Model::Data>& obs, 
+		const std::vector<Clus>& clus, const Model& model, std::map<uint64_t, uint64_t>& lblmap){
+
+	//get a mapping from lbl to assigned data idcs
+	std::map<uint64_t, std::vector<uint64_t> > inClus;
+	for(uint64_t j = 0; j < lbls.size(); j++){
+		inClus[lbls[j]].push_back(j);
+	}
+	
+	//cache the old cluster kernels
+	vector<double> oldKs;
+	for(uint64_t i = 0; i < clus.size(); i++){
+		oldKs.push_back(model.kernelOldPOldP(clus[i]));
+	}
+
+	double obsSumWt = 0.0;
+	vector<int> newlbls, oldlbls;
+	vector<double> wts;
+	double minWt = std::numeric_limits<double>::infinity();
+	for(auto it = 0; it != inClus.end(); ++it){
+		//calculate the within-cluster kernel
+		double clusK = 0.0;
+		for(uint64_t j = 0; j < it->second.size(); j++){
+			double owt = model.kernelDD(obs[it->second[j]], obs[it->second[j]]);
+			clusK += owt;
+			obsSumWt += owt;
+			for(uint64_t k = j+1; k < it->second.size(); k++){
+				clusK += 2.0*model.kernelDD(obs[it->second[j]], obs[it->second[k]]);
+			}
+		}
+		//push back the new cost
+		newlbls.push_back(it->first);
+		oldlbls.push_back(clus.size()+it->first);//unique label for this new cluster
+		wts.push_back(clusK/it->second.size() - model.getNewPenalty());
+		if (wts.back() < minWt){
+			minWt = wts.back();
+		}
+
+		//calculate the cluster-old prm kernels
+		for(uint64_t j = 0; j < clus.size(); j++){
+			double ctok = 0.0;
+			for(uint64_t k = 0; k < it->second.size(); k++){
+				ctok += 2.0*model.kernelDOldP(obs[k], clus[j]);
+			}
+			double gamma = model.oldWeight(clus[j]);
+			newlbls.push_back(it->first);
+			oldlbls.push_back(j);
+			wts.push_back( (clusK+ gamma*(ctok - it->second.size()*oldKs[j]))/(gamma+it->second.size()) - model.getOldPenalty(clus[j]));
+			if (wts.back() < minWt){
+				minWt = wts.back();
+			}
+		}
+	}
+
+	minWt = minWt >= 0 ? minWt*0.9 : minWt*1.1;
+	for (uint64_t i = 0; i < wts.size(); i++){
+		wts[i] -= minWt;
+	}
+
+	MaxMatching maxm;
+	map<int, int> opt = maxm.getMaxMatching(newlbls, oldlbls, wts);
+	lblmap.clear();
+	uint64_t nextNewLbl = clus.size();
+	for(auto it = opt.begin(); it != opt.end(); ++it){
+		if (it->second >= clus.size()){
+			lblmap[it->first] = nextNewLbl++;
+		} else {
+			lblmap[it->first] = it->second;
+		}
+	}
+	return maxm.getObjective() + minWt*opt.size() + obsSumWt;
+}
+
+
+#define __MATCHINGSPECTRAL_IMPL_HPP
+#endif /* __MATCHINGSPECTRAL_IMPL_HPP */

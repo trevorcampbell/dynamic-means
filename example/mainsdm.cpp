@@ -44,19 +44,19 @@ int main(int argc, char** argv){
 	data_cfg.set("radius", 0.4);
 	data_cfg.set("motionStdDev", 0.02);
 	data_cfg.set("clusterStdDev", 0.01);
-	data_cfg.set("nDataPerClusterPerStep", 100);
+	data_cfg.set("nDataPerClusterPerStep", 200);
 	data_cfg.set("initialClusters", 3);
 	MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double lambda = 5;
-	double T_Q = 10;
-	double K_tau = 1.05;
+	double lambda = 30;
+	double T_Q = 100;
+	double K_tau = 1.1;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
-	double jumpThresh = 0.08;
+	double jumpThresh = 0.07;
 	dynm_cfg.set("lambda", lambda);
 	dynm_cfg.set("Q", Q);
 	dynm_cfg.set("tau", tau);

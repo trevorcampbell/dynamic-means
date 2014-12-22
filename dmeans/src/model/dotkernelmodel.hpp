@@ -50,8 +50,11 @@ class DotProductKernelModel{
 			return lambda;
 		}
 
-		double getAgePenalty(const Cluster<Data, Parameter>& c) const {
+		double getOldPenalty(const Cluster<Data, Parameter>& c) const {
 			return Q*c.getAge();
+		}
+		double getNewPenalty() const {
+			return lambda;
 		}
 
 
