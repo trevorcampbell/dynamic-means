@@ -41,16 +41,16 @@ int main(int argc, char** argv){
 	int nSteps = 100;//run the experiment for nSteps steps
 	//play with the below constants to change the data generation process
 	dmeans::Config data_cfg;
-	data_cfg.set("birthProbability", 0.10);
-	data_cfg.set("deathProbability", 0.05);
+	data_cfg.set("birthProbability", 0.05);
+	data_cfg.set("deathProbability", 0.01);
 	data_cfg.set("motionStdDev", 0.05);
-	data_cfg.set("clusterStdDev", 0.0);
+	data_cfg.set("clusterStdDev", 0.05);
 	data_cfg.set("nDataPerClusterPerStep", 15);
-	data_cfg.set("initialClusters", 4);
-	//MovingDataGenerator* datagen = new MovingGaussianDataGenerator(data_cfg);
+	data_cfg.set("initialClusters", 7);
+	MovingDataGenerator* datagen = new MovingGaussianDataGenerator(data_cfg);
 	//MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
-	data_cfg.set("radius", 0.05);
-	MovingDataGenerator* datagen = new MovingShapeDataGenerator(data_cfg);
+	//data_cfg.set("radius", 0.05);
+	//MovingDataGenerator* datagen = new MovingShapeDataGenerator(data_cfg);
 
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
@@ -73,6 +73,8 @@ int main(int argc, char** argv){
 	map<int, int> matchings;//stores the saved matchings from previous timesteps
 							//enables proper label tracking (see note at line 27)
 	dmeans::MaxMatching maxm;
+	ofstream dataout("data.log", ios_base::trunc);
+	ofstream lblout("lbls.log", ios_base::trunc);
 	for (int i = 0; i < nSteps; i++){
 		//****************************
 		//birth/death/motion processes
@@ -87,7 +89,6 @@ int main(int argc, char** argv){
 		vector<uint64_t> trueLabels;
 		vector<VSModel::Data> data;
 		datagen->get(vdata, trueLabels);
-		ofstream dataout("data.log", ios_base::app);
 		dataout << vdata.size() << endl;
 		for(uint64_t i = 0; i < vdata.size(); i++){
 			VSModel::Data d;
@@ -95,13 +96,16 @@ int main(int argc, char** argv){
 			data.push_back(d);
 			dataout << vdata[i].transpose() << endl;
 		}
-		dataout.close();
 
 		//***************************
 		//cluster using Dynamic Means
 		//***************************
 		cout << "Step " << i << ": Clustering " << data.size() << " datapoints..." << endl;
 		dmeans::Results<VSModel> res = dynm.cluster(data);
+		lblout << vdata.size() << endl;
+		for (uint64_t i = 0; i < vdata.size(); i++){
+			lblout << res.lbls[i] << endl;
+		}
 
 		//***************************************************
 		//calculate the accuracy via linear programming
@@ -121,6 +125,8 @@ int main(int argc, char** argv){
 	}
 	cout << "Average Accuracy: " << cumulativeAccuracy/(double)nSteps << "\% Total CPU Time = " << cumulativeTime << "s" << endl;
 	cout << "Done!" << endl;
+	dataout.close();
+	lblout.close();
 	delete datagen;
 
 	return 0;

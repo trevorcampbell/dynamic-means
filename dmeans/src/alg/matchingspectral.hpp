@@ -4,7 +4,6 @@
 #include "../util/maxmatching.hpp"
 #include <cassert>
 
-
 namespace dmeans{
 template<class Model, bool monoCheck>
 class _MatchingSpectral{
@@ -25,7 +24,7 @@ class _MatchingSpectral{
 		void orthonormalize(MXd& V) const; 
 		vector<uint64_t> getLblsFromIndicatorMat(const MXd& X) const;
 		double getOldNewMatching(const std::vector<uint64_t>& lbls, const std::vector<typename Model::Data>& obs, 
-				const std::vector<Clus>& clus, const Model& model, std::map<uint64_t, uint64_t>& lblmap);
+				const std::vector<Clus>& clus, const Model& model, std::map<uint64_t, uint64_t>& lblmap) const;
 		class MonotonicityViolationException{
 			public:
 				MonotonicityViolationException(double prevobj, double obj, std::string funcname){

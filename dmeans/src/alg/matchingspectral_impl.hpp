@@ -30,7 +30,6 @@ double _MatchingSpectral<Model, monoCheck>::cluster(const std::vector<typename M
 	}
 
 	uint64_t nA = obs.size();
-	uint64_t nB = clus.size();
 
 	const uint64_t nZCols = Z.cols(); //number of clusters currently instantiated
 
@@ -92,7 +91,7 @@ double _MatchingSpectral<Model, monoCheck>::cluster(const std::vector<typename M
 			double tmpobj;
 			do{
 				tmpobj = prevobj = obj;
-				this->findClosestConstrained(Z*V, X, nB);
+				this->findClosestConstrained(Z*V, X);
 				obj = (X-Z*V).squaredNorm();
 				if (obj > (1.0+1e-6)*tmpobj){
 					throw MonotonicityViolationException(tmpobj, obj, "findClosestConstrained()");
@@ -120,18 +119,22 @@ double _MatchingSpectral<Model, monoCheck>::cluster(const std::vector<typename M
 
 	//assign the data
 	for (uint64_t i = 0; i < obs.size(); i++){
-		if ( lblmap[minLbls[i]] >= clus.size()){
+		while ( lblmap[minLbls[i]] >= clus.size()){ //use a while loop because getOldNewMatching guarantees all labels between 0 and max are used
+													//therefore pushing a few empty clusters is not problematic, they will be filled after
 			Clus newclus;
 			clus.push_back(newclus);
 		}
 		clus[lblmap[minLbls[i]]].assignData(i, obs[i]);
+	}
+	for(uint64_t i = 0; i < clus.size(); i++){
+		assert( !(clus[i].isEmpty() && clus[i].isNew()) );
 	}
 
 	//update the parameters
 	for (uint64_t i = 0; i < clus.size(); i++){
 		model.updatePrm(clus[i]);
 	}
-	return minObj;
+	return clusterCost;
 }
 
 template<class Model, bool monoCheck>
@@ -276,8 +279,8 @@ vector<uint64_t> _MatchingSpectral<Model, monoCheck>::getLblsFromIndicatorMat(co
 	vector<uint64_t> lbls;
 	const uint64_t nR = X.rows();
 	const uint64_t nC = X.cols();
-	for (int i = 0; i < nR; i++){
-		for (int j = 0; j < nC; j++){
+	for (uint64_t i = 0; i < nR; i++){
+		for (uint64_t j = 0; j < nC; j++){
 			if (fabs(X(i, j)-1.0) < 1.0e-6){
 				lbls.push_back(j);
 				break;
@@ -290,14 +293,14 @@ vector<uint64_t> _MatchingSpectral<Model, monoCheck>::getLblsFromIndicatorMat(co
 
 template<class Model, bool monoCheck>
 double _MatchingSpectral<Model, monoCheck>::getOldNewMatching(const std::vector<uint64_t>& lbls, const std::vector<typename Model::Data>& obs, 
-		const std::vector<Clus>& clus, const Model& model, std::map<uint64_t, uint64_t>& lblmap){
+		const std::vector<Clus>& clus, const Model& model, std::map<uint64_t, uint64_t>& lblmap) const{
 
 	//get a mapping from lbl to assigned data idcs
 	std::map<uint64_t, std::vector<uint64_t> > inClus;
 	for(uint64_t j = 0; j < lbls.size(); j++){
 		inClus[lbls[j]].push_back(j);
 	}
-	
+
 	//cache the old cluster kernels
 	vector<double> oldKs;
 	for(uint64_t i = 0; i < clus.size(); i++){
@@ -308,7 +311,7 @@ double _MatchingSpectral<Model, monoCheck>::getOldNewMatching(const std::vector<
 	vector<int> newlbls, oldlbls;
 	vector<double> wts;
 	double minWt = std::numeric_limits<double>::infinity();
-	for(auto it = 0; it != inClus.end(); ++it){
+	for(auto it = inClus.begin(); it != inClus.end(); ++it){
 		//calculate the within-cluster kernel
 		double clusK = 0.0;
 		for(uint64_t j = 0; j < it->second.size(); j++){
@@ -331,8 +334,9 @@ double _MatchingSpectral<Model, monoCheck>::getOldNewMatching(const std::vector<
 		for(uint64_t j = 0; j < clus.size(); j++){
 			double ctok = 0.0;
 			for(uint64_t k = 0; k < it->second.size(); k++){
-				ctok += 2.0*model.kernelDOldP(obs[k], clus[j]);
+				ctok += 2.0*model.kernelDOldP(obs[it->second[k]], clus[j]);
 			}
+
 			double gamma = model.oldWeight(clus[j]);
 			newlbls.push_back(it->first);
 			oldlbls.push_back(j);
@@ -353,13 +357,14 @@ double _MatchingSpectral<Model, monoCheck>::getOldNewMatching(const std::vector<
 	lblmap.clear();
 	uint64_t nextNewLbl = clus.size();
 	for(auto it = opt.begin(); it != opt.end(); ++it){
-		if (it->second >= clus.size()){
+		if (it->second >= (int)clus.size()){
 			lblmap[it->first] = nextNewLbl++;
 		} else {
 			lblmap[it->first] = it->second;
 		}
 	}
-	return maxm.getObjective() + minWt*opt.size() + obsSumWt;
+
+	return obsSumWt- (maxm.getObjective() + minWt*opt.size());
 }
 
 

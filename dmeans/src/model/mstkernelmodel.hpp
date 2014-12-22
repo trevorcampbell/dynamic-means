@@ -105,13 +105,13 @@ class MSTKernelModel{
 				}
 
 				void write(std::string fname, double jth){
-					std::ofstream treeout(fname.c_str(), ios_base::trunc);
-					treeout << nodes.size() << endl;
+					std::ofstream treeout(fname.c_str(), std::ios_base::trunc);
+					treeout << nodes.size() << std::endl;
 					for (uint64_t i = 0; i < nodes.size(); i++){
 						if (parentLists[i].size() == 0){
-							treeout << -1 << " " << dist(nodes[i], nodes[0], jth) << " " <<  nodes[i].transpose() << endl;
+							treeout << -1 << " " << dist(nodes[i], nodes[0], jth) << " " <<  nodes[i].transpose() << std::endl;
 						} else {
-							treeout << parentLists[i].back() << " " <<  dist(nodes[i], nodes[0], jth) << " " << nodes[i].transpose() << endl;
+							treeout << parentLists[i].back() << " " <<  dist(nodes[i], nodes[0], jth) << " " << nodes[i].transpose() << std::endl;
 						}
 					}
 					treeout.close();

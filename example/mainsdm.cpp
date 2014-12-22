@@ -51,12 +51,13 @@ int main(int argc, char** argv){
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double lambda = 30;
+	double lambda = 40;
 	double T_Q = 100;
 	double K_tau = 1.1;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	double jumpThresh = 0.07;
+	//double omega = 0.07;
 	dynm_cfg.set("lambda", lambda);
 	dynm_cfg.set("Q", Q);
 	dynm_cfg.set("tau", tau);
@@ -64,10 +65,11 @@ int main(int argc, char** argv){
 	dynm_cfg.set("nProjectionRestarts", 10);
 	dynm_cfg.set("verbose", true);
 	dynm_cfg.set("jumpThreshold", jumpThresh);
+//	dynm_cfg.set("kernelWidth", omega);
 	dynm_cfg.set("sparseApproximationSize", 100);
 	dynm_cfg.set("eigenSolverType", dmeans::EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	dynm_cfg.set("eigenSolverDimension", 100);
-	dmeans::DMeans<MSTModel, dmeans::SpectralWithMonotonicityChecks> dynm(dynm_cfg);
+	dmeans::DMeans<MSTModel, dmeans::MatchingSpectralWithMonotonicityChecks> dynm(dynm_cfg);
 
 	//run the experiment
 	double cumulativeAccuracy = 0.0;//stores the accuracy accumulated for each step
@@ -99,7 +101,6 @@ int main(int argc, char** argv){
 			dataout << vdata[i].transpose() << endl;
 		}
 
-		
 
 		//***************************
 		//cluster using Dynamic Means
@@ -131,6 +132,7 @@ int main(int argc, char** argv){
 		//treetest.construct(vdata);
 		//treetest.write("tree.log", jumpThresh);
 		//return 0;
+
 	}
 	cout << "Average Accuracy: " << cumulativeAccuracy/(double)nSteps << "\% Total CPU Time = " << cumulativeTime << "s" << endl;
 	cout << "Done!" << endl;
