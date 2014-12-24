@@ -11,6 +11,20 @@ class MSTKernelModel{
 	public:
 		double lambda, Q, tau, jth, spEps;
 		uint64_t spK;
+		class InvalidParameterException{
+			public:
+				InvalidParameterException(double lambda, double Q, double tau, double jth, uint64_t spK, double spEps){
+					std::cout << "Error - Invalid parameters for DotProductKernelModel!" << std::endl;
+					std::cout << "Lambda: " << lambda << std::endl;
+					std::cout << "Q: " << Q << std::endl;
+					std::cout << "tau: " << tau << std::endl;
+					std::cout << "jth: " << jth << std::endl;
+					std::cout << "spK: " << spK << std::endl;
+					std::cout << "spEps: " << spEps << std::endl;
+				}
+		};
+
+
 		class MST{
 			public:
 				std::vector< Eigen::Matrix<double, n, 1> > nodes;
@@ -125,6 +139,9 @@ class MSTKernelModel{
 			this->jth = cfg.get("jumpThreshold", Config::REQUIRED, -1.0);
 			this->spK = cfg.get("sparseApproximationSize", Config::REQUIRED, -1);
 			this->spEps = cfg.get("sparseApproximationErrorThreshold", Config::OPTIONAL, 1.0e-6);
+			if (lambda <= 0 || Q <= 0 || tau <= 0 || spK <= 0 || spEps <= 0 || jth <= 0){
+				throw InvalidParameterException(lambda, Q, tau, jth, spK, spEps);
+			}
 		}
 		class Data{
 			public:

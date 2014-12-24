@@ -6,10 +6,24 @@ template <int n>
 class VectorSpaceModel{
 	public:
 		double lambda, Q, tau;
+		class InvalidParameterException{
+			public:
+				InvalidParameterException(double lambda, double Q, double tau){
+					std::cout << "Error - Invalid parameters for DotProductKernelModel!" << std::endl;
+					std::cout << "Lambda: " << lambda << std::endl;
+					std::cout << "Q: " << Q << std::endl;
+					std::cout << "tau: " << tau << std::endl;
+				}
+		};
+
+
 		VectorSpaceModel(Config cfg){
 			this->lambda = cfg.get("lambda", Config::REQUIRED, -1.0);
 			this->Q = cfg.get("Q", Config::REQUIRED, -1.0);
 			this->tau = cfg.get("tau", Config::REQUIRED, -1.0);
+			if (lambda <= 0 || Q <= 0 || tau <= 0){
+				throw InvalidParameterException(lambda, Q, tau);
+			}
 		}
 		class Data{
 			public:

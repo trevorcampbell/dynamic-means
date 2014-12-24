@@ -9,6 +9,21 @@ class ExponentialKernelModel{
 	public:
 		double lambda, Q, tau, omega, spEps;
 		uint64_t spK;
+
+		class InvalidParameterException{
+			public:
+				InvalidParameterException(double lambda, double Q, double tau, double omega, uint64_t spK, double spEps){
+					std::cout << "Error - Invalid parameters for DotProductKernelModel!" << std::endl;
+					std::cout << "Lambda: " << lambda << std::endl;
+					std::cout << "Q: " << Q << std::endl;
+					std::cout << "tau: " << tau << std::endl;
+					std::cout << "omega: " << omega << std::endl;
+					std::cout << "spK: " << spK << std::endl;
+					std::cout << "spEps: " << spEps << std::endl;
+				}
+		};
+
+
 		ExponentialKernelModel(Config cfg){
 			this->lambda = cfg.get("lambda", Config::REQUIRED, -1.0);
 			this->Q = cfg.get("Q", Config::REQUIRED, -1.0);
@@ -16,6 +31,9 @@ class ExponentialKernelModel{
 			this->omega = cfg.get("kernelWidth", Config::REQUIRED, -1.0);
 			this->spK = cfg.get("sparseApproximationSize", Config::REQUIRED, -1);
 			this->spEps = cfg.get("sparseApproximationErrorThreshold", Config::OPTIONAL, 1.0e-6);
+			if (lambda <= 0 || Q <= 0 || tau <= 0 || spK <= 0 || spEps <= 0 || omega <= 0){
+				throw InvalidParameterException(lambda, Q, tau, omega, spK, spEps);
+			}
 		}
 		class Data{
 			public:
