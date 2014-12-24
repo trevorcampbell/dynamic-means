@@ -157,7 +157,6 @@ void paramsweep(){
 	lambdas.push_back(50.0);
 	lambdas.push_back(55.0);
 
-	T_Qs.push_back(1.0);
 	T_Qs.push_back(3.0);
 	T_Qs.push_back(5.0);
 	T_Qs.push_back(7.0);
@@ -167,8 +166,7 @@ void paramsweep(){
 	T_Qs.push_back(15.0);
 	T_Qs.push_back(17.0);
 
-	K_taus.push_back(1.01);
-	K_taus.push_back(1.1);
+	K_taus.push_back(1.0);
 	K_taus.push_back(1.5);
 	K_taus.push_back(2.0);
 	K_taus.push_back(2.5);
