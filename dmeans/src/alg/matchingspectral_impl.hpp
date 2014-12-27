@@ -17,11 +17,15 @@ double _MatchingSpectral<Model, monoCheck>::cluster(const std::vector<typename M
 	if(obs.size() == 0){return 0.0;}
 
 	//compute the kernel matrix
+	if(this->verbose){ std::cout << "Getting kernel matrix" << std::endl;}
 	MXd KUp = this->getKernelMatUpper(obs, clus, model);
 	//solve the eigensystem
+	if(this->verbose){ std::cout << "Solving eigensystem" << std::endl;
+					   std::cout << "Solver: " << (this->solverType == EigenSolver::Type::EIGEN_SELF_ADJOINT ? "Self adjoint" : "redsvd") << std::endl;}
 	EigenSolver eigsol(KUp, this->solverType, this->nEigs, model.getEigenvalueLowerThreshold());
 
 	MXd Z; VXd eigvals;
+	if (this->verbose){ std::cout << "Getting results and normalizing Z" << std::endl;}
 	eigsol.getResults(eigvals, Z);
 
 	if (eigvals.size() == 0){
@@ -56,8 +60,10 @@ double _MatchingSpectral<Model, monoCheck>::cluster(const std::vector<typename M
 	double minObj = numeric_limits<double>::infinity();
 	vector<uint64_t> minLbls;
 
+	if (this->verbose){ std::cout << "Projecting into X" << std::endl;}
 	//propose nProjectionRestarts V trials
 	for (uint64_t i = 0; i < nProjectionRestarts; i++){
+		if (this->verbose){ std::cout << "Projection attempt " << i+1 << "/" << nProjectionRestarts << std::endl;}
 		V.setZero();
 		//initialize unitary V via ``most orthogonal rows'' method
 		int rndRow = (RNG::get())()%nA;
@@ -114,10 +120,12 @@ double _MatchingSpectral<Model, monoCheck>::cluster(const std::vector<typename M
 			//but getOldNewMatching below handles that case
 		}
 	}
+	if (this->verbose){ std::cout << "Getting the old/new matching" << std::endl;}
 
 	std::map<uint64_t, uint64_t> lblmap;
 	double clusterCost = this->getOldNewMatching(minLbls, obs, clus, model, lblmap);
 
+	if (this->verbose){ std::cout << "Computing the  final labelling" << std::endl;}
 	//assign the data
 	for (uint64_t i = 0; i < obs.size(); i++){
 		while ( lblmap[minLbls[i]] >= clus.size()){ //use a while loop because getOldNewMatching guarantees all labels between 0 and max are used
@@ -135,6 +143,7 @@ double _MatchingSpectral<Model, monoCheck>::cluster(const std::vector<typename M
 	for (uint64_t i = 0; i < clus.size(); i++){
 		model.updatePrm(clus[i]);
 	}
+	if (this->verbose){ std::cout << "Done!" << std::endl;}
 	return clusterCost;
 }
 

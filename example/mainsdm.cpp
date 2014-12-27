@@ -53,9 +53,9 @@ int main(int argc, char** argv){
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double lambda = 40;
-	double T_Q = 100;
-	double K_tau = 2.0;
+	double lambda = 55;
+	double T_Q = 13;
+	double K_tau = 4.5;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	double jumpThresh = 0.07;
