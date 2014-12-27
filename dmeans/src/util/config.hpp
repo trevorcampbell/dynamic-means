@@ -37,6 +37,11 @@ class Config{
 					throw ParameterNotFoundException(key);
 				}
 			}
+		void print(std::ostream& out) const{
+			for (auto it = params.begin(); it != params.end(); ++it){
+				out << it->first << ": " << it->second << std::endl;
+			}
+		}
 	private:
 		std::map<std::string, std::string> params;
 
