@@ -38,17 +38,18 @@ int main(int argc, char** argv){
 	
 
 	//constants
-	int nSteps = 100;//run the experiment for nSteps steps
+	int nSteps = 10;//run the experiment for nSteps steps
 	//play with the below constants to change the data generation process
 	dmeans::Config data_cfg;
-	data_cfg.set("birthProbability", 0.05);
-	data_cfg.set("deathProbability", 0.01);
-	data_cfg.set("motionStdDev", 0.05);
-	data_cfg.set("clusterStdDev", 0.05);
-	data_cfg.set("nDataPerClusterPerStep", 15);
-	data_cfg.set("initialClusters", 7);
-	MovingDataGenerator* datagen = new MovingGaussianDataGenerator(data_cfg);
-	//MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
+	data_cfg.set("birthProbability", 0.00);
+	data_cfg.set("deathProbability", 0.00);
+	data_cfg.set("radius", 0.4);
+	data_cfg.set("motionStdDev", 0.02);
+	data_cfg.set("clusterStdDev", 0.01);
+	data_cfg.set("nDataPerClusterPerStep", 200);
+	data_cfg.set("initialClusters", 3);
+	//MovingDataGenerator* datagen = new MovingGaussianDataGenerator(data_cfg);
+	MovingDataGenerator* datagen = new MovingRingDataGenerator(data_cfg);
 	//data_cfg.set("radius", 0.05);
 	//MovingDataGenerator* datagen = new MovingShapeDataGenerator(data_cfg);
 

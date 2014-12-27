@@ -38,13 +38,13 @@ int main(int argc, char** argv){
 	
 
 	//constants
-	int nSteps = 100;//run the experiment for nSteps steps
+	int nSteps = 10;//run the experiment for nSteps steps
 	//play with the below constants to change the data generation process
 	dmeans::Config data_cfg;
 	data_cfg.set("birthProbability", 0.0);
 	data_cfg.set("deathProbability", 0.0);
 	data_cfg.set("radius", 0.4);
-	data_cfg.set("motionStdDev", 0.02);
+	data_cfg.set("motionStdDev", 0.05);
 	data_cfg.set("clusterStdDev", 0.01);
 	data_cfg.set("nDataPerClusterPerStep", 200);
 	data_cfg.set("initialClusters", 3);
@@ -53,9 +53,9 @@ int main(int argc, char** argv){
 	//the Dynamic Means object
 	//play with lambda/Q/tau to change Dynamic Means' performance
 	dmeans::Config dynm_cfg;
-	double lambda = 32;
+	double lambda = 40;
 	double T_Q = 100;
-	double K_tau = 1.1;
+	double K_tau = 2.0;
 	double Q = lambda/T_Q;
 	double tau = (T_Q*(K_tau-1.0)+1.0)/(T_Q-1.0);
 	double jumpThresh = 0.07;
