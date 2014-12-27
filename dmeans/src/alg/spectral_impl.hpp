@@ -1,13 +1,12 @@
 #ifndef __SPECTRAL_IMPL_HPP
 template<class Model, bool monoCheck>
 _Spectral<Model, monoCheck>::_Spectral(const Config& cfg){
+	this->cfg = cfg;
 	this->solverType = this->cfg.get("eigenSolverType", Config::Type::OPTIONAL, EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	if (this->solverType == EigenSolver::Type::EIGEN_SELF_ADJOINT){
 		this->nEigs = 0;
-		std::cout << "USING EIGEN SELF ADJOINT" << std::endl;
 	} else {
 		this->nEigs = this->cfg.get("eigenSolverDimension", Config::Type::REQUIRED, 0);
-		std::cout << "USING REDSVD" << std::endl;
 	}
 	this->verbose = cfg.get("verbose", Config::Type::OPTIONAL, false);
 	this->nProjectionRestarts = this->cfg.get("nProjectionRestarts", Config::Type::OPTIONAL, 1);

@@ -1,6 +1,7 @@
 #ifndef __MATCHINGSPECTRAL_IMPL_HPP
 template<class Model, bool monoCheck>
 _MatchingSpectral<Model, monoCheck>::_MatchingSpectral(const Config& cfg){
+	this->cfg = cfg;
 	this->solverType = this->cfg.get("eigenSolverType", Config::Type::OPTIONAL, EigenSolver::Type::EIGEN_SELF_ADJOINT);
 	if (this->solverType == EigenSolver::Type::EIGEN_SELF_ADJOINT){
 		this->nEigs = 0;
