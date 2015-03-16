@@ -112,7 +112,7 @@ void DynMeans<Vec>::cluster(std::vector<Vec>& newobservations, int nRestarts,
 		randOrderings.push_back(tmpindices);
 	}
 
-	//stuff for storing best clustering (all other countries make inferior potassium) 
+	//stuff for storing best clustering
 	finalObj =  std::numeric_limits<double>::max();
 	std::vector<int> finalCnts;
 
