@@ -1,9 +1,9 @@
 dynamic-means
 =============
 
-###Clustering for Temporally Evolving Datasets
+### Clustering for Temporally Evolving Datasets
 
-####Introduction
+#### Introduction
 
 The [Dynamic Means algorithm](http://arxiv.org/abs/1305.6659) is a k-means-like algorithm for clustering large or temporally evolving datasets.
 It operates batch-sequentially, i.e. it processes "windows" of data rather than processing an entire dataset
@@ -20,7 +20,7 @@ Efficient C++ implementations of all algorithms are provided in this repository.
 </p>
 
 
-####Usage
+#### Usage
 1. Clone this repository:
 	<pre>
     git clone https://github.com/trevorcampbell/dynamic-means.git
@@ -121,7 +121,7 @@ Efficient C++ implementations of all algorithms are provided in this repository.
 
 7. Repeat step 6 as many times as required (e.g., split a dataset of 1,000,000 datapoints into chunks of 1,000 and cluster each sequentially) 
 
-####Example Code
+#### Example Code
 To run the example, first make sure liblpsolve is installed (required for label accuracy computations):
     
     sudo apt-get install liblpsolve55-dev
@@ -148,7 +148,7 @@ For Kernel Dynamic Means, run
 If you want to change how the example compiles, a [premake](http://industriousone.com/premake) 
 Makefile generation script is included.
 
-####Citation
+#### Citation
 
 If you use Dynamic Means/Spectral Dynamic Means/Kernel Dynamic Means for a paper or project, please use the following BibTeX entry for citation:
 	<pre>
